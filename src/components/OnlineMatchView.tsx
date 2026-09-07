@@ -8,8 +8,7 @@ import {
   resignOnlineMatch, 
   offerDrawOnlineMatch, 
   acceptDrawOnlineMatch,
-  finalizeOnlineMatch,
-  acceptOnlineMatchChallenge
+  finalizeOnlineMatch 
 } from '../services/onlineMatchService';
 import { 
   sendInGameMessage, 
@@ -127,17 +126,6 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
       }
       setLoadState('ready');
       setSession(newSession);
-
-      // Auto-heal challenge state so neither player remains frozen on waiting screen
-      if (
-        newSession.status === 'waiting' &&
-        (newSession.guestId || (newSession.whitePlayer && newSession.blackPlayer)) &&
-        (myUid === newSession.hostId || myUid === newSession.guestId || myUid === newSession.whitePlayer?.uid || myUid === newSession.blackPlayer?.uid)
-      ) {
-        void acceptOnlineMatchChallenge(matchId);
-        setSession(prev => prev ? { ...prev, status: 'in_progress' } : prev);
-      }
-
       socketService.getSocket()?.emit('join_match', { matchId, uid: myUid, session: newSession });
 
       // Synchronize chess game instance
@@ -155,12 +143,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
       }
     });
 
-    if (!socketService.getSocket()) {
-      socketService.connect(myUid);
-    }
-    const socket = socketService.getSocket();
-    
-    if (!socket) return;
+    const socket = socketService.getSocket() || socketService.connect(myUid);
     
     setSocketStatus(socket.connected ? 'connected' : 'connecting');
 
@@ -186,15 +169,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
       if (data.success) {
         setLoadState(prev => prev === 'loading' ? 'ready' : prev);
         setSession(prev => {
-          const isNowActive = data.status === 'active' || data.status === 'starting' || Boolean(data.whitePlayer?.uid && data.blackPlayer?.uid);
-          if (prev) {
-            return {
-              ...prev,
-              status: isNowActive && prev.status === 'waiting' ? 'in_progress' : prev.status,
-              whitePlayer: prev.whitePlayer || (data.whitePlayer ? { uid: data.whitePlayer.uid, displayName: data.whitePlayer.name, elo: data.whitePlayer.rating } : undefined),
-              blackPlayer: prev.blackPlayer || (data.blackPlayer ? { uid: data.blackPlayer.uid, displayName: data.blackPlayer.name, elo: data.blackPlayer.rating } : undefined)
-            };
-          }
+          if (prev) return prev; // Keep the authoritative Firestore one if we have it
           return {
             id: data.matchId,
             hostId: data.whitePlayer?.uid || '',
@@ -203,7 +178,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
             fen: data.fen,
             pgn: '',
             turn: data.turn,
-            status: isNowActive ? 'in_progress' : data.status,
+            status: data.status,
             winner: null,
             timeControl: { name: 'Rapid', initialSeconds: data.whiteSecondsRemaining, incrementSeconds: 0 },
             whiteSecondsRemaining: data.whiteSecondsRemaining,

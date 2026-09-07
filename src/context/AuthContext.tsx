@@ -286,17 +286,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Seed Sky and Dev profiles
   useEffect(() => {
-    // Failsafe timer to ensure loading never gets stuck indefinitely
-    const failsafeTimer = window.setTimeout(() => {
-      setLoading((prevLoading) => {
-        if (prevLoading) {
-          console.warn('[AuthProvider] Failsafe loading timer triggered - forcing loading to false');
-          return false;
-        }
-        return prevLoading;
-      });
-    }, 1000);
-
     const params = new URLSearchParams(window.location.search);
     const accountParam = params.get('account') || params.get('user') || params.get('login');
     const storedSky = localStorage.getItem('chess_active_account') === 'sky';

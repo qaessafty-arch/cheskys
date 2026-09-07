@@ -153,15 +153,15 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       title: notif.title,
       message: notif.message,
       duration: notif.type === 'challenge' ? 30000 : 6000,
-      action: notif.type === 'challenge' ? {
+      action: (notif.type === 'challenge' || notif.type === 'room_invite') ? {
         label: 'Accept',
         color: 'emerald',
-        onClick: () => handleChallengeResponse(notif, 'accepted')
+        onClick: () => notif.type === 'room_invite' ? handleRoomInviteResponse(notif, 'accepted') : handleChallengeResponse(notif, 'accepted')
       } : undefined,
-      secondaryAction: notif.type === 'challenge' ? {
+      secondaryAction: (notif.type === 'challenge' || notif.type === 'room_invite') ? {
         label: 'Decline',
         color: 'red',
-        onClick: () => handleChallengeResponse(notif, 'declined')
+        onClick: () => notif.type === 'room_invite' ? handleRoomInviteResponse(notif, 'declined') : handleChallengeResponse(notif, 'declined')
       } : undefined,
       expiresAt: notif.actionData?.expiresAt
     });
@@ -183,6 +183,22 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           detail: { matchId: notif.actionData.matchId } 
         }));
       }
+    } catch (e) {
+      handleFirestoreError(e, OperationType.UPDATE, `users/${user.uid}/notifications/${notif.id}`);
+    }
+  };
+
+  const handleRoomInviteResponse = async (notif: Notification, status: 'accepted' | 'declined') => {
+    if (!user) return;
+    try {
+      const ref = doc(db, `users/${user.uid}/notifications/${notif.id}`);
+      await safeUpdateDoc(ref, { 
+        'actionData.status': status,
+        isRead: true 
+      });
+      window.dispatchEvent(new CustomEvent('room_invite_response', { 
+        detail: { status, inviteId: notif.id, roomCode: notif.actionData?.roomCode } 
+      }));
     } catch (e) {
       handleFirestoreError(e, OperationType.UPDATE, `users/${user.uid}/notifications/${notif.id}`);
     }

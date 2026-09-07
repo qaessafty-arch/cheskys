@@ -9,9 +9,6 @@ import {
   updateDoc as fbUpdateDoc,
   addDoc as fbAddDoc,
   deleteDoc as fbDeleteDoc,
-  getDocs as fbGetDocs,
-  Query,
-  QuerySnapshot,
   setLogLevel,
   DocumentReference,
   CollectionReference,
@@ -109,17 +106,14 @@ export function isFirestoreQuotaExhaustedError(error: unknown): boolean {
 const TODAY = new Date().toISOString().slice(0, 10);
 const QUOTA_KEY = 'firestore_write_quota_exhausted_day';
 
-// Circuit-breaker flag for daily quota limit. Defaults to false so challenges and writes operate normally.
-let quotaExhaustedNoticeShown = false;
-
-// Clear any stale local quota lockout from previous sessions to allow fresh match writes
-try {
-  if (typeof localStorage !== 'undefined') {
-    localStorage.removeItem(QUOTA_KEY);
-  }
-} catch {}
+// Today's quota reached: mark true by default to immediately stop all rejected write streams
+let quotaExhaustedNoticeShown = true;
 
 export function isFirestoreQuotaExhausted(): boolean {
+  try {
+    const savedDay = localStorage.getItem(QUOTA_KEY);
+    if (savedDay === TODAY) return true;
+  } catch {}
   return quotaExhaustedNoticeShown;
 }
 
@@ -207,23 +201,6 @@ export async function safeDeleteDoc<T = any>(
       return;
     }
     console.warn('[Firestore] safeDeleteDoc notice:', error?.message);
-  }
-}
-
-/**
- * Safely executes a Firestore getDocs query.
- */
-export async function safeGetDocs(q: Query): Promise<QuerySnapshot | null> {
-  if (isFirestoreQuotaExhausted()) return null;
-  try {
-    return await fbGetDocs(q);
-  } catch (error: any) {
-    if (isFirestoreQuotaExhaustedError(error)) {
-      setFirestoreQuotaExhausted(true);
-      return null;
-    }
-    console.warn('[Firestore] safeGetDocs notice:', error?.message);
-    return null;
   }
 }
 

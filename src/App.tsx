@@ -20,6 +20,7 @@ import { socketService } from './utils/socket';
 import { getActiveTheme, applyThemeToDOM } from './utils/themePresets';
 import { getRespectProfile, recordVictory, recordMercy } from './utils/respectSystem';
 import { useAuth } from './context/AuthContext';
+import { useRoom } from './context/RoomContext';
 import { useSettings } from './context/SettingsContext';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
@@ -84,6 +85,7 @@ const UserProfilePage = lazyPreload(() => import('./components/UserProfilePage')
 
 export default function App() {
   const { user, profile: authProfile, updateRespectMetrics } = useAuth();
+  const { currentRoom, activeGameId, acceptInvite, declineInvite } = useRoom();
   const { t, i18n } = useTranslation();
 
   // Global Settings and Background managed via SettingsContext
@@ -145,6 +147,34 @@ export default function App() {
 
   // Game Mode
   const [activeMode, setActiveMode] = useState<GameMode>('ai');
+
+  useEffect(() => {
+    const handleRoomInviteResponse = async (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const { status, inviteId, roomCode } = customEvent.detail;
+      if (status === 'accepted') {
+        setActiveMode('private_room');
+        await acceptInvite(inviteId, roomCode);
+      } else {
+        await declineInvite(inviteId);
+      }
+    };
+    window.addEventListener('room_invite_response', handleRoomInviteResponse);
+    return () => window.removeEventListener('room_invite_response', handleRoomInviteResponse);
+  }, [acceptInvite, declineInvite]);
+
+  useEffect(() => {
+    if (currentRoom && activeMode !== 'private_room' && activeMode !== 'online_match') {
+      setActiveMode('private_room');
+    }
+  }, [currentRoom, activeMode]);
+
+  useEffect(() => {
+    if (activeGameId && activeMode !== 'online_match') {
+      setActiveOnlineMatchId(activeGameId);
+      setActiveMode('online_match');
+    }
+  }, [activeGameId, activeMode]);
 
   // Match Configuration
   const [currentBot, setCurrentBot] = useState<BotProfile>(BOT_PROFILES[2]); // Bishop Tactician (1400 Elo)

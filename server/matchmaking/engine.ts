@@ -42,10 +42,14 @@ export class MatchmakingEngine {
     // Process the queue every 2 seconds.
     setInterval(() => this.processQueue(), 2000);
 
-    // Middleware to extract credentials or fallback gracefully for guests
+    // Middleware to extract and validate auth token from handshake
     this.io.use((socket, next) => {
       const token = socket.handshake.auth?.token;
-      const uid = socket.handshake.auth?.uid || `guest_${socket.id || Math.random().toString(36).slice(2)}`;
+      const uid = socket.handshake.auth?.uid;
+
+      if (!token && !uid) {
+        return next(new Error('Authentication error: Missing credentials.'));
+      }
 
       // Attach credentials to socket.data for secure lifecycle use
       socket.data = { ...socket.data, token, uid };
@@ -80,12 +84,6 @@ export class MatchmakingEngine {
       this.handleCancelWaiting(socket, data, cb),
     );
     socket.on('cancelWaiting', (data, cb) =>
-      this.handleCancelWaiting(socket, data, cb),
-    );
-    socket.on('challenge_timeout', (data, cb) =>
-      this.handleCancelWaiting(socket, data, cb),
-    );
-    socket.on('cancel_challenge', (data, cb) =>
       this.handleCancelWaiting(socket, data, cb),
     );
 
@@ -326,12 +324,6 @@ export class MatchmakingEngine {
       this.userToMatch.set(uid, match.matchId);
     }
 
-    if (match.whiteUid && match.blackUid) {
-      if (match.status === 'waiting') {
-        match.status = 'active';
-      }
-    }
-
     const roomState = {
       success: true,
       matchId: match.matchId,
@@ -349,14 +341,6 @@ export class MatchmakingEngine {
     socket.emit('match_joined', roomState);
     socket.emit('roomJoined', roomState);
     if (typeof cb === 'function') cb(roomState);
-
-    // Broadcast updated state to other player in the room so the waiting screen unfreezes
-    this.io.to(match.matchId).emit('match_joined', roomState);
-    this.io.to(match.matchId).emit('roomJoined', roomState);
-    if (match.gameCode) {
-      this.io.to(match.gameCode).emit('match_joined', roomState);
-      this.io.to(match.gameCode).emit('roomJoined', roomState);
-    }
   }
 
   // ---- Move handling ----

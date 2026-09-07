@@ -11,14 +11,16 @@ import {
   where,
   serverTimestamp,
   Timestamp,
+  enableNetwork,
+  disableNetwork,
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType, safeAddDoc, safeSetDoc, safeUpdateDoc, safeDeleteDoc } from '../utils/firebase';
 import { soundManager } from '../utils/audio';
-import { socketService } from '../utils/socket';
 import { createOnlineMatch, joinOnlineMatch } from '../services/onlineMatchService';
 import { OnlineMatchPlayer, TimeControl } from '../types/chess';
 
 export type RoomStatus = 'waiting' | 'ready' | 'in_progress' | 'ended' | 'expired';
+export type ConnectionStatus = 'connected' | 'connecting' | 'disconnected';
 
 export interface RoomSettings {
   timeControlId: string;
@@ -34,7 +36,7 @@ export interface RoomInvite {
   userId: string;
   userName: string;
   userPhotoURL?: string;
-  status: 'pending' | 'accepted' | 'declined' | 'expired';
+  status: 'pending' | 'accepted' | 'declined';
   invitedAt: any;
   settings: RoomSettings;
 }
@@ -47,7 +49,7 @@ export interface UserInvite {
   invitedBy: string;
   invitedByName: string;
   invitedByPhoto?: string;
-  status: 'pending' | 'accepted' | 'declined' | 'expired';
+  status: 'pending' | 'accepted' | 'declined';
   settings: RoomSettings;
   createdAt: any;
 }
@@ -86,6 +88,7 @@ export interface PrivateRoom {
 }
 
 interface RoomContextType {
+  connectionStatus: ConnectionStatus;
   currentRoom: PrivateRoom | null;
   incomingInvites: UserInvite[];
   loading: boolean;
@@ -113,10 +116,35 @@ interface RoomContextType {
   dismissActiveGame: () => void;
 }
 
+export function useSocketHealthMonitor(
+  socket: { connect: () => Promise<void>; disconnect: () => Promise<void> },
+  status: ConnectionStatus
+) {
+  useEffect(() => {
+    if (status === 'connecting') {
+      const timer = setTimeout(() => {
+        console.warn('SocketHealthMonitor: connection stalled, forcing reconnect...');
+        const jitter = Math.random() * 2000;
+        setTimeout(async () => {
+          try {
+            await socket.disconnect();
+            await socket.connect();
+            console.log('Socket reconnect attempt executed.');
+          } catch (e) {
+            console.error('Forced reconnect failed:', e);
+          }
+        }, jitter);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [status, socket]);
+}
+
 const RoomContext = createContext<RoomContextType | undefined>(undefined);
 
 export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, profile } = useAuth();
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
   const [currentRoom, setCurrentRoom] = useState<PrivateRoom | null>(null);
   const [incomingInvites, setIncomingInvites] = useState<UserInvite[]>([]);
   const [loading, setLoading] = useState(false);
@@ -182,11 +210,22 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Real-time listener for current room
   useEffect(() => {
-    if (!currentRoom?.roomCode) return;
+    if (!currentRoom?.roomCode) {
+      setConnectionStatus('disconnected');
+      return;
+    }
+
+    setConnectionStatus('connecting');
     const roomRef = doc(db, 'rooms', currentRoom.roomCode);
     const unsub = onSnapshot(
       roomRef,
+      { includeMetadataChanges: true },
       (docSnap) => {
+        // If we received data from the server, mark as connected
+        if (!docSnap.metadata.fromCache) {
+          setConnectionStatus('connected');
+        }
+
         if (!docSnap.exists()) {
           // Room was canceled or deleted
           if (currentRoomRef.current?.status === 'waiting') {
@@ -241,39 +280,16 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [currentRoom?.roomCode, cleanUpLegacyRoomDoc]);
 
-  // Socket.IO fallback for direct connection and immediate matchmaking (bypasses Firestore quota issues)
-  useEffect(() => {
-    if (!currentRoom?.roomCode || activeGameId) return;
+  // Socket adapter for Firebase network state
+  const socketInstance = useRef({
+    connect: () => enableNetwork(db),
+    disconnect: () => disableNetwork(db),
+  }).current;
 
-    if (!socketService.getSocket()) {
-      socketService.connect(profile?.uid);
-    }
-    const socket = socketService.getSocket();
-    if (!socket) return;
+  // Socket Health Monitor (Connection stabilization)
+  useSocketHealthMonitor(socketInstance, connectionStatus);
 
-    socket.emit('join_match', { matchId: currentRoom.roomCode, uid: profile?.uid });
-
-    const handleRoomReady = (roomState: any) => {
-      if (roomState?.status === 'starting' || roomState?.status === 'active' || roomState?.status === 'in_progress') {
-        if (!activeGameId && currentRoomRef.current?.status !== 'in_progress') {
-          soundManager.playMatchFound();
-          setActiveGameId(currentRoom.roomCode);
-        }
-      }
-    };
-
-    socket.on('match_joined', handleRoomReady);
-    socket.on('gameStarted', handleRoomReady);
-    socket.on('roomJoined', handleRoomReady);
-
-    return () => {
-      socket.off('match_joined', handleRoomReady);
-      socket.off('gameStarted', handleRoomReady);
-      socket.off('roomJoined', handleRoomReady);
-    };
-  }, [currentRoom?.roomCode, activeGameId, profile?.uid]);
-
-  // Real-time listener for incoming user invites with 30s state-reconciliation
+  // Real-time listener for incoming user invites
   useEffect(() => {
     if (!user) {
       setIncomingInvites([]);
@@ -289,57 +305,15 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const unsub = onSnapshot(
       invitesQuery,
       (snapshot) => {
-        const now = Date.now();
-        const activeList: UserInvite[] = [];
-
-        snapshot.docs.forEach((d) => {
-          const data = d.data() as UserInvite;
-          const invite = { id: d.id, ...data };
-          const createdTime =
-            data.createdAt?.toMillis ? data.createdAt.toMillis() :
-            data.createdAt?.seconds ? data.createdAt.seconds * 1000 :
-            (typeof data.createdAt === 'string' || typeof data.createdAt === 'number') ? new Date(data.createdAt).getTime() :
-            now;
-
-          // If invite is older than 30 seconds, auto-reconcile to expired
-          if (now - createdTime >= 30000) {
-            void safeUpdateDoc(doc(db, 'user_invites', d.id), { status: 'expired' });
-          } else {
-            activeList.push(invite);
-          }
-        });
-
-        setIncomingInvites(activeList);
+        const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as UserInvite));
+        setIncomingInvites(list);
       },
       (error) => {
         handleFirestoreError(error, OperationType.LIST, 'user_invites');
       }
     );
 
-    // Watchdog timer to cleanly drop invites exceeding 30 seconds
-    const interval = setInterval(() => {
-      const now = Date.now();
-      setIncomingInvites((prev) => {
-        const remaining = prev.filter((inv) => {
-          const createdTime =
-            inv.createdAt?.toMillis ? inv.createdAt.toMillis() :
-            inv.createdAt?.seconds ? inv.createdAt.seconds * 1000 :
-            (typeof inv.createdAt === 'string' || typeof inv.createdAt === 'number') ? new Date(inv.createdAt).getTime() :
-            now;
-          const isStale = (now - createdTime) >= 30000;
-          if (isStale) {
-            void safeUpdateDoc(doc(db, 'user_invites', inv.id), { status: 'expired' });
-          }
-          return !isStale;
-        });
-        return remaining.length !== prev.length ? remaining : prev;
-      });
-    }, 2000);
-
-    return () => {
-      unsub();
-      clearInterval(interval);
-    };
+    return () => unsub();
   }, [user]);
 
   // 3-second automatic countdown when status is 'ready'
@@ -670,63 +644,6 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
 
-        // Fallback: check server API endpoint /api/games/${cleanCode}/state
-        try {
-          const apiRes = await fetch(`/api/games/${encodeURIComponent(cleanCode)}/state`);
-          if (apiRes.ok) {
-            const serverState = await apiRes.json();
-            if (serverState) {
-              if (serverState.status && serverState.status !== 'waiting' && serverState.guestId && serverState.guestId !== profile.uid) {
-                throw new Error('This match is already in progress or completed.');
-              }
-              if (serverState.hostId === profile.uid) {
-                throw new Error('You are the creator of this match. Share your code with a friend!');
-              }
-
-              const guestPlayer: OnlineMatchPlayer = {
-                uid: profile.uid,
-                displayName: profile.displayName || 'Opponent',
-                avatar: profile.photoURL || undefined,
-                elo: typeof profile.elo === 'number' ? profile.elo : 1200,
-              };
-              await joinOnlineMatch(cleanCode, guestPlayer);
-              setActiveGameId(cleanCode);
-
-              const synthRoom: PrivateRoom = {
-                roomId: cleanCode,
-                roomCode: cleanCode,
-                creatorId: serverState.hostId || 'host',
-                creatorName: serverState.whitePlayer?.displayName || 'Host',
-                creatorElo: serverState.whitePlayer?.elo || 1200,
-                creatorColor: serverState.whitePlayer?.uid === serverState.hostId ? 'white' : 'black',
-                opponentColor: serverState.whitePlayer?.uid === serverState.hostId ? 'black' : 'white',
-                opponentId: profile.uid,
-                opponentName: profile.displayName || 'Opponent',
-                opponentElo: typeof profile.elo === 'number' ? profile.elo : 1200,
-                status: serverState.status === 'in_progress' ? 'in_progress' : 'ready',
-                settings: {
-                  timeControlId: serverState.timeControl?.id || 'rapid',
-                  timeControlName: serverState.timeControl?.name || 'Rapid 10+0',
-                  initialSeconds: serverState.timeControl?.initialSeconds || 600,
-                  incrementSeconds: serverState.timeControl?.incrementSeconds || 0,
-                  color: 'random',
-                  rated: true,
-                },
-                createdAt: new Date(),
-                expiresAt: new Date(Date.now() + 600000),
-                gameId: cleanCode,
-              };
-              setCurrentRoom(synthRoom);
-              soundManager.playMatchFound();
-              return synthRoom;
-            }
-          }
-        } catch (e: any) {
-          if (e?.message?.includes('already in progress') || e?.message?.includes('creator of this match')) {
-            throw e;
-          }
-        }
-
         throw new Error('No room found with that code. Please check and try again.');
       }
 
@@ -889,6 +806,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCountdown(null);
     setCurrentRoom(null);
     setJoinError(null);
+    setConnectionStatus('disconnected');
   }, []);
 
   const updateRoomStatus = useCallback(
@@ -975,23 +893,6 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
           createdAt: serverTimestamp(),
         });
 
-        // Register in socketService with strict 30s TTL watchdog
-        socketService.registerPendingChallenge({
-          id: inviteId,
-          challengerId: profile.uid,
-          challengerName: profile.displayName || 'You',
-          challengerAvatar: profile.photoURL || undefined,
-          targetUserId: friendUid,
-          targetUserName: friendName,
-          timeControlName: currentRoom.settings.timeControlName,
-          timeControlSeconds: currentRoom.settings.initialSeconds,
-          roomCode: roomCode,
-          type: 'room',
-          createdAt: Date.now(),
-          expiresAt: Date.now() + 30000,
-          status: 'pending',
-        });
-
         // If main room doc has legacy invites map, clean it up to prevent size issues
         if (currentRoom.invites) {
           try {
@@ -1011,9 +912,6 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
     async (inviteId: string, roomCode?: string) => {
       const code = roomCode || currentRoom?.roomCode;
       if (!code) return;
-
-      // Optimistically clear invite immediately to prevent freeze in UI
-      setIncomingInvites(prev => prev.filter(inv => inv.id !== inviteId));
 
       try {
         // Update user_invites status
@@ -1037,8 +935,6 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const declineInvite = useCallback(
     async (inviteId: string) => {
-      // Optimistically clear invite immediately
-      setIncomingInvites(prev => prev.filter(inv => inv.id !== inviteId));
       try {
         const userInviteRef = doc(db, 'user_invites', inviteId);
         await safeUpdateDoc(userInviteRef, { status: 'declined' });
@@ -1110,6 +1006,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return (
     <RoomContext.Provider
       value={{
+        connectionStatus,
         currentRoom,
         incomingInvites,
         loading,

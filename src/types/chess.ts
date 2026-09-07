@@ -112,7 +112,7 @@ export interface FriendRequestItem {
   fromUserHonorRank: string;
   toUserId: string;
   toUsername?: string;
-  status: 'pending' | 'accepted' | 'declined' | 'expired';
+  status: 'pending' | 'accepted' | 'declined';
   createdAt: string;
 }
 
@@ -393,6 +393,7 @@ export interface Notification {
   createdAt: string;
   link?: string;
   actionData?: {
+    roomCode?: string;
     matchId?: string;
     challengerId?: string;
     challengerName?: string;

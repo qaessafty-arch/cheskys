@@ -55,6 +55,7 @@ export function useRoom() {
       type: 'room_invite',
       title: 'Game invite',
       message: `${profile.displayName || 'A friend'} invited you to room ${roomCode}. Accept to join.`,
+      actionData: { roomCode }
     });
     showToast({
       type: 'room_invite',

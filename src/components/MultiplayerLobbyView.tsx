@@ -281,17 +281,6 @@ export const MultiplayerLobbyView: React.FC<MultiplayerLobbyViewProps> = ({
     }
   };
 
-  const handleAcceptOpenMatch = async (matchId: string) => {
-    try {
-      await joinOnlineMatch(matchId, buildLocalPlayer());
-      soundManager.playVictory();
-      onStartMatch(matchId);
-    } catch (e: any) {
-      console.warn('Accept open match error:', e);
-      onStartMatch(matchId);
-    }
-  };
-
   const handleCopyCode = () => {
     if (!createdMatchId) return;
     navigator.clipboard.writeText(createdMatchId);
@@ -796,7 +785,7 @@ export const MultiplayerLobbyView: React.FC<MultiplayerLobbyViewProps> = ({
                   </div>
 
                   <button
-                    onClick={() => handleAcceptOpenMatch(m.id)}
+                    onClick={() => onStartMatch(m.id)}
                     className="px-3 py-1.5 rounded-xl bg-[#52673A] hover:bg-[#52673A]/90 text-white font-black text-xs flex items-center gap-1 cursor-pointer border border-[#F5C453]/40 shadow-md"
                   >
                     <span>Accept</span>
