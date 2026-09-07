@@ -675,10 +675,10 @@ if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: {
         middlewareMode: true,
-        // Attach Vite's HMR WebSocket to the same HTTP server that serves
-        // the middleware. Without this, /@vite/client connects to a socket
-        // that is never upgraded and closes before opening.
-        hmr: { server },
+        // This custom Express server is also used through the Vercel preview
+        // proxy, which does not forward Vite's upgrade socket reliably. Keep
+        // the runtime preview free of failed HMR WebSocket connections.
+        hmr: false,
       },
       appType: 'spa',
     });
