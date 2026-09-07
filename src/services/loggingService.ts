@@ -1,5 +1,5 @@
-import { doc, setDoc, collection, getDocs, query, orderBy, limit, deleteDoc } from 'firebase/firestore';
-import { db } from '../utils/firebase';
+import { doc, collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
+import { db, safeSetDoc } from '../utils/firebase';
 import { MatchLogRecord, GameMode, PieceColor } from '../types/chess';
 
 const LOCAL_STORAGE_LOGS_KEY = 'chesskys_match_history_logs';
@@ -117,7 +117,7 @@ export async function logCompletedGame(record: Omit<MatchLogRecord, 'id' | 'date
   // 3. Persist to Firestore if available
   try {
     const ref = doc(db, 'game_logs', newLog.id);
-    await setDoc(ref, {
+    await safeSetDoc(ref, {
       ...newLog,
       userId: record.userId || 'guest'
     });

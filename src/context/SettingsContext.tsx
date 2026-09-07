@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { AppSettings, CustomBackgroundConfig } from '../types/chess';
 import { useAuth } from './AuthContext';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { doc } from 'firebase/firestore';
+import { db, safeUpdateDoc } from '../utils/firebase';
 import {
   getSavedCustomBackground,
   saveCustomBackground,
@@ -103,10 +103,8 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
 
         // Sync to Firestore if authenticated
         if (user?.uid) {
-          try {
-            const userDocRef = doc(db, 'users', user.uid);
-            updateDoc(userDocRef, { settings: next }).catch(() => {});
-          } catch {}
+          const userDocRef = doc(db, 'users', user.uid);
+          safeUpdateDoc(userDocRef, { settings: next }).catch(() => {});
         }
 
         return next;
@@ -126,12 +124,10 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
 
       // Sync directly to user profile in Firebase
       if (user?.uid) {
-        try {
-          const userDocRef = doc(db, 'users', user.uid);
-          updateDoc(userDocRef, {
-            customBackground: newBg,
-          }).catch(() => {});
-        } catch {}
+        const userDocRef = doc(db, 'users', user.uid);
+        safeUpdateDoc(userDocRef, {
+          customBackground: newBg,
+        }).catch(() => {});
       }
     },
     [updateSettings, user?.uid]

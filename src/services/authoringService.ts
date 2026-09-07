@@ -1,5 +1,5 @@
-import { doc, getDoc, setDoc, deleteDoc, collection, getDocs, updateDoc, increment, query, orderBy, limit } from 'firebase/firestore';
-import { db } from '../utils/firebase';
+import { doc, getDoc, collection, getDocs, increment, query, orderBy, limit } from 'firebase/firestore';
+import { db, safeSetDoc, safeDeleteDoc, safeUpdateDoc } from '../utils/firebase';
 import { AuthoredPuzzle, PieceColor } from '../types/chess';
 import { Chess } from 'chess.js';
 
@@ -120,7 +120,7 @@ export async function saveAuthoredPuzzle(puzzle: AuthoredPuzzle): Promise<void> 
   // 2. Sync to Firestore if published
   try {
     const ref = doc(db, 'authored_puzzles', puzzle.id);
-    await setDoc(ref, puzzle, { merge: true });
+    await safeSetDoc(ref, puzzle, { merge: true });
   } catch (err) {
     console.warn('Cloud puzzle save failed (offline or guest):', err);
   }
@@ -133,7 +133,7 @@ export async function deleteAuthoredPuzzle(puzzleId: string): Promise<void> {
 
   try {
     const ref = doc(db, 'authored_puzzles', puzzleId);
-    await deleteDoc(ref);
+    await safeDeleteDoc(ref);
   } catch (err) {
     console.warn('Cloud puzzle delete failed:', err);
   }
@@ -151,7 +151,7 @@ export async function likeAuthoredPuzzle(puzzleId: string): Promise<void> {
   // Update cloud
   try {
     const ref = doc(db, 'authored_puzzles', puzzleId);
-    await updateDoc(ref, {
+    await safeUpdateDoc(ref, {
       likesCount: increment(1)
     });
   } catch (e) {
@@ -169,7 +169,7 @@ export async function recordPuzzleSolve(puzzleId: string): Promise<void> {
 
   try {
     const ref = doc(db, 'authored_puzzles', puzzleId);
-    await updateDoc(ref, {
+    await safeUpdateDoc(ref, {
       solvesCount: increment(1)
     });
   } catch (e) {

@@ -1,15 +1,13 @@
 import { 
   collection, 
   doc, 
-  setDoc, 
   getDoc, 
   getDocs,
   query,
   where,
-  updateDoc, 
   onSnapshot
 } from 'firebase/firestore';
-import { db } from '../utils/firebase';
+import { db, safeSetDoc, safeUpdateDoc } from '../utils/firebase';
 import { Tournament, TournamentPlayer, TimeControl, TournamentMatchNode } from '../types/chess';
 import { createOnlineMatchChallenge } from './onlineMatchService';
 
@@ -45,7 +43,7 @@ export const createTournament = async (
     matches: [],
     createdAt: new Date().toISOString()
   };
-  await setDoc(doc(db, 'tournaments', id), t);
+  await safeSetDoc(doc(db, 'tournaments', id), t);
   return id;
 };
 
@@ -127,7 +125,7 @@ export const joinTournament = async (tournamentId: string, player: TournamentPla
     updateData.matches = generateBracket(updatedPlayers, t.maxPlayers);
   }
   
-  await updateDoc(ref, updateData);
+  await safeUpdateDoc(ref, updateData);
 };
 
 export const startMatch = async (tournamentId: string, matchId: string, timeControl: TimeControl): Promise<string> => {
@@ -151,7 +149,7 @@ export const startMatch = async (tournamentId: string, matchId: string, timeCont
   if (!sessionId) throw new Error("Failed to create match");
 
   // Attach tournament info to the match session
-  await updateDoc(doc(db, 'online_matches', sessionId), {
+  await safeUpdateDoc(doc(db, 'online_matches', sessionId), {
     tournamentId,
     tournamentMatchId: matchId
   });
@@ -159,7 +157,7 @@ export const startMatch = async (tournamentId: string, matchId: string, timeCont
   const updatedMatches = [...t.matches];
   updatedMatches[matchIndex] = { ...m, matchSessionId: sessionId, status: 'in_progress' };
   
-  await updateDoc(ref, { matches: updatedMatches });
+  await safeUpdateDoc(ref, { matches: updatedMatches });
   
   return sessionId;
 };
@@ -189,9 +187,9 @@ export const advanceTournamentMatch = async (tournamentId: string, matchId: stri
     }
   } else {
     // Finals!
-    await updateDoc(ref, { matches: updatedMatches, winnerId, status: 'completed' });
+    await safeUpdateDoc(ref, { matches: updatedMatches, winnerId, status: 'completed' });
     return;
   }
   
-  await updateDoc(ref, { matches: updatedMatches });
+  await safeUpdateDoc(ref, { matches: updatedMatches });
 };

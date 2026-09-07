@@ -2,19 +2,15 @@ import {
   collection, 
   doc, 
   getDoc, 
-  setDoc, 
-  updateDoc, 
-  deleteDoc, 
   query, 
   where, 
   getDocs, 
   onSnapshot, 
   serverTimestamp,
-  addDoc,
   orderBy,
   limit
 } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../utils/firebase';
+import { db, handleFirestoreError, OperationType, safeAddDoc, safeSetDoc, safeUpdateDoc, safeDeleteDoc } from '../utils/firebase';
 import { FriendUser, FriendRequestItem, UserRole } from '../types/chess';
 import { UserProfileData } from '../context/AuthContext';
 
@@ -151,7 +147,7 @@ const existing = await getDocs(q);
       createdAt: new Date().toISOString()
     };
 
-    await addDoc(collection(db, 'friend_requests'), reqData);
+    await safeAddDoc(collection(db, 'friend_requests'), reqData);
     return { success: true, message: `Friend request sent to ${targetUser.displayName}!` };
   } catch (e: any) {
     console.error('Error sending friend request:', e);
@@ -169,19 +165,19 @@ export const respondToFriendRequest = async (
   try {
     const reqRef = doc(db, 'friend_requests', requestId);
     if (!accept) {
-      await updateDoc(reqRef, { status: 'declined', updatedAt: new Date().toISOString() });
+      await safeUpdateDoc(reqRef, { status: 'declined', updatedAt: new Date().toISOString() });
       return true;
     }
 
     // Accept request
-    await updateDoc(reqRef, { status: 'accepted', updatedAt: new Date().toISOString() });
+    await safeUpdateDoc(reqRef, { status: 'accepted', updatedAt: new Date().toISOString() });
 
     // Store friend relationship under both users
     const myFriendRef = doc(db, `users/${currentUserId}/friends/${otherUserId}`);
     const otherFriendRef = doc(db, `users/${otherUserId}/friends/${currentUserId}`);
 
-    await setDoc(myFriendRef, { friendUid: otherUserId, addedAt: new Date().toISOString() }, { merge: true });
-    await setDoc(otherFriendRef, { friendUid: currentUserId, addedAt: new Date().toISOString() }, { merge: true });
+    await safeSetDoc(myFriendRef, { friendUid: otherUserId, addedAt: new Date().toISOString() }, { merge: true });
+    await safeSetDoc(otherFriendRef, { friendUid: currentUserId, addedAt: new Date().toISOString() }, { merge: true });
 
     return true;
   } catch (e) {
@@ -292,8 +288,8 @@ export const listenToFriendsList = (
 // Remove friend
 export const removeFriendRelationship = async (userId: string, friendId: string): Promise<boolean> => {
   try {
-    await deleteDoc(doc(db, `users/${userId}/friends/${friendId}`));
-    await deleteDoc(doc(db, `users/${friendId}/friends/${userId}`));
+    await safeDeleteDoc(doc(db, `users/${userId}/friends/${friendId}`));
+    await safeDeleteDoc(doc(db, `users/${friendId}/friends/${userId}`));
     return true;
   } catch (e) {
     console.error('Error removing friend:', e);
@@ -304,13 +300,13 @@ export const removeFriendRelationship = async (userId: string, friendId: string)
 export const blockUser = async (currentUid: string, targetUid: string, targetName: string): Promise<boolean> => {
   try {
     const blockRef = doc(db, `users/${currentUid}/blocked/${targetUid}`);
-    await setDoc(blockRef, { uid: targetUid, displayName: targetName, blockedAt: new Date().toISOString() });
+    await safeSetDoc(blockRef, { uid: targetUid, displayName: targetName, blockedAt: new Date().toISOString() });
     
     // Also remove from friends list if they are friends
     const myFriendRef = doc(db, `users/${currentUid}/friends/${targetUid}`);
     const theirFriendRef = doc(db, `users/${targetUid}/friends/${currentUid}`);
-    await deleteDoc(myFriendRef);
-    await deleteDoc(theirFriendRef);
+    await safeDeleteDoc(myFriendRef);
+    await safeDeleteDoc(theirFriendRef);
     
     return true;
   } catch (e) {
@@ -322,7 +318,7 @@ export const blockUser = async (currentUid: string, targetUid: string, targetNam
 export const unblockUser = async (currentUid: string, targetUid: string): Promise<boolean> => {
   try {
     const blockRef = doc(db, `users/${currentUid}/blocked/${targetUid}`);
-    await deleteDoc(blockRef);
+    await safeDeleteDoc(blockRef);
     return true;
   } catch (e) {
     console.error('Failed to unblock user', e);

@@ -41,8 +41,8 @@ import { FeedbackModal } from './FeedbackModal';
 import { DeveloperSettingsModal } from './DeveloperSettingsModal';
 import { ChessAvatarModal } from './ChessAvatarModal';
 import { AVATAR_PRESETS, compressAndResizeImage } from '../utils/imageUtils';
-import { collection, doc, onSnapshot, deleteDoc } from 'firebase/firestore';
-import { db, storage } from '../utils/firebase';
+import { collection, doc, onSnapshot } from 'firebase/firestore';
+import { db, storage, safeDeleteDoc } from '../utils/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { sanitizeChatText } from '../utils/security';
 
@@ -144,7 +144,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
       return () => unsub();
     }
   }, [user?.uid, isOpen]);
-  const handleUnblock = async (uid: string) => { if(user) { await deleteDoc(doc(db, `users/${user.uid}/blocked/${uid}`)); } };
+  const handleUnblock = async (uid: string) => { if(user) { await safeDeleteDoc(doc(db, `users/${user.uid}/blocked/${uid}`)); } };
   const [linkError, setLinkError] = useState('');
   
   const handleTogglePrivacy = async () => {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { doc, getDoc, setDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
-import { db } from '../utils/firebase';
+import { doc, getDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { db, safeSetDoc } from '../utils/firebase';
 import { Trash2, Plus, RefreshCw } from 'lucide-react';
 
 export const StickerManager: React.FC = () => {
@@ -35,7 +35,7 @@ export const StickerManager: React.FC = () => {
     setError('');
     try {
       const updated = [...stickers, newUrl.trim()];
-      await setDoc(doc(db, 'system_configs', 'stickers'), {
+      await safeSetDoc(doc(db, 'system_configs', 'stickers'), {
         id: 'stickers',
         urls: updated,
         updatedAt: serverTimestamp()
@@ -53,7 +53,7 @@ export const StickerManager: React.FC = () => {
     setError('');
     try {
       const updated = stickers.filter((_, i) => i !== indexToRemove);
-      await setDoc(doc(db, 'system_configs', 'stickers'), {
+      await safeSetDoc(doc(db, 'system_configs', 'stickers'), {
         id: 'stickers',
         urls: updated,
         updatedAt: serverTimestamp()

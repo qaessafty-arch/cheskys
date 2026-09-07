@@ -1,5 +1,5 @@
-import { doc, updateDoc, onSnapshot, collection, query, where, serverTimestamp } from 'firebase/firestore';
-import { db } from '../utils/firebase';
+import { doc, onSnapshot, collection, query, where, serverTimestamp } from 'firebase/firestore';
+import { db, safeUpdateDoc } from '../utils/firebase';
 
 /**
  * Presence Service for Chesskys PRO
@@ -8,7 +8,7 @@ import { db } from '../utils/firebase';
 export const updateUserPresence = async (uid: string, status: 'online' | 'offline' | 'in-game', matchId?: string) => {
   if (!uid) return;
   const userRef = doc(db, 'users', uid);
-  await updateDoc(userRef, {
+  await safeUpdateDoc(userRef, {
     presence: {
       status,
       lastSeen: new Date().toISOString(),

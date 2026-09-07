@@ -3,15 +3,12 @@ import {
   doc, 
   getDocs, 
   getDoc, 
-  setDoc, 
-  updateDoc, 
-  deleteDoc, 
   query, 
   limit, 
   orderBy, 
   getDocFromServer
 } from 'firebase/firestore';
-import { db, auth, handleFirestoreError, OperationType } from '../utils/firebase';
+import { db, auth, handleFirestoreError, OperationType, safeSetDoc, safeDeleteDoc, isFirestoreQuotaExhausted } from '../utils/firebase';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 export interface DatabaseCollectionMeta {
@@ -112,7 +109,7 @@ export const writeDatabaseDocument = async (
 ): Promise<boolean> => {
   try {
     const targetDoc = doc(db, collectionName, docId);
-    await setDoc(targetDoc, {
+    await safeSetDoc(targetDoc, {
       ...data,
       updatedAt: new Date().toISOString()
     }, { merge: true });
@@ -133,7 +130,7 @@ export const deleteDatabaseDocument = async (
 ): Promise<boolean> => {
   try {
     const targetDoc = doc(db, collectionName, docId);
-    await deleteDoc(targetDoc);
+    await safeDeleteDoc(targetDoc);
     return true;
   } catch (err: any) {
     handleFirestoreError(err, OperationType.DELETE, collectionName);
@@ -151,7 +148,7 @@ export const seedSampleDatabaseData = async (): Promise<{ seeded: number; errors
 
   // 1. Seed System Announcement
   try {
-    await setDoc(doc(db, 'announcements', 'welcome_v2'), {
+    await safeSetDoc(doc(db, 'announcements', 'welcome_v2'), {
       id: 'welcome_v2',
       title: '☀️ Welcome to Chesskys PRO Cloud Arena',
       content: 'Cloud Firestore database is live and synchronized with real-time multiplayer, leaderboard rankings, tactics puzzles, and battle audits.',
@@ -208,7 +205,7 @@ export const seedSampleDatabaseData = async (): Promise<{ seeded: number; errors
 
   for (const u of sampleUsers) {
     try {
-      await setDoc(doc(db, 'users', u.uid), {
+      await safeSetDoc(doc(db, 'users', u.uid), {
         ...u,
         updatedAt: new Date().toISOString()
       }, { merge: true });
@@ -221,7 +218,7 @@ export const seedSampleDatabaseData = async (): Promise<{ seeded: number; errors
 
   // 3. Seed Sample Tactical Puzzle
   try {
-    await setDoc(doc(db, 'authored_puzzles', 'puzzle_arabian_mate'), {
+    await safeSetDoc(doc(db, 'authored_puzzles', 'puzzle_arabian_mate'), {
       id: 'puzzle_arabian_mate',
       title: 'Mountain Fortress Arabian Mate',
       description: 'Coordinate knight and rook to trap the enemy king against the corner rim.',

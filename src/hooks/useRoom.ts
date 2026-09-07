@@ -1,8 +1,6 @@
 import { useRoom as _useRoom } from '../context/RoomContext';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../utils/firebase';
 
 export function useRoom() {
   const room = _useRoom();

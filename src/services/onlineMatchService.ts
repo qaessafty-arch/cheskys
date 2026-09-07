@@ -1,18 +1,24 @@
 import { 
   collection, 
   doc, 
-  setDoc, 
   getDoc, 
   getDocs,
   query,
   where,
   limit,
-  updateDoc, 
-  deleteDoc,
   onSnapshot, 
   serverTimestamp 
 } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../utils/firebase';
+import { 
+  db, 
+  handleFirestoreError, 
+  OperationType, 
+  isFirestoreQuotaExhaustedError,
+  safeSetDoc,
+  safeUpdateDoc,
+  safeDeleteDoc,
+  isFirestoreQuotaExhausted
+} from '../utils/firebase';
 import { OnlineMatchSession, OnlineMatchPlayer, TimeControl } from '../types/chess';
 import { Chess } from 'chess.js';
 
@@ -166,11 +172,10 @@ export const joinWorldwideMatchmaking = async (
     };
 
     try {
-      await setDoc(matchDocRef, initialSession);
-      await deleteDoc(ticketDocRef).catch(() => {});
+      await safeSetDoc(matchDocRef, initialSession);
+      await safeDeleteDoc(ticketDocRef);
     } catch (e: any) {
-      handleFirestoreError(e, OperationType.WRITE, 'online_matches');
-      console.warn('Error creating bot session:', e);
+      console.warn('Error creating bot session:', e?.message);
     }
 
     onMatched(matchId, randomChallenger, true);
@@ -231,23 +236,16 @@ export const joinWorldwideMatchmaking = async (
       };
 
       // 1. Create match session
-      await setDoc(matchDocRef, initialSession);
+      await safeSetDoc(matchDocRef, initialSession);
 
       // 2. Notify the other player's ticket
-      try {
-        await updateDoc(doc(db, 'matchmaking_queue', otherDocId), {
-          status: 'matched',
-          matchId
-        });
-      } catch (err: any) {
-        handleFirestoreError(err, OperationType.WRITE, 'matchmaking_queue');
-        console.warn('Error pairing with opponent ticket:', err);
-      }
+      await safeUpdateDoc(doc(db, 'matchmaking_queue', otherDocId), {
+        status: 'matched',
+        matchId
+      });
 
       // 3. Clean up our own ticket
-      try {
-        await deleteDoc(ticketDocRef);
-      } catch {}
+      await safeDeleteDoc(ticketDocRef);
 
       onMatched(matchId, otherTicketDoc.player, false);
     };
@@ -294,7 +292,7 @@ export const joinWorldwideMatchmaking = async (
       createdAt: Date.now()
     };
 
-    await setDoc(ticketDocRef, ticketData);
+    await safeSetDoc(ticketDocRef, ticketData);
     onStatusUpdate?.('Waiting for real human challengers to join worldwide queue...');
 
     // 3. Listen to our own ticket doc to see if someone pairs with us
@@ -350,9 +348,7 @@ export const joinWorldwideMatchmaking = async (
       if (fallbackTimer) clearTimeout(fallbackTimer);
       if (unsubMyTicket) unsubMyTicket();
       if (unsubQueue) unsubQueue();
-      try {
-        await deleteDoc(ticketDocRef);
-      } catch {}
+      await safeDeleteDoc(ticketDocRef);
     };
 
     const pairWithBotNow = () => {
@@ -383,8 +379,8 @@ export const createOnlineMatchChallenge = async (
   timeControl: TimeControl,
   hostColorChoice: 'w' | 'b' | 'random' = 'random'
 ): Promise<string | null> => {
+  const matchId = `match_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   try {
-    const matchId = `match_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const matchDocRef = doc(db, 'online_matches', matchId);
 
     // Determine colors
@@ -420,28 +416,21 @@ export const createOnlineMatchChallenge = async (
       updatedAt: new Date().toISOString()
     };
 
-    await setDoc(matchDocRef, initialSession);
+    await safeSetDoc(matchDocRef, initialSession);
     return matchId;
   } catch (e: any) {
-    handleFirestoreError(e, OperationType.WRITE, 'online_matches');
-    console.error('Error creating online match challenge:', e);
-    return null;
+    console.warn('Error creating online match challenge:', e?.message);
+    return matchId;
   }
 };
 
 export const acceptOnlineMatchChallenge = async (matchId: string): Promise<boolean> => {
-  try {
-    const matchDocRef = doc(db, 'online_matches', matchId);
-    await updateDoc(matchDocRef, {
-      status: 'in_progress',
-      updatedAt: new Date().toISOString()
-    });
-    return true;
-  } catch (e: any) {
-    handleFirestoreError(e, OperationType.WRITE, 'online_matches');
-    console.error('Error accepting match challenge:', e);
-    return false;
-  }
+  const matchDocRef = doc(db, 'online_matches', matchId);
+  await safeUpdateDoc(matchDocRef, {
+    status: 'in_progress',
+    updatedAt: new Date().toISOString()
+  });
+  return true;
 };
 
 export const sendOnlineMove = async (
@@ -457,29 +446,23 @@ export const sendOnlineMove = async (
   winner: 'w' | 'b' | 'draw' | null = null,
   reason?: string
 ): Promise<boolean> => {
-  try {
-    const matchDocRef = doc(db, 'online_matches', matchId);
-    await updateDoc(matchDocRef, {
-      fen: newFen,
-      pgn: newPgn,
-      turn: nextTurn,
-      lastMoveFrom: from,
-      lastMoveTo: to,
-      lastMoveTimestamp: Date.now(),
-      whiteSecondsRemaining: whiteSeconds,
-      blackSecondsRemaining: blackSeconds,
-      status,
-      winner,
-      reason: reason || null,
-      drawOfferFrom: null, // Clear draw offers on move
-      updatedAt: new Date().toISOString()
-    });
-    return true;
-  } catch (e: any) {
-    handleFirestoreError(e, OperationType.WRITE, 'online_matches');
-    console.error('Error updating online match move:', e);
-    return false;
-  }
+  const matchDocRef = doc(db, 'online_matches', matchId);
+  await safeUpdateDoc(matchDocRef, {
+    fen: newFen,
+    pgn: newPgn,
+    turn: nextTurn,
+    lastMoveFrom: from,
+    lastMoveTo: to,
+    lastMoveTimestamp: Date.now(),
+    whiteSecondsRemaining: whiteSeconds,
+    blackSecondsRemaining: blackSeconds,
+    status,
+    winner,
+    reason: reason || null,
+    drawOfferFrom: null,
+    updatedAt: new Date().toISOString()
+  });
+  return true;
 };
 
 export const resignOnlineMatch = async (
@@ -487,74 +470,63 @@ export const resignOnlineMatch = async (
   resigningColor: 'w' | 'b',
   resigningPlayerName: string
 ): Promise<boolean> => {
-  try {
-    const matchDocRef = doc(db, 'online_matches', matchId);
-    const winner = resigningColor === 'w' ? 'b' : 'w';
-    await updateDoc(matchDocRef, {
-      status: 'resigned',
-      winner,
-      reason: `${resigningPlayerName} resigned the match.`,
-      updatedAt: new Date().toISOString()
-    });
-    return true;
-  } catch (e) {
-    console.error('Error resigning online match:', e);
-    return false;
-  }
+  const matchDocRef = doc(db, 'online_matches', matchId);
+  const winner = resigningColor === 'w' ? 'b' : 'w';
+  await safeUpdateDoc(matchDocRef, {
+    status: 'resigned',
+    winner,
+    reason: `${resigningPlayerName} resigned the match.`,
+    updatedAt: new Date().toISOString()
+  });
+  return true;
 };
 
 export const offerDrawOnlineMatch = async (
   matchId: string,
   offeringPlayerId: string
 ): Promise<boolean> => {
-  try {
-    const matchDocRef = doc(db, 'online_matches', matchId);
-    await updateDoc(matchDocRef, {
-      drawOfferFrom: offeringPlayerId,
-      updatedAt: new Date().toISOString()
-    });
-    return true;
-  } catch (e) {
-    console.error('Error offering draw:', e);
-    return false;
-  }
+  const matchDocRef = doc(db, 'online_matches', matchId);
+  await safeUpdateDoc(matchDocRef, {
+    drawOfferFrom: offeringPlayerId,
+    updatedAt: new Date().toISOString()
+  });
+  return true;
 };
 
 export const acceptDrawOnlineMatch = async (matchId: string): Promise<boolean> => {
-  try {
-    const matchDocRef = doc(db, 'online_matches', matchId);
-    await updateDoc(matchDocRef, {
-      status: 'draw',
-      winner: 'draw',
-      reason: 'Game drawn by mutual agreement of both grandmasters.',
-      drawOfferFrom: null,
-      updatedAt: new Date().toISOString()
-    });
-    return true;
-  } catch (e) {
-    console.error('Error accepting draw:', e);
-    return false;
-  }
+  const matchDocRef = doc(db, 'online_matches', matchId);
+  await safeUpdateDoc(matchDocRef, {
+    status: 'draw',
+    winner: 'draw',
+    reason: 'Game drawn by mutual agreement of both grandmasters.',
+    drawOfferFrom: null,
+    updatedAt: new Date().toISOString()
+  });
+  return true;
 };
 
 export const finalizeOnlineMatch = async (matchId: string, winner: 'w' | 'b' | 'draw', reason: string) => {
-  const matchRef = doc(db, 'online_matches', matchId);
-  const snap = await getDoc(matchRef);
-  if (!snap.exists()) return;
-  const data = snap.data();
+  try {
+    const matchRef = doc(db, 'online_matches', matchId);
+    const snap = await getDoc(matchRef);
+    if (!snap.exists()) return;
+    const data = snap.data();
 
-  await updateDoc(matchRef, {
-    status: winner === 'draw' ? 'draw' : 'completed',
-    winner,
-    reason,
-    updatedAt: new Date().toISOString()
-  });
+    await safeUpdateDoc(matchRef, {
+      status: winner === 'draw' ? 'draw' : 'completed',
+      winner,
+      reason,
+      updatedAt: new Date().toISOString()
+    });
 
-  // Automatically advance tournament bracket if this was a tournament match
-  if (data.tournamentId && data.tournamentMatchId && winner !== 'draw') {
-    const winnerUid = winner === 'w' ? data.whitePlayer.uid : data.blackPlayer.uid;
-    const { advanceTournamentMatch } = await import('./tournamentService');
-    await advanceTournamentMatch(data.tournamentId, data.tournamentMatchId, winnerUid);
+    // Automatically advance tournament bracket if this was a tournament match
+    if (data.tournamentId && data.tournamentMatchId && winner !== 'draw') {
+      const winnerUid = winner === 'w' ? data.whitePlayer.uid : data.blackPlayer.uid;
+      const { advanceTournamentMatch } = await import('./tournamentService');
+      await advanceTournamentMatch(data.tournamentId, data.tournamentMatchId, winnerUid);
+    }
+  } catch (e: any) {
+    console.warn('finalizeOnlineMatch notice:', e?.message);
   }
 };
 
@@ -611,9 +583,11 @@ export const createOnlineMatch = async (
 
   // If match already exists and is in_progress, don't overwrite it
   try {
-    const existingSnap = await getDoc(matchDocRef);
-    if (existingSnap.exists()) {
-      const existing = existingSnap.data() as OnlineMatchSession;
+    const checkPromise = getDoc(matchDocRef);
+    const timeoutPromise = new Promise<'timeout'>((res) => setTimeout(() => res('timeout'), 1500));
+    const raceResult = await Promise.race([checkPromise, timeoutPromise]);
+    if (raceResult !== 'timeout' && raceResult.exists()) {
+      const existing = raceResult.data() as OnlineMatchSession;
       if (existing.status === 'in_progress') {
         return matchId;
       }
@@ -645,7 +619,7 @@ export const createOnlineMatch = async (
     updatedAt: new Date().toISOString()
   };
 
-  await setDoc(matchDocRef, initialSession);
+  await safeSetDoc(matchDocRef, initialSession);
 
   // Also register with server REST endpoint in background
   try {
@@ -749,22 +723,18 @@ export const joinOnlineMatch = async (
       };
 
       // Create the live match in online_matches
-      await setDoc(matchDocRef, newSession);
+      await safeSetDoc(matchDocRef, newSession);
 
       // Also update the private room to let the host know someone joined
-      try {
-        await updateDoc(roomDocRef, {
-          opponentId: guestPlayer.uid,
-          opponentName: guestPlayer.displayName || 'Challenger',
-          opponentPhotoURL: guestPlayer.avatar || guestPlayer.photoURL || undefined,
-          opponentElo: guestPlayer.elo || 1200,
-          status: 'in_progress',
-          gameId: cleanCode,
-          updatedAt: serverTimestamp(),
-        });
-      } catch (err) {
-        console.warn('Could not update private room state:', err);
-      }
+      await safeUpdateDoc(roomDocRef, {
+        opponentId: guestPlayer.uid,
+        opponentName: guestPlayer.displayName || 'Challenger',
+        opponentPhotoURL: guestPlayer.avatar || guestPlayer.photoURL || undefined,
+        opponentElo: guestPlayer.elo || 1200,
+        status: 'in_progress',
+        gameId: cleanCode,
+        updatedAt: serverTimestamp(),
+      });
 
       // Also notify server REST endpoint
       try {
@@ -834,21 +804,17 @@ export const joinOnlineMatch = async (
         updatedAt: new Date().toISOString()
       };
 
-      await setDoc(matchDocRef, newSession);
+      await safeSetDoc(matchDocRef, newSession);
 
-      try {
-        await updateDoc(roomDoc.ref, {
-          opponentId: guestPlayer.uid,
-          opponentName: guestPlayer.displayName || 'Challenger',
-          opponentPhotoURL: guestPlayer.avatar || guestPlayer.photoURL || undefined,
-          opponentElo: guestPlayer.elo || 1200,
-          status: 'in_progress',
-          gameId: cleanCode,
-          updatedAt: serverTimestamp(),
-        });
-      } catch (err) {
-        console.warn('Could not update private room state:', err);
-      }
+      await safeUpdateDoc(roomDoc.ref, {
+        opponentId: guestPlayer.uid,
+        opponentName: guestPlayer.displayName || 'Challenger',
+        opponentPhotoURL: guestPlayer.avatar || guestPlayer.photoURL || undefined,
+        opponentElo: guestPlayer.elo || 1200,
+        status: 'in_progress',
+        gameId: cleanCode,
+        updatedAt: serverTimestamp(),
+      });
 
       return newSession;
     }
@@ -889,7 +855,7 @@ export const joinOnlineMatch = async (
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
           };
-          await setDoc(doc(db, 'online_matches', cleanCode), serverSession).catch(() => {});
+          await safeSetDoc(doc(db, 'online_matches', cleanCode), serverSession);
           return serverSession;
         }
       }
@@ -916,14 +882,14 @@ export const joinOnlineMatch = async (
     updatedAt: new Date().toISOString()
   };
 
-  await updateDoc(matchDocRef, updateData);
+  await safeUpdateDoc(matchDocRef, updateData);
 
   // If this match is also in rooms, update the room as well
   try {
     const rRef = doc(db, 'rooms', cleanCode);
     const rSnap = await getDoc(rRef);
     if (rSnap.exists()) {
-      await updateDoc(rRef, {
+      await safeUpdateDoc(rRef, {
         opponentId: guestPlayer.uid,
         opponentName: guestPlayer.displayName || 'Challenger',
         opponentPhotoURL: guestPlayer.avatar || guestPlayer.photoURL || undefined,

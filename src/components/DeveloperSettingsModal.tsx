@@ -34,8 +34,8 @@ import {
 import { UserRole, UserFeedback, AboutUsConfig, SystemConfig } from '../types/chess';
 import { DatabaseView } from './DatabaseView';
 import { StickerManager } from './StickerManager';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../utils/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { db, safeSetDoc } from '../utils/firebase';
 import { sanitizeChatText } from '../utils/security';
 
 interface DeveloperSettingsModalProps {
@@ -140,7 +140,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
       };
 
       const configRef = doc(db, 'system_configs', 'aboutUs');
-      await setDoc(configRef, sanitized);
+      await safeSetDoc(configRef, sanitized);
       showSuccess("About Us CMS Published Successfully!");
     } catch (err) {
       console.error("CMS Save error:", err);

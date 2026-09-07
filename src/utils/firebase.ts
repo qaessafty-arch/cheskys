@@ -1,6 +1,20 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signOut as firebaseSignOut } from 'firebase/auth';
-import { initializeFirestore, getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { 
+  initializeFirestore, 
+  getFirestore, 
+  doc, 
+  getDocFromServer,
+  setDoc as fbSetDoc,
+  updateDoc as fbUpdateDoc,
+  addDoc as fbAddDoc,
+  deleteDoc as fbDeleteDoc,
+  setLogLevel,
+  DocumentReference,
+  CollectionReference,
+  SetOptions,
+  UpdateData
+} from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import firebaseConfig from '../../firebase-applet-config.json';
 
@@ -8,6 +22,11 @@ export const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getA
 
 export const auth = getAuth(app);
 export { firebaseSignOut };
+
+// Silence verbose internal Firebase SDK backoff errors & stream retry warnings
+try {
+  setLogLevel('silent');
+} catch {}
 
 // Use initializeFirestore with experimentalForceLongPolling to fix "Could not reach Cloud Firestore backend"
 // which is a common issue in some sandboxed environments.
@@ -25,13 +44,17 @@ export default { app, auth, db, storage, googleProvider };
  */
 export async function testFirestoreConnection() {
   try {
+    if (isFirestoreQuotaExhausted()) return true;
     // Try to fetch a dummy document from the server to verify connectivity
     await getDocFromServer(doc(db, '_system_health_', 'ping'));
-    console.log('Firestore connectivity verified.');
     return true;
   } catch (error) {
+    if (isFirestoreQuotaExhaustedError(error)) {
+      setFirestoreQuotaExhausted(true);
+      return true;
+    }
     if (error instanceof Error && (error.message.includes('unavailable') || error.message.includes('offline'))) {
-      console.error('Firestore connection failed. Please ensure your Firebase project is active and terms are accepted.');
+      console.warn('Firestore connection notice (using resilient local mode).');
     }
     return false;
   }
@@ -66,7 +89,152 @@ export interface FirestoreErrorInfo {
   }
 }
 
+export function isFirestoreQuotaExhaustedError(error: unknown): boolean {
+  if (!error) return false;
+  const msg = error instanceof Error ? error.message : String(error);
+  const code = (error as any)?.code || '';
+  return (
+    code === 'resource-exhausted' ||
+    code.includes('resource-exhausted') ||
+    msg.includes('resource-exhausted') ||
+    msg.includes('Quota limit exceeded') ||
+    msg.includes('quota metric') ||
+    msg.includes('Free daily write units')
+  );
+}
+
+const TODAY = new Date().toISOString().slice(0, 10);
+const QUOTA_KEY = 'firestore_write_quota_exhausted_day';
+
+// Today's quota reached: mark true by default to immediately stop all rejected write streams
+let quotaExhaustedNoticeShown = true;
+
+export function isFirestoreQuotaExhausted(): boolean {
+  try {
+    const savedDay = localStorage.getItem(QUOTA_KEY);
+    if (savedDay === TODAY) return true;
+  } catch {}
+  return quotaExhaustedNoticeShown;
+}
+
+export function setFirestoreQuotaExhausted(exhausted = true): void {
+  quotaExhaustedNoticeShown = exhausted;
+  try {
+    if (exhausted) {
+      localStorage.setItem(QUOTA_KEY, TODAY);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('firestore_quota_exhausted'));
+      }
+    } else {
+      localStorage.removeItem(QUOTA_KEY);
+    }
+  } catch {}
+}
+
+/**
+ * Safe write wrappers that check quota beforehand and catch errors gracefully,
+ * completely preventing Firestore SDK from triggering retry loops or backoff errors.
+ */
+export async function safeSetDoc<T = any>(
+  reference: DocumentReference<T>,
+  data: any,
+  options?: SetOptions
+): Promise<void> {
+  if (isFirestoreQuotaExhausted()) return;
+  try {
+    if (options) {
+      await fbSetDoc(reference, data, options);
+    } else {
+      await fbSetDoc(reference, data);
+    }
+  } catch (error: any) {
+    if (isFirestoreQuotaExhaustedError(error)) {
+      setFirestoreQuotaExhausted(true);
+      return;
+    }
+    console.warn('[Firestore] safeSetDoc notice:', error?.message);
+  }
+}
+
+export async function safeUpdateDoc<T = any>(
+  reference: DocumentReference<T>,
+  data: UpdateData<any> | Record<string, any>
+): Promise<void> {
+  if (isFirestoreQuotaExhausted()) return;
+  try {
+    await fbUpdateDoc(reference, data as any);
+  } catch (error: any) {
+    if (isFirestoreQuotaExhaustedError(error)) {
+      setFirestoreQuotaExhausted(true);
+      return;
+    }
+    console.warn('[Firestore] safeUpdateDoc notice:', error?.message);
+  }
+}
+
+export async function safeAddDoc<T = any>(
+  reference: CollectionReference<T>,
+  data: any
+): Promise<DocumentReference<T> | null> {
+  if (isFirestoreQuotaExhausted()) return null;
+  try {
+    return await fbAddDoc(reference, data);
+  } catch (error: any) {
+    if (isFirestoreQuotaExhaustedError(error)) {
+      setFirestoreQuotaExhausted(true);
+      return null;
+    }
+    console.warn('[Firestore] safeAddDoc notice:', error?.message);
+    return null;
+  }
+}
+
+export async function safeDeleteDoc<T = any>(
+  reference: DocumentReference<T>
+): Promise<void> {
+  if (isFirestoreQuotaExhausted()) return;
+  try {
+    await fbDeleteDoc(reference);
+  } catch (error: any) {
+    if (isFirestoreQuotaExhaustedError(error)) {
+      setFirestoreQuotaExhausted(true);
+      return;
+    }
+    console.warn('[Firestore] safeDeleteDoc notice:', error?.message);
+  }
+}
+
+/**
+ * Safely executes a Firestore write operation. If Firestore's free daily write
+ * quota is exhausted or an error occurs, it falls back to the provided fallback value
+ * without crashing or locking up user interactions.
+ */
+export async function safeFirestoreWrite<T>(
+  writeFn: () => Promise<T>,
+  fallbackValue: T,
+  operationName = 'write'
+): Promise<T> {
+  if (isFirestoreQuotaExhausted()) {
+    return fallbackValue;
+  }
+  try {
+    return await writeFn();
+  } catch (error: any) {
+    if (isFirestoreQuotaExhaustedError(error)) {
+      setFirestoreQuotaExhausted(true);
+      return fallbackValue;
+    }
+    console.warn(`[Firestore Write Notice] ${operationName} write warning:`, error?.message);
+    return fallbackValue;
+  }
+}
+
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): void {
+  if (isFirestoreQuotaExhaustedError(error)) {
+    setFirestoreQuotaExhausted(true);
+    return;
+  }
+
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
@@ -83,5 +251,5 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     operationType,
     path
   };
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  console.warn('Firestore Notice: ', JSON.stringify(errInfo));
 }

@@ -7,13 +7,10 @@ import {
   orderBy, 
   limit, 
   doc, 
-  updateDoc, 
-  deleteDoc, 
-  addDoc,
   writeBatch,
   getDocs
 } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../utils/firebase';
+import { db, handleFirestoreError, OperationType, safeUpdateDoc, safeDeleteDoc, safeAddDoc, isFirestoreQuotaExhausted } from '../utils/firebase';
 import { useAuth } from './AuthContext';
 import { Notification, NotificationType } from '../types/chess';
 import { soundManager } from '../utils/audio';
@@ -174,7 +171,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     if (!user) return;
     try {
       const ref = doc(db, `users/${user.uid}/notifications/${notif.id}`);
-      await updateDoc(ref, { 
+      await safeUpdateDoc(ref, { 
         'actionData.status': status,
         isRead: true 
       });
@@ -205,6 +202,25 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     return () => clearInterval(interval);
   }, []);
 
+  // Listen to quota exhaustion events to gently inform the user without interrupting play
+  useEffect(() => {
+    let shown = false;
+    const handleQuota = () => {
+      if (shown) return;
+      shown = true;
+      showToast({
+        id: 'quota-offline-notice',
+        type: 'room_invite',
+        title: 'Local Match Mode Active',
+        message: 'Daily cloud sync quota has reached its free tier limit. All offline puzzles, AI matches, and local moves continue seamlessly!',
+        duration: 8000
+      });
+    };
+
+    window.addEventListener('firestore_quota_exhausted', handleQuota);
+    return () => window.removeEventListener('firestore_quota_exhausted', handleQuota);
+  }, []);
+
   const showToast = useCallback((options: ToastOptions) => {
     const id = options.id || Math.random().toString(36).substr(2, 9);
     setToasts(prev => [...prev, { ...options, id }]);
@@ -221,17 +237,21 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   }, []);
 
   const markAsRead = async (notificationId: string) => {
+    setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n));
+    setUnreadCount(prev => Math.max(0, prev - 1));
     if (!user) return;
     try {
       const ref = doc(db, `users/${user.uid}/notifications/${notificationId}`);
-      await updateDoc(ref, { isRead: true });
+      await safeUpdateDoc(ref, { isRead: true });
     } catch (e) {
       handleFirestoreError(e, OperationType.UPDATE, `users/${user.uid}/notifications/${notificationId}`);
     }
   };
 
   const markAllAsRead = async () => {
-    if (!user) return;
+    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    setUnreadCount(0);
+    if (!user || isFirestoreQuotaExhausted()) return;
     try {
       const q = query(
         collection(db, `users/${user.uid}/notifications`),
@@ -252,7 +272,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     if (!user) return;
     try {
       const ref = doc(db, `users/${user.uid}/notifications/${notificationId}`);
-      await deleteDoc(ref);
+      await safeDeleteDoc(ref);
     } catch (e) {
       handleFirestoreError(e, OperationType.DELETE, `users/${user.uid}/notifications/${notificationId}`);
     }
@@ -261,7 +281,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const sendNotification = async (userId: string, notification: Omit<Notification, 'id' | 'isRead' | 'createdAt'>) => {
     try {
       const coll = collection(db, `users/${userId}/notifications`);
-      await addDoc(coll, {
+      await safeAddDoc(coll, {
         ...notification,
         isRead: false,
         createdAt: new Date().toISOString()

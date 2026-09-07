@@ -1,18 +1,15 @@
 import { 
   collection, 
   doc, 
-  addDoc, 
   onSnapshot, 
   query, 
   orderBy, 
   limit, 
   serverTimestamp,
   getDocs,
-  setDoc,
-  updateDoc,
   Timestamp
 } from 'firebase/firestore';
-import { db } from '../utils/firebase';
+import { db, safeAddDoc, safeSetDoc } from '../utils/firebase';
 import { DirectMessageItem } from '../types/chess';
 
 // --- Direct Messages (Private Friends Chat) ---
@@ -36,19 +33,19 @@ export const sendDirectMessage = async (
 ): Promise<string | null> => {
   try {
     const messagesRef = collection(db, `direct_messages/${chatId}/messages`);
-    const docRef = await addDoc(messagesRef, {
+    const docRef = await safeAddDoc(messagesRef, {
       ...message,
       createdAt: new Date().toISOString()
     });
 
     // Update the parent chat metadata
-    await setDoc(doc(db, 'direct_messages', chatId), {
+    await safeSetDoc(doc(db, 'direct_messages', chatId), {
       lastMessage: message.text,
       lastMessageTime: new Date().toISOString(),
       senderId: message.senderId
     }, { merge: true });
 
-    return docRef.id;
+    return docRef?.id || 'offline_dm';
   } catch (e) {
     console.error('Error sending direct message:', e);
     return null;
@@ -104,11 +101,11 @@ export const sendInGameMessage = async (
 ): Promise<string | null> => {
   try {
     const messagesRef = collection(db, `online_matches/${gameId}/chat`);
-    const docRef = await addDoc(messagesRef, {
+    const docRef = await safeAddDoc(messagesRef, {
       ...message,
       timestamp: serverTimestamp()
     });
-    return docRef.id;
+    return docRef?.id || 'offline_chat';
   } catch (e) {
     console.error('Error sending in-game message:', e);
     return null;
@@ -157,7 +154,7 @@ export const setInGameTypingStatus = async (
 ) => {
   try {
     const typingDocRef = doc(db, `online_matches/${gameId}/typing`, uid);
-    await setDoc(typingDocRef, {
+    await safeSetDoc(typingDocRef, {
       isTyping,
       updatedAt: serverTimestamp()
     });

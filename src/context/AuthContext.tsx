@@ -19,9 +19,6 @@ import {
 import { 
   doc, 
   getDoc, 
-  setDoc, 
-  updateDoc, 
-  deleteDoc,
   onSnapshot, 
   serverTimestamp,
   collection,
@@ -31,7 +28,17 @@ import {
   getDocs,
   addDoc
 } from 'firebase/firestore';
-import { auth, db, googleProvider, handleFirestoreError, OperationType } from '../utils/firebase';
+import { 
+  auth, 
+  db, 
+  googleProvider, 
+  handleFirestoreError, 
+  OperationType,
+  safeSetDoc,
+  safeUpdateDoc,
+  safeDeleteDoc,
+  isFirestoreQuotaExhausted
+} from '../utils/firebase';
 import { RespectLeaderboardEntry, UserRole, UserFeedback, UserPermissions } from '../types/chess';
 import { getHonorRank } from '../utils/respectSystem';
 
@@ -310,18 +317,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const seedDefaultDocs = async () => {
       try {
-        if (!auth.currentUser) return;
+        if (!auth.currentUser || isFirestoreQuotaExhausted()) return;
         const skyDocRef = doc(db, 'users', SKY_PROFILE_DEFAULT.uid);
         const skySnap = await getDoc(skyDocRef);
         if (!skySnap.exists()) {
-          await setDoc(skyDocRef, {
+          await safeSetDoc(skyDocRef, {
             ...SKY_PROFILE_DEFAULT,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
           });
         }
       } catch (err: any) {
-        handleFirestoreError(err, OperationType.WRITE, 'users');
         // Silent catch for background seeding
       }
     };
@@ -492,7 +498,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               updatedAt: serverTimestamp()
             };
 
-            await setDoc(userDocRef, newProfile);
+            await safeSetDoc(userDocRef, newProfile);
             setProfile(newProfile);
           }
         } catch (err: any) {
@@ -651,7 +657,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             await firebaseUpdateProfile(userCredential.user, { displayName: targetEmail === 'dev@chessky.local' ? 'q.brz' : 'sky' });
             // Save admin role in Firestore so security rules can grant access
             const userDocRef = doc(db, 'users', userCredential.user.uid);
-            await setDoc(userDocRef, {
+            await safeSetDoc(userDocRef, {
               uid: userCredential.user.uid,
               displayName: targetEmail === 'dev@chessky.local' ? 'q.brz' : 'sky',
               username: targetEmail === 'dev@chessky.local' ? 'q.brz' : 'sky',
@@ -781,13 +787,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       const userDocRef = doc(db, 'users', targetUid);
-      await updateDoc(userDocRef, {
+      await safeUpdateDoc(userDocRef, {
         ...updates,
         updatedAt: serverTimestamp()
       });
     } catch (e: any) {
-      handleFirestoreError(e, OperationType.WRITE, 'users');
-      console.warn('Owner badge/status cloud sync notice:', e);
+      console.warn('Owner badge/status cloud sync notice:', e?.message);
     }
   };
 
@@ -796,7 +801,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!auth.currentUser) throw new Error('Not logged in');
     try {
       await fetch('/api/auth/session-logout', { method: 'POST' });
-      await deleteDoc(doc(db, 'users', auth.currentUser.uid));
+      await safeDeleteDoc(doc(db, 'users', auth.currentUser.uid));
       await deleteUser(auth.currentUser);
       setUser(null);
       setProfile(null);
@@ -827,7 +832,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updatePrivacy = async (isPublic: boolean) => {
     if (!auth.currentUser) return;
     try {
-      await updateDoc(doc(db, 'users', auth.currentUser.uid), { isPublic });
+      await safeUpdateDoc(doc(db, 'users', auth.currentUser.uid), { isPublic });
       if (profile) setProfile({ ...profile, isPublic });
     } catch (err) {
       throw err;
@@ -891,7 +896,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       const userDocRef = doc(db, 'users', targetUid);
-      await updateDoc(userDocRef, {
+      await safeUpdateDoc(userDocRef, {
         respectPoints: newRespect,
         elo: newElo,
         executions: newExecutions,
@@ -903,8 +908,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updatedAt: serverTimestamp()
       });
     } catch (e: any) {
-      handleFirestoreError(e, OperationType.WRITE, 'users');
-      console.warn('Profile metric sync notice:', e);
+      console.warn('Profile metric sync notice:', e?.message);
     }
   };
 
@@ -955,13 +959,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       const userDocRef = doc(db, 'users', targetUid);
-      await setDoc(userDocRef, {
+      await safeSetDoc(userDocRef, {
         ...details,
         updatedAt: serverTimestamp()
       }, { merge: true });
     } catch (e: any) {
-      handleFirestoreError(e, OperationType.WRITE, 'users');
-      console.warn('Profile detail update notice:', e);
+      console.warn('Profile detail update notice:', e?.message);
     }
   };
 
@@ -1059,7 +1062,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateFeedbackStatus = async (feedbackId: string, status: 'pending' | 'reviewed' | 'resolved', note?: string) => {
     try {
       const fbRef = doc(db, 'feedbacks', feedbackId);
-      await updateDoc(fbRef, {
+      await safeUpdateDoc(fbRef, {
         status,
         ...(note ? { developerNote: note } : {}),
         updatedAt: serverTimestamp()
@@ -1076,7 +1079,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const deleteFeedbackItem = async (feedbackId: string) => {
     try {
       const fbRef = doc(db, 'feedbacks', feedbackId);
-      await deleteDoc(fbRef);
+      await safeDeleteDoc(fbRef);
     } catch (e) {
       console.warn('Cloud feedback delete:', e);
     }
@@ -1119,7 +1122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   ) => {
     try {
       const userRef = doc(db, 'users', targetUid);
-      await updateDoc(userRef, {
+      await safeUpdateDoc(userRef, {
         ...updates,
         updatedAt: serverTimestamp()
       });
