@@ -1,0 +1,256 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    /* ---------------------------------------------------------------- *
+     * Default Deny
+     * ---------------------------------------------------------------- */
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    /* ---------------------------------------------------------------- *
+     * Reusable Helpers
+     * ---------------------------------------------------------------- */
+    
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isDeveloper() {
+      return isSignedIn() && (
+        request.auth.token.get('role', '') == 'admin' ||
+        request.auth.token.get('email', '').lower() in [
+          'qaessafty@gmail.com', 
+          'qayssafty@gmail.com', 
+          'qaess.business@gmail.com',
+          'dev@chessky.local',
+          'sky@chessky.local'
+        ]
+      );
+    }
+
+    function isOwnerOf(targetUid) {
+      return isSignedIn() && (uid() == targetUid || isDeveloper());
+    }
+
+    /* ---------------------------------------------------------------- *
+     * Validation Blueprints
+     * ---------------------------------------------------------------- */
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'displayName'])
+        && data.uid is string && data.uid.size() <= 128
+        && data.displayName is string && data.displayName.size() <= 100;
+    }
+
+    function isValidOnlineMatch(data) {
+      return data.keys().hasAll(['id', 'fen', 'status', 'turn'])
+        && data.id is string && data.id.size() <= 128
+        && data.status in ['waiting', 'in_progress', 'completed', 'aborted', 'checkmate', 'resigned', 'draw', 'timeout', 'abandoned']
+        && data.turn in ['w', 'b'];
+    }
+
+    function isValidDirectMessage(data) {
+      return data.keys().hasAll(['senderId', 'text'])
+        && data.senderId is string && data.senderId.size() <= 128
+        && data.text is string && data.text.size() <= 5000;
+    }
+
+    /* ---------------------------------------------------------------- *
+     * Collections
+     * ---------------------------------------------------------------- */
+
+    match /guests/{guestId} {
+      allow read, write: if request.auth == null || request.auth.uid == guestId;
+    }
+
+    match /users/{userId} {
+      allow read: if isOwnerOf(userId);
+      allow create: if isOwnerOf(userId) && isValidUserProfile(incoming());
+      allow update: if isOwnerOf(userId) && isValidUserProfile(incoming());
+      allow delete: if false;
+
+      match /friends/{friendId} {
+        allow read: if isOwnerOf(userId) || isOwnerOf(friendId);
+        allow write: if isOwnerOf(userId) || isOwnerOf(friendId);
+      }
+
+      match /notifications/{notificationId} {
+        allow read: if isOwnerOf(userId);
+        allow create: if isSignedIn();
+        allow update: if isOwnerOf(userId);
+        allow delete: if isOwnerOf(userId);
+      }
+
+      match /blocked/{blockedId} {
+        allow read, write: if isOwnerOf(userId);
+      }
+    }
+
+    match /friend_requests/{requestId} {
+      allow read: if isSignedIn() && (resource.data.fromUserId == uid() || resource.data.toUserId == uid() || isDeveloper());
+      allow create: if isSignedIn() && incoming().fromUserId == uid();
+      allow update: if isSignedIn() && (existing().toUserId == uid() || existing().fromUserId == uid() || isDeveloper());
+      allow delete: if isSignedIn() && (existing().toUserId == uid() || existing().fromUserId == uid() || isDeveloper());
+    }
+
+    match /online_matches/{matchId} {
+      function isPlayer() {
+        let whiteId = resource.data.get(['whitePlayer', 'uid'], '');
+        let blackId = resource.data.get(['blackPlayer', 'uid'], '');
+        let guestId = resource.data.get('guestId', '');
+        let hostId = resource.data.get('hostId', '');
+        return isOwnerOf(whiteId) || isOwnerOf(blackId) || isOwnerOf(guestId) || isOwnerOf(hostId);
+      }
+
+      allow read: if true; // Allow spectators
+      allow create: if isSignedIn() && isValidOnlineMatch(incoming());
+      allow update: if (isPlayer() || resource.data.status == 'waiting' || isDeveloper()) && isValidOnlineMatch(incoming());
+      allow delete: if isDeveloper();
+
+      match /chat/{messageId} {
+        allow read: if true;
+        allow create: if isSignedIn() && isOwnerOf(incoming().senderUid);
+      }
+
+      match /typing/{typingUserId} {
+        allow read: if true;
+        allow write: if isOwnerOf(typingUserId);
+      }
+    }
+
+    match /tournaments/{tournamentId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn(); // Simplified for now to allow joining
+      allow delete: if isDeveloper() || isOwnerOf(resource.data.creatorId);
+    }
+
+    match /direct_messages/{chatId} {
+      function inChat(data) {
+        return isSignedIn() && (
+          data.fromUserId == uid() || 
+          data.toUserId == uid() || 
+          isDeveloper()
+        );
+      }
+      allow read: if inChat(resource.data);
+      allow create: if inChat(incoming());
+      allow update: if inChat(existing()) || isDeveloper();
+      allow delete: if isDeveloper();
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn() && (
+          get(/databases/$(database)/documents/direct_messages/$(chatId)).data.fromUserId == uid() ||
+          get(/databases/$(database)/documents/direct_messages/$(chatId)).data.toUserId == uid() ||
+          isDeveloper()
+        );
+        allow create: if isSignedIn() && isOwnerOf(incoming().senderId) && isValidDirectMessage(incoming());
+      }
+    }
+
+    match /matchmaking_queue/{ticketId} {
+      allow read, list: if true;
+      allow create: if isOwnerOf(incoming().player.uid) && incoming().status == 'waiting';
+      allow update: if isOwnerOf(existing().player.uid) || (existing().status == 'waiting' && incoming().status == 'matched');
+      allow delete: if isOwnerOf(existing().player.uid) || isDeveloper();
+    }
+
+    match /authored_puzzles/{puzzleId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update: if isOwnerOf(existing().authorUid) || isDeveloper();
+      allow delete: if isOwnerOf(existing().authorUid) || isDeveloper();
+    }
+
+    match /game_logs/{logId} {
+      allow read: if isOwnerOf(resource.data.userId);
+      allow create: if isOwnerOf(incoming().userId);
+      allow update: if false;
+      allow delete: if isOwnerOf(resource.data.userId);
+    }
+
+    match /feedbacks/{feedbackId} {
+      allow create: if true;
+      allow read: if isDeveloper() || (isSignedIn() && resource.data.userId == uid());
+      allow update, delete: if isDeveloper();
+    }
+
+    match /announcements/{announcementId} {
+      allow read: if true;
+      allow write: if isDeveloper();
+    }
+
+    match /system_health/{docId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /system_configs/{configId} {
+      // Allow everyone to read essential public configurations
+      allow read: if configId in ['aboutUs', 'stickers'] || isDeveloper();
+      // Only developers can write system configurations
+      allow write: if isDeveloper();
+    }
+
+    // Private Rooms - accessible to authenticated users
+    match /rooms/{roomId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (
+        resource.data.creatorId == uid() ||
+        resource.data.opponentId == uid() ||
+        resource.data.status == 'waiting' ||
+        isDeveloper()
+      );
+      allow delete: if isSignedIn() && (
+        (resource.data.creatorId == uid() && resource.data.status == 'waiting') ||
+        isDeveloper()
+      );
+
+      match /invites/{inviteId} {
+        allow read, write: if isSignedIn();
+      }
+
+      match /chat/{chatId} {
+        allow read, write: if isSignedIn();
+      }
+
+      match /messages/{messageId} {
+        allow read, write: if isSignedIn();
+      }
+    }
+
+    // User invites - for notifications and direct room invites
+    match /user_invites/{inviteId} {
+      allow read: if isSignedIn() && (
+        resource.data.userId == uid() ||
+        resource.data.invitedBy == uid() ||
+        isDeveloper()
+      );
+      allow write: if isSignedIn();
+    }
+  }
+}

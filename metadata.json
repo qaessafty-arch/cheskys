@@ -1,0 +1,8 @@
+{
+  "name": "Remix Chesskys",
+  "description": "Premier interactive chess platform featuring AI bots, live evaluation engine, tactical puzzles, game analysis, customizable themes, and move history.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
