@@ -673,7 +673,13 @@ PGN: ${pgn}` }]
 
 if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        // This custom Express server is also used through the Vercel preview
+        // proxy, which does not forward Vite's upgrade socket reliably. Keep
+        // the runtime preview free of failed HMR WebSocket connections.
+        hmr: false,
+      },
       appType: 'spa',
     });
     app.use(vite.middlewares);

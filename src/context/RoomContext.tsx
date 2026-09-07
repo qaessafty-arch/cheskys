@@ -10,6 +10,7 @@ import {
   deleteDoc,
   deleteField,
   onSnapshot,
+  runTransaction,
   query,
   where,
   serverTimestamp,
@@ -126,8 +127,9 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [countdown, setCountdown] = useState<number | null>(null);
   const [activeGameId, setActiveGameId] = useState<string | null>(null);
 
-  const countdownTimerRef = useRef<any>(null);
+  const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const currentRoomRef = useRef<PrivateRoom | null>(null);
+  const launchedRoomRef = useRef<string | null>(null);
   currentRoomRef.current = currentRoom;
 
   // Migration helper: Strip legacy bloated fields and backfill subcollections if present
@@ -214,7 +216,12 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         // Handle game start countdown if ready
-        if (data.status === 'ready' && prevStatus !== 'ready' && prevStatus !== 'in_progress') {
+        if (
+          data.status === 'ready' &&
+          prevStatus !== 'ready' &&
+          prevStatus !== 'in_progress' &&
+          launchedRoomRef.current !== data.roomCode
+        ) {
           startCountdownFlow(data);
         }
 
@@ -228,7 +235,14 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    return () => unsub();
+    return () => {
+      unsub();
+      if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+        countdownTimerRef.current = null;
+        setCountdown(null);
+      }
+    };
   }, [currentRoom?.roomCode, cleanUpLegacyRoomDoc]);
 
   // Real-time listener for incoming user invites
@@ -260,7 +274,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // 3-second automatic countdown when status is 'ready'
   const startCountdownFlow = (room: PrivateRoom) => {
-    if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
+    if (countdownTimerRef.current || launchedRoomRef.current === room.roomCode) return;
 
     let count = 3;
     setCountdown(count);
@@ -277,8 +291,9 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCountdown(null);
         soundManager.playCountdownTick(true);
 
-        // If creator, create or link the online match session and update status to in_progress
-        if (profile?.uid === room.creatorId) {
+        // Only the creator launches the session, and only once per room.
+        if (profile?.uid === room.creatorId && launchedRoomRef.current !== room.roomCode) {
+          launchedRoomRef.current = room.roomCode;
           try {
             const hostPlayer: OnlineMatchPlayer = {
               uid: room.creatorId,
@@ -519,22 +534,8 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const opponentPhotoURL = profile.photoURL || undefined;
       const opponentElo = typeof profile.elo === 'number' ? profile.elo : 1200;
 
-      // Write system announcement to messages subcollection
-      try {
-        const msgColl = collection(db, 'rooms', cleanCode, 'messages');
-        await addDoc(msgColl, {
-          userId: 'system',
-          userName: 'System',
-          message: `${opponentName} joined the room! 🎉`,
-          timestamp: serverTimestamp(),
-          isSystem: true,
-          type: 'system',
-        });
-      } catch (err) {
-        console.warn('Could not write join message to subcollection:', err);
-      }
-
-      // Update room document with ONLY essential fields, explicitly pruning bloated legacy arrays to prevent 1MB limit failures
+      // Claim the room atomically before doing any nonessential writes. This prevents two challengers
+      // from both joining when they submit the same code at nearly the same time.
       const updatePayload: Record<string, any> = {
         opponentId: profile.uid,
         opponentName,
@@ -546,7 +547,29 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data.chat) updatePayload.chat = deleteField();
       if (data.invites) updatePayload.invites = deleteField();
 
-      await updateDoc(roomDoc, updatePayload);
+      const claimedRoom = await runTransaction(db, async (transaction) => {
+        const latestSnap = await transaction.get(roomDoc);
+        if (!latestSnap.exists()) throw new Error('No room found with that code. Please check and try again.');
+        const latestRoom = latestSnap.data() as PrivateRoom;
+        if (latestRoom.status !== 'waiting') {
+          throw new Error('This room was just joined by another player.');
+        }
+        if (latestRoom.creatorId === profile.uid) {
+          throw new Error("You are the creator of this room. Share your code with a friend!");
+        }
+        transaction.update(roomDoc, updatePayload);
+        return latestRoom;
+      });
+
+      // Chat and online-match mirroring are best-effort side effects and must not delay the room claim.
+      void addDoc(collection(db, 'rooms', cleanCode, 'messages'), {
+        userId: 'system',
+        userName: 'System',
+        message: `${opponentName} joined the room!`,
+        timestamp: serverTimestamp(),
+        isSystem: true,
+        type: 'system',
+      }).catch((err) => console.warn('Could not write join message to subcollection:', err));
 
       // Also sync into online_matches
       try {
@@ -562,7 +585,8 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const joinedRoom: PrivateRoom = {
-        ...data,
+        ...claimedRoom,
+        roomCode: cleanCode,
         opponentId: profile.uid,
         opponentName,
         opponentPhotoURL,
