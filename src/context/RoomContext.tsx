@@ -639,6 +639,63 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
 
+        // Fallback: check server API endpoint /api/games/${cleanCode}/state
+        try {
+          const apiRes = await fetch(`/api/games/${encodeURIComponent(cleanCode)}/state`);
+          if (apiRes.ok) {
+            const serverState = await apiRes.json();
+            if (serverState) {
+              if (serverState.status && serverState.status !== 'waiting' && serverState.guestId && serverState.guestId !== profile.uid) {
+                throw new Error('This match is already in progress or completed.');
+              }
+              if (serverState.hostId === profile.uid) {
+                throw new Error('You are the creator of this match. Share your code with a friend!');
+              }
+
+              const guestPlayer: OnlineMatchPlayer = {
+                uid: profile.uid,
+                displayName: profile.displayName || 'Opponent',
+                avatar: profile.photoURL || undefined,
+                elo: typeof profile.elo === 'number' ? profile.elo : 1200,
+              };
+              await joinOnlineMatch(cleanCode, guestPlayer);
+              setActiveGameId(cleanCode);
+
+              const synthRoom: PrivateRoom = {
+                roomId: cleanCode,
+                roomCode: cleanCode,
+                creatorId: serverState.hostId || 'host',
+                creatorName: serverState.whitePlayer?.displayName || 'Host',
+                creatorElo: serverState.whitePlayer?.elo || 1200,
+                creatorColor: serverState.whitePlayer?.uid === serverState.hostId ? 'white' : 'black',
+                opponentColor: serverState.whitePlayer?.uid === serverState.hostId ? 'black' : 'white',
+                opponentId: profile.uid,
+                opponentName: profile.displayName || 'Opponent',
+                opponentElo: typeof profile.elo === 'number' ? profile.elo : 1200,
+                status: serverState.status === 'in_progress' ? 'in_progress' : 'ready',
+                settings: {
+                  timeControlId: serverState.timeControl?.id || 'rapid',
+                  timeControlName: serverState.timeControl?.name || 'Rapid 10+0',
+                  initialSeconds: serverState.timeControl?.initialSeconds || 600,
+                  incrementSeconds: serverState.timeControl?.incrementSeconds || 0,
+                  color: 'random',
+                  rated: true,
+                },
+                createdAt: new Date(),
+                expiresAt: new Date(Date.now() + 600000),
+                gameId: cleanCode,
+              };
+              setCurrentRoom(synthRoom);
+              soundManager.playMatchFound();
+              return synthRoom;
+            }
+          }
+        } catch (e: any) {
+          if (e?.message?.includes('already in progress') || e?.message?.includes('creator of this match')) {
+            throw e;
+          }
+        }
+
         throw new Error('No room found with that code. Please check and try again.');
       }
 
