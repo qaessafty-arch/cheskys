@@ -42,14 +42,10 @@ export class MatchmakingEngine {
     // Process the queue every 2 seconds.
     setInterval(() => this.processQueue(), 2000);
 
-    // Middleware to extract and validate auth token from handshake
+    // Middleware to extract credentials or fallback gracefully for guests
     this.io.use((socket, next) => {
       const token = socket.handshake.auth?.token;
-      const uid = socket.handshake.auth?.uid;
-
-      if (!token && !uid) {
-        return next(new Error('Authentication error: Missing credentials.'));
-      }
+      const uid = socket.handshake.auth?.uid || `guest_${socket.id || Math.random().toString(36).slice(2)}`;
 
       // Attach credentials to socket.data for secure lifecycle use
       socket.data = { ...socket.data, token, uid };
