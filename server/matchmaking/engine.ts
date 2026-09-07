@@ -86,6 +86,12 @@ export class MatchmakingEngine {
     socket.on('cancelWaiting', (data, cb) =>
       this.handleCancelWaiting(socket, data, cb),
     );
+    socket.on('challenge_timeout', (data, cb) =>
+      this.handleCancelWaiting(socket, data, cb),
+    );
+    socket.on('cancel_challenge', (data, cb) =>
+      this.handleCancelWaiting(socket, data, cb),
+    );
 
     socket.on('joinGame', (data, cb) =>
       this.handleJoinGame(socket, data, cb),
@@ -324,6 +330,12 @@ export class MatchmakingEngine {
       this.userToMatch.set(uid, match.matchId);
     }
 
+    if (match.whiteUid && match.blackUid) {
+      if (match.status === 'waiting') {
+        match.status = 'active';
+      }
+    }
+
     const roomState = {
       success: true,
       matchId: match.matchId,
@@ -341,6 +353,14 @@ export class MatchmakingEngine {
     socket.emit('match_joined', roomState);
     socket.emit('roomJoined', roomState);
     if (typeof cb === 'function') cb(roomState);
+
+    // Broadcast updated state to other player in the room so the waiting screen unfreezes
+    this.io.to(match.matchId).emit('match_joined', roomState);
+    this.io.to(match.matchId).emit('roomJoined', roomState);
+    if (match.gameCode) {
+      this.io.to(match.gameCode).emit('match_joined', roomState);
+      this.io.to(match.gameCode).emit('roomJoined', roomState);
+    }
   }
 
   // ---- Move handling ----

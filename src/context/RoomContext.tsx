@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType, safeAddDoc, safeSetDoc, safeUpdateDoc, safeDeleteDoc } from '../utils/firebase';
 import { soundManager } from '../utils/audio';
+import { socketService } from '../utils/socket';
 import { createOnlineMatch, joinOnlineMatch } from '../services/onlineMatchService';
 import { OnlineMatchPlayer, TimeControl } from '../types/chess';
 
@@ -33,7 +34,7 @@ export interface RoomInvite {
   userId: string;
   userName: string;
   userPhotoURL?: string;
-  status: 'pending' | 'accepted' | 'declined';
+  status: 'pending' | 'accepted' | 'declined' | 'expired';
   invitedAt: any;
   settings: RoomSettings;
 }
@@ -46,7 +47,7 @@ export interface UserInvite {
   invitedBy: string;
   invitedByName: string;
   invitedByPhoto?: string;
-  status: 'pending' | 'accepted' | 'declined';
+  status: 'pending' | 'accepted' | 'declined' | 'expired';
   settings: RoomSettings;
   createdAt: any;
 }
@@ -241,7 +242,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [currentRoom?.roomCode, cleanUpLegacyRoomDoc]);
 
-  // Real-time listener for incoming user invites
+  // Real-time listener for incoming user invites with 30s state-reconciliation
   useEffect(() => {
     if (!user) {
       setIncomingInvites([]);
@@ -257,15 +258,57 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const unsub = onSnapshot(
       invitesQuery,
       (snapshot) => {
-        const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as UserInvite));
-        setIncomingInvites(list);
+        const now = Date.now();
+        const activeList: UserInvite[] = [];
+
+        snapshot.docs.forEach((d) => {
+          const data = d.data() as UserInvite;
+          const invite = { id: d.id, ...data };
+          const createdTime =
+            data.createdAt?.toMillis ? data.createdAt.toMillis() :
+            data.createdAt?.seconds ? data.createdAt.seconds * 1000 :
+            (typeof data.createdAt === 'string' || typeof data.createdAt === 'number') ? new Date(data.createdAt).getTime() :
+            now;
+
+          // If invite is older than 30 seconds, auto-reconcile to expired
+          if (now - createdTime >= 30000) {
+            void safeUpdateDoc(doc(db, 'user_invites', d.id), { status: 'expired' });
+          } else {
+            activeList.push(invite);
+          }
+        });
+
+        setIncomingInvites(activeList);
       },
       (error) => {
         handleFirestoreError(error, OperationType.LIST, 'user_invites');
       }
     );
 
-    return () => unsub();
+    // Watchdog timer to cleanly drop invites exceeding 30 seconds
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setIncomingInvites((prev) => {
+        const remaining = prev.filter((inv) => {
+          const createdTime =
+            inv.createdAt?.toMillis ? inv.createdAt.toMillis() :
+            inv.createdAt?.seconds ? inv.createdAt.seconds * 1000 :
+            (typeof inv.createdAt === 'string' || typeof inv.createdAt === 'number') ? new Date(inv.createdAt).getTime() :
+            now;
+          const isStale = (now - createdTime) >= 30000;
+          if (isStale) {
+            void safeUpdateDoc(doc(db, 'user_invites', inv.id), { status: 'expired' });
+          }
+          return !isStale;
+        });
+        return remaining.length !== prev.length ? remaining : prev;
+      });
+    }, 2000);
+
+    return () => {
+      unsub();
+      clearInterval(interval);
+    };
   }, [user]);
 
   // 3-second automatic countdown when status is 'ready'
@@ -844,6 +887,23 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
           createdAt: serverTimestamp(),
         });
 
+        // Register in socketService with strict 30s TTL watchdog
+        socketService.registerPendingChallenge({
+          id: inviteId,
+          challengerId: profile.uid,
+          challengerName: profile.displayName || 'You',
+          challengerAvatar: profile.photoURL || undefined,
+          targetUserId: friendUid,
+          targetUserName: friendName,
+          timeControlName: currentRoom.settings.timeControlName,
+          timeControlSeconds: currentRoom.settings.initialSeconds,
+          roomCode: roomCode,
+          type: 'room',
+          createdAt: Date.now(),
+          expiresAt: Date.now() + 30000,
+          status: 'pending',
+        });
+
         // If main room doc has legacy invites map, clean it up to prevent size issues
         if (currentRoom.invites) {
           try {
@@ -863,6 +923,9 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
     async (inviteId: string, roomCode?: string) => {
       const code = roomCode || currentRoom?.roomCode;
       if (!code) return;
+
+      // Optimistically clear invite immediately to prevent freeze in UI
+      setIncomingInvites(prev => prev.filter(inv => inv.id !== inviteId));
 
       try {
         // Update user_invites status
@@ -886,6 +949,8 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const declineInvite = useCallback(
     async (inviteId: string) => {
+      // Optimistically clear invite immediately
+      setIncomingInvites(prev => prev.filter(inv => inv.id !== inviteId));
       try {
         const userInviteRef = doc(db, 'user_invites', inviteId);
         await safeUpdateDoc(userInviteRef, { status: 'declined' });

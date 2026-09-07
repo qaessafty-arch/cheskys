@@ -112,7 +112,7 @@ export interface FriendRequestItem {
   fromUserHonorRank: string;
   toUserId: string;
   toUsername?: string;
-  status: 'pending' | 'accepted' | 'declined';
+  status: 'pending' | 'accepted' | 'declined' | 'expired';
   createdAt: string;
 }
 
