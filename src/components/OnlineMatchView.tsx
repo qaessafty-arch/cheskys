@@ -155,7 +155,12 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
       }
     });
 
-    const socket = socketService.getSocket() || socketService.connect(myUid);
+    if (!socketService.getSocket()) {
+      socketService.connect(myUid);
+    }
+    const socket = socketService.getSocket();
+    
+    if (!socket) return;
     
     setSocketStatus(socket.connected ? 'connected' : 'connecting');
 

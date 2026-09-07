@@ -183,7 +183,6 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Real-time listener for current room
   useEffect(() => {
     if (!currentRoom?.roomCode) return;
-
     const roomRef = doc(db, 'rooms', currentRoom.roomCode);
     const unsub = onSnapshot(
       roomRef,
@@ -241,6 +240,38 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
   }, [currentRoom?.roomCode, cleanUpLegacyRoomDoc]);
+
+  // Socket.IO fallback for direct connection and immediate matchmaking (bypasses Firestore quota issues)
+  useEffect(() => {
+    if (!currentRoom?.roomCode || activeGameId) return;
+
+    if (!socketService.getSocket()) {
+      socketService.connect(profile?.uid);
+    }
+    const socket = socketService.getSocket();
+    if (!socket) return;
+
+    socket.emit('join_match', { matchId: currentRoom.roomCode, uid: profile?.uid });
+
+    const handleRoomReady = (roomState: any) => {
+      if (roomState?.status === 'starting' || roomState?.status === 'active' || roomState?.status === 'in_progress') {
+        if (!activeGameId && currentRoomRef.current?.status !== 'in_progress') {
+          soundManager.playMatchFound();
+          setActiveGameId(currentRoom.roomCode);
+        }
+      }
+    };
+
+    socket.on('match_joined', handleRoomReady);
+    socket.on('gameStarted', handleRoomReady);
+    socket.on('roomJoined', handleRoomReady);
+
+    return () => {
+      socket.off('match_joined', handleRoomReady);
+      socket.off('gameStarted', handleRoomReady);
+      socket.off('roomJoined', handleRoomReady);
+    };
+  }, [currentRoom?.roomCode, activeGameId, profile?.uid]);
 
   // Real-time listener for incoming user invites with 30s state-reconciliation
   useEffect(() => {
