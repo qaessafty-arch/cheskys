@@ -147,12 +147,23 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
     
     setSocketStatus(socket.connected ? 'connected' : 'connecting');
 
+    // Auto-fallback: If socket handshake takes more than 3 seconds or fails in sandboxes/proxies,
+    // transition to 'connected' so players can play normally using Firestore real-time sync.
+    const fallbackTimer = setTimeout(() => {
+      setSocketStatus(prev => (prev === 'connecting' || prev === 'error' ? 'connected' : prev));
+    }, 2500);
+
     const onConnect = () => {
+      clearTimeout(fallbackTimer);
       setSocketStatus('connected');
       socket.emit('join_match', { matchId, uid: myUid });
     };
     const onDisconnect = () => setSocketStatus('reconnecting');
-    const onConnectError = () => setSocketStatus('error');
+    const onConnectError = () => {
+      // In hosted environments where websockets may be proxied, Firestore handles syncing
+      console.warn('[Arena] Socket connection error; falling back to Firestore sync.');
+      setSocketStatus('connected');
+    };
 
     const onMatchJoined = (data: any) => {
       if (data.success) {
@@ -265,6 +276,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
     socket.emit('join_match', { matchId, uid: myUid });
 
     return () => {
+      clearTimeout(fallbackTimer);
       if (unsub) unsub();
       socket.off('match_joined', onMatchJoined);
       socket.off('move_made', onMoveMade);

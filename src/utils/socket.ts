@@ -16,9 +16,9 @@ class SocketService {
         auth: { token: authToken, uid: this.uid },
         autoConnect: true,
         reconnection: true,
-        reconnectionAttempts: 5,
+        reconnectionAttempts: 10,
         reconnectionDelay: 1000,
-        transports: ['websocket'],
+        transports: ['polling', 'websocket'],
       });
       
       this.socket.on('connect', () => {

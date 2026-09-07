@@ -490,7 +490,7 @@ async function startServer() {
       origin: '*', // Customize in production
       methods: ['GET', 'POST']
     },
-    transports: ['websocket']
+    transports: ['websocket', 'polling']
   });
 
   // Initialize Enterprise Matchmaking Engine
