@@ -1,9 +1,5 @@
 name: Deploy to GitHub Pages
 
-# If your org blocks the default GITHUB_TOKEN from managing Pages,
-# set a personal access token (PAT) with repo/workflow scopes in
-# repository secret `PAGES_TOKEN`. The workflow will use it when present.
-
 on:
   push:
     branches: [main]
@@ -39,8 +35,7 @@ jobs:
         run: cp dist/index.html dist/404.html
       - uses: actions/configure-pages@v5
         with:
-          # Use PAGES_TOKEN secret if set, otherwise fall back to the workflow token
-          token: ${{ secrets.PAGES_TOKEN || github.token }}
+          token: ${{ secrets.PAGES_TOKEN || secrets.GITHUB_TOKEN }}
           enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
@@ -60,4 +55,4 @@ jobs:
       - id: deployment
         uses: actions/deploy-pages@v4
         with:
-          token: ${{ secrets.PAGES_TOKEN || github.token }}
+          token: ${{ secrets.PAGES_TOKEN || secrets.GITHUB_TOKEN }}
