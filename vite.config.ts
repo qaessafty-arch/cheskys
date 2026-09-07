@@ -52,15 +52,11 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: '0.0.0.0',
     allowedHosts: true as const,
-    // Optimize HMR WebSocket Configuration for Dev & prevent sandbox crashes
-    hmr: process.env.DISABLE_HMR === 'true' ? false : {
-      protocol: 'ws',
-      host: 'localhost',
-      port: 5173,
-      timeout: 60000,
-      overlay: false
-    },
-    // Disable HMR and file watching entirely in production / agent mode to save CPU
+    // Let Vite derive the HMR endpoint from the active preview server. A hard-coded
+    // localhost:5173 endpoint makes the browser connect to a socket that does not exist
+    // when the sandbox exposes the app on another port or through a preview proxy.
+    hmr: process.env.DISABLE_HMR === 'true' ? false : undefined,
+    // Disable file watching entirely in production / agent mode to save CPU.
     watch: mode === 'production' || process.env.DISABLE_HMR === 'true' ? null : {
       usePolling: true,
       interval: 1000,

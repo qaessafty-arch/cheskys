@@ -673,7 +673,13 @@ PGN: ${pgn}` }]
 
 if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        // Attach Vite's HMR WebSocket to the same HTTP server that serves
+        // the middleware. Without this, /@vite/client connects to a socket
+        // that is never upgraded and closes before opening.
+        hmr: { server },
+      },
       appType: 'spa',
     });
     app.use(vite.middlewares);
