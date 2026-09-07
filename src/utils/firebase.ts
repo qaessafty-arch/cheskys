@@ -4,7 +4,7 @@ import { initializeFirestore, getFirestore, doc, getDocFromServer } from 'fireba
 import { getStorage } from 'firebase/storage';
 import firebaseConfig from '../../firebase-applet-config.json';
 
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+export const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 export const auth = getAuth(app);
 export { firebaseSignOut };
@@ -17,6 +17,8 @@ export const db = firebaseConfig.firestoreDatabaseId
 
 export const googleProvider = new GoogleAuthProvider();
 export const storage = getStorage(app);
+
+export default { app, auth, db, storage, googleProvider };
 
 /**
  * Validates the connection to Firestore by attempting to fetch a document directly from the server.

@@ -4,8 +4,8 @@ import path from 'path';
 import { defineConfig } from 'vite';
 
 export default defineConfig(({ mode }) => ({
-  // Dynamically supports GitHub Pages subdirectory deployments (e.g., /null-sky/)
-  base: process.env.PUBLIC_BASE_PATH || '/',
+  // Support GitHub Pages subdirectory and custom domain deployments seamlessly
+  base: mode === 'production' ? (process.env.PUBLIC_BASE_PATH || './') : '/',
   plugins: [react(), tailwindcss()],
   build: {
     target: 'es2022',

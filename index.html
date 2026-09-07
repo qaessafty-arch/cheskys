@@ -12,10 +12,19 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&family=Dancing+Script:wght@600;700&family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@600;700;800&family=Outfit:wght@500;600;700;800;900&family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
+    <style>
+      html, body {
+        background-color: #020617 !important;
+        color: #f8fafc;
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+      }
+    </style>
     <!-- Single Page Apps for GitHub Pages URL Restorer -->
     <script type="text/javascript">
       (function(l) {
-        if (l.search[1] === '/' ) {
+        if (l.search && l.search[1] === '/' ) {
           var decoded = l.search.slice(1).split('&').map(function(s) { 
             return s.replace(/~and~/g, '&') 
           }).join('?');
@@ -25,9 +34,28 @@
         }
       }(window.location))
     </script>
+    <script type="text/javascript">
+      window.addEventListener('error', function(e) {
+        var fallback = document.getElementById('app-loading-fallback');
+        if (fallback) {
+          fallback.innerHTML = '<div style="max-width:440px;padding:24px;border:1px solid rgba(239,68,68,0.3);border-radius:16px;background:rgba(15,23,42,0.95);text-align:center;">' +
+            '<div style="font-size:28px;margin-bottom:12px;">☀️</div>' +
+            '<div style="color:#ef4444;font-weight:700;font-size:14px;margin-bottom:8px;">Interface Notice</div>' +
+            '<div style="color:#cbd5e1;font-size:12px;font-family:monospace;word-break:break-all;">' + (e.message || 'Loading error') + '</div>' +
+            '<button onclick="window.location.reload()" style="margin-top:16px;padding:8px 16px;background:#f59e0b;color:#000;border:none;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;">Reload</button>' +
+            '</div>';
+        }
+      });
+    </script>
   </head>
   <body class="bg-slate-950 text-slate-100 antialiased selection:bg-amber-500/30 selection:text-amber-200">
-    <div id="root"></div>
+    <div id="root">
+      <div id="app-loading-fallback" style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#020617;color:#f8fafc;font-family:system-ui,-apple-system,sans-serif;">
+        <div style="font-size:36px;margin-bottom:12px;">☀️</div>
+        <div style="font-size:16px;font-weight:800;letter-spacing:0.12em;color:#f59e0b;text-transform:uppercase;">Remix Chesskys</div>
+        <div style="font-size:12px;color:#64748b;margin-top:6px;">Connecting to realm...</div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
