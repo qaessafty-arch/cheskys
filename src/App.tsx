@@ -140,11 +140,6 @@ export default function App() {
   // Tab focus tracking for anti-cheat
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.hidden && activeMode === 'online_match' && activeOnlineMatchId && user) {
-        import('./utils/socket').then(({ socketService }) => {
-          socketService.emitTabBlur(activeOnlineMatchId, user.uid);
-        });
-      }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {

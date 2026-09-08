@@ -5,6 +5,7 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
+    base: '/cheskys/',
     plugins: [react(), tailwindcss()],
     build: {
       // Split the vendor weight out of the app chunk so the board renders
