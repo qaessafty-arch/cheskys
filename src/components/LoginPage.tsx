@@ -248,7 +248,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           }}
         />
         {/* Radial ambient glow orbs */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-gradient-to-tr blue-400/10 via-sky-500/10 to-sky-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-gradient-to-tr from-blue-400/10 via-sky-500/10 to-sky-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-20 -right-20 w-[400px] h-[400px] bg-gradient-to-br from-sky-500/10 to-transparent rounded-full blur-3xl pointer-events-none" />
       </div>
 

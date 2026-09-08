@@ -686,7 +686,7 @@ export default function App() {
     settings.blackPieceTheme === 'batman';
 
   return (
-    <div className="min-h-[100dvh] bg-[var(--app-bg,slate-950)] text-[var(--text-main,#FDFCF7)] flex flex-col selection:bg-blue-400/30 selection:text-blue-400 relative overflow-x-hidden font-ui transition-colors duration-300">
+    <div className="min-h-[100dvh] bg-[var(--app-bg,#020617)] text-[var(--text-main,#FDFCF7)] flex flex-col selection:bg-blue-400/30 selection:text-blue-400 relative overflow-x-hidden font-ui transition-colors duration-300">
       {/* Ambient Peshmerga Radial Mesh Gradient */}
       <div className="mesh-gradient" />
 
