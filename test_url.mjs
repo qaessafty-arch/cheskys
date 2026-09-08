@@ -1,27 +1,18 @@
 import { chromium } from 'playwright';
-
 (async () => {
   const browser = await chromium.launch();
   const context = await browser.newContext();
   const page = await context.newPage();
   
-  page.on('console', msg => console.log('BROWSER CONSOLE:', msg.type(), msg.text()));
-  page.on('pageerror', error => console.error('PAGE ERROR:', error));
+  page.on('response', response => {
+    if (response.status() === 404) {
+      console.log('404 URL:', response.url());
+    }
+  });
 
   try {
-    await page.goto('https://ais-dev-c5qj7cc4v7pweulfjizrz6-834574229097.europe-west2.run.app', { waitUntil: 'networkidle' });
-    
-    // Check #root HTML
-    const html = await page.evaluate(() => document.getElementById('root').innerHTML);
-    if (html.includes('app-loading-fallback')) {
-       console.log('Fallback is still present!');
-       console.log('Fallback HTML:', html);
-    } else {
-       console.log('App mounted successfully.');
-    }
-  } catch (e) {
-    console.error('Goto error:', e);
-  }
+    await page.goto('https://qaessafty-arch.github.io/cheskys/', { waitUntil: 'networkidle' });
+  } catch (e) {}
 
   await browser.close();
 })();
