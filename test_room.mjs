@@ -4,21 +4,28 @@ import { chromium } from 'playwright';
   const browser = await chromium.launch();
   const context = await browser.newContext();
   const page = await context.newPage();
-
+  
   page.on('console', msg => console.log('BROWSER CONSOLE:', msg.type(), msg.text()));
-  page.on('pageerror', error => console.error('PAGE ERROR:', error));
+  page.on('pageerror', error => console.error('BROWSER ERROR:', error));
 
-  await page.goto('http://localhost:3000', { waitUntil: 'networkidle' });
-
-  // Get current active mode or text
-  console.log('Main text before click:', (await page.evaluate(() => document.querySelector('main')?.innerText || document.body.innerText)).slice(0, 300));
-
-  const privateRoomBtn = await page.$('button[id*="private_room"], [data-mode="private_room"], button:has-text("Private Room"), button:has-text("Private")');
-  console.log('Button details:', await privateRoomBtn.evaluate(el => el.outerHTML));
-  await privateRoomBtn.click();
-  await page.waitForTimeout(2000);
-
-  console.log('Main text after click:', (await page.evaluate(() => document.querySelector('main')?.innerText || document.body.innerText)).slice(0, 500));
+  try {
+    await page.goto('http://localhost:3000', { waitUntil: 'networkidle' });
+    
+    // Inject mock user to trigger logged-in state
+    await page.evaluate(() => {
+      localStorage.setItem('chess_guest_session', JSON.stringify({
+        uid: 'test_guest',
+        displayName: 'Test Guest',
+        createdAt: Date.now()
+      }));
+    });
+    
+    await page.reload({ waitUntil: 'networkidle' });
+    console.log('Page reloaded with mock user');
+    
+  } catch (e) {
+    console.error('Goto error:', e);
+  }
 
   await browser.close();
 })();

@@ -417,6 +417,17 @@ export const createOnlineMatchChallenge = async (
     };
 
     await safeSetDoc(matchDocRef, initialSession);
+
+    // Record locally for immediate retrieval in My Rooms
+    recordLocalUserCreatedRoom({
+      code: matchId,
+      hostId: hostPlayer.uid,
+      timeControl,
+      side: isHostWhite ? 'w' : 'b',
+      status: 'waiting',
+      createdAt: initialSession.createdAt
+    });
+
     return matchId;
   } catch (e: any) {
     console.warn('Error creating online match challenge:', e?.message);
@@ -621,36 +632,15 @@ export const createOnlineMatch = async (
 
   await safeSetDoc(matchDocRef, initialSession);
 
-  // Also mirror to 'rooms' collection so RoomContext and PrivateRoom can immediately discover it
-  try {
-    const roomDocRef = doc(db, 'rooms', matchId);
-    await safeSetDoc(roomDocRef, {
-      roomId: matchId,
-      roomCode: matchId,
-      creatorId: hostPlayer.uid,
-      creatorName: hostPlayer.displayName || 'Host',
-      creatorPhotoURL: hostPlayer.avatar || null,
-      creatorElo: hostPlayer.elo || 1200,
-      creatorColor: isHostWhite ? 'white' : 'black',
-      opponentColor: isHostWhite ? 'black' : 'white',
-      opponentId: null,
-      opponentName: null,
-      opponentElo: null,
-      status: 'waiting',
-      settings: {
-        timeControlId: timeControl.id,
-        timeControlName: timeControl.name,
-        initialSeconds: timeControl.initialSeconds,
-        incrementSeconds: timeControl.incrementSeconds,
-        color: side === 'w' ? 'white' : side === 'b' ? 'black' : 'random',
-        isRated: true,
-      },
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-  } catch (err) {
-    console.warn('[onlineMatchService] rooms mirror warning:', err);
-  }
+  // Record locally for instantaneous retrieval in My Rooms
+  recordLocalUserCreatedRoom({
+    code: matchId,
+    hostId: hostPlayer.uid,
+    timeControl,
+    side: resolvedSide,
+    status: 'waiting',
+    createdAt: initialSession.createdAt
+  });
 
   // Also register with server REST endpoint in background
   try {
@@ -867,22 +857,13 @@ export const joinOnlineMatch = async (
             incrementSeconds: 0,
             category: 'rapid'
           };
-          const isGuestWhite = data.playerColor === 'w' || data.playerColor === 'white';
-          const hostPlayerObj = {
-            uid: data.game?.whitePlayer?.uid || data.game?.blackPlayer?.uid || 'host_server',
-            displayName: data.game?.whitePlayer?.displayName || data.game?.blackPlayer?.displayName || 'Host',
-            elo: data.game?.whitePlayer?.rating || data.game?.blackPlayer?.rating || 1200,
-          };
-          const whitePlayer = isGuestWhite ? guestPlayer : hostPlayerObj;
-          const blackPlayer = isGuestWhite ? hostPlayerObj : guestPlayer;
-
           const serverSession: OnlineMatchSession = {
             id: data.gameId || cleanCode,
             code: data.gameCode || cleanCode,
-            hostId: hostPlayerObj.uid,
+            hostId: 'host_server',
             guestId: guestPlayer.uid,
-            whitePlayer,
-            blackPlayer,
+            whitePlayer: data.playerColor === 'white' ? guestPlayer : { uid: 'host_server', displayName: 'Host', elo: 1200 },
+            blackPlayer: data.playerColor === 'black' ? guestPlayer : { uid: 'host_server', displayName: 'Host', elo: 1200 },
             fen: data.game?.fen || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
             pgn: data.game?.pgn || '',
             moves: data.game?.moves || [],
@@ -895,7 +876,7 @@ export const joinOnlineMatch = async (
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
           };
-          await safeSetDoc(doc(db, 'online_matches', cleanCode), serverSession).catch(() => {});
+          await safeSetDoc(doc(db, 'online_matches', cleanCode), serverSession);
           return serverSession;
         }
       }
@@ -956,37 +937,6 @@ export const joinOnlineMatch = async (
 };
 
 /**
- * Cancels an active or waiting online match across cloud and backend state
- */
-export const cancelOnlineMatch = async (matchId: string): Promise<void> => {
-  const cleanId = matchId.trim().toUpperCase();
-
-  // 1. Update online_matches
-  try {
-    const matchRef = doc(db, 'online_matches', cleanId);
-    await safeUpdateDoc(matchRef, {
-      status: 'cancelled',
-      updatedAt: new Date().toISOString(),
-    });
-  } catch {}
-
-  // 2. Update rooms collection
-  try {
-    const roomRef = doc(db, 'rooms', cleanId);
-    await safeUpdateDoc(roomRef, {
-      status: 'cancelled',
-      updatedAt: serverTimestamp(),
-    });
-  } catch {}
-
-  // 3. Notify backend REST endpoints
-  try {
-    fetch(`/api/games/${encodeURIComponent(cleanId)}/cancel`, { method: 'POST' }).catch(() => {});
-    fetch(`/api/rooms/${encodeURIComponent(cleanId)}/cancel`, { method: 'POST' }).catch(() => {});
-  } catch {}
-};
-
-/**
  * Listens to active open challenges waiting for a player
  */
 export const listenToPublicOpenMatches = (
@@ -1017,61 +967,288 @@ export const listenToPublicOpenMatches = (
   }
 };
 
+export interface UserCreatedRoomItem {
+  id: string;
+  code: string;
+  timeControl: TimeControl;
+  status: string;
+  createdAt: string;
+  opponent?: {
+    uid?: string;
+    displayName?: string;
+    avatar?: string;
+    elo?: number;
+  } | null;
+  side?: 'w' | 'b' | 'random';
+  isHost: boolean;
+}
+
+const LOCAL_CREATED_ROOMS_KEY = 'chessky_my_created_rooms';
+
+export const recordLocalUserCreatedRoom = (room: {
+  code: string;
+  hostId: string;
+  timeControl: TimeControl;
+  side?: 'w' | 'b' | 'random';
+  status?: string;
+  createdAt?: string;
+}) => {
+  try {
+    const raw = localStorage.getItem(LOCAL_CREATED_ROOMS_KEY);
+    const existing: any[] = raw ? JSON.parse(raw) : [];
+    const cleanCode = room.code.trim().toUpperCase();
+    const filtered = existing.filter((r: any) => r.code !== cleanCode);
+    filtered.unshift({
+      id: cleanCode,
+      code: cleanCode,
+      hostId: room.hostId,
+      timeControl: room.timeControl,
+      side: room.side || 'random',
+      status: room.status || 'waiting',
+      createdAt: room.createdAt || new Date().toISOString(),
+      isHost: true
+    });
+    localStorage.setItem(LOCAL_CREATED_ROOMS_KEY, JSON.stringify(filtered.slice(0, 50)));
+  } catch (e) {
+    // ignore storage limits
+  }
+};
+
+export const getLocalUserCreatedRooms = (userUid?: string): UserCreatedRoomItem[] => {
+  try {
+    const raw = localStorage.getItem(LOCAL_CREATED_ROOMS_KEY);
+    if (!raw) return [];
+    const list = JSON.parse(raw);
+    if (!Array.isArray(list)) return [];
+    return list
+      .filter((item: any) => !userUid || item.hostId === userUid)
+      .map((item: any) => ({
+        id: item.code || item.id,
+        code: (item.code || item.id).toUpperCase(),
+        timeControl: item.timeControl || {
+          id: 'rapid',
+          name: 'Rapid 10m',
+          initialSeconds: 600,
+          incrementSeconds: 0,
+          category: 'rapid'
+        },
+        status: item.status || 'waiting',
+        createdAt: item.createdAt || new Date().toISOString(),
+        side: item.side || 'random',
+        isHost: true,
+        opponent: item.opponent || null
+      }));
+  } catch {
+    return [];
+  }
+};
+
 /**
- * Listens to rooms created by the current user
+ * Listens to all rooms created by the specified user across online_matches,
+ * rooms collections, and local storage fallback.
  */
-export const listenToUserRooms = (
-  userId: string,
-  callback: (matches: OnlineMatchSession[]) => void
-) => {
-  if (!userId) {
+export const listenToUserCreatedRooms = (
+  userUid: string,
+  callback: (rooms: UserCreatedRoomItem[]) => void
+): (() => void) => {
+  if (!userUid) {
     callback([]);
     return () => {};
   }
-  try {
-    const q = query(
-      collection(db, 'online_matches'),
-      where('hostId', '==', userId),
-      limit(20)
-    );
 
-    const unsub = onSnapshot(
-      q,
+  let firestoreMatchRooms: Record<string, UserCreatedRoomItem> = {};
+  let firestorePrivateRooms: Record<string, UserCreatedRoomItem> = {};
+
+  const emitMerged = () => {
+    const map = new Map<string, UserCreatedRoomItem>();
+
+    // 1. Local baseline (fetch fresh to prevent stale overwrites during optimistic updates)
+    const freshLocalBaseline = getLocalUserCreatedRooms(userUid);
+    for (const r of freshLocalBaseline) {
+      map.set(r.code, r);
+    }
+
+    // 2. Private rooms from /rooms collection
+    for (const [code, r] of Object.entries(firestorePrivateRooms)) {
+      map.set(code, r);
+    }
+
+    // 3. Online match sessions (highest priority)
+    for (const [code, r] of Object.entries(firestoreMatchRooms)) {
+      map.set(code, r);
+    }
+
+    const merged = Array.from(map.values()).sort((a, b) => {
+      const timeA = new Date(a.createdAt).getTime() || 0;
+      const timeB = new Date(b.createdAt).getTime() || 0;
+      return timeB - timeA;
+    });
+
+    callback(merged);
+  };
+
+  // Immediate initial emission
+  emitMerged();
+
+  // Listen to /online_matches where hostId == userUid
+  let unsubMatches = () => {};
+  try {
+    const qMatches = query(
+      collection(db, 'online_matches'),
+      where('hostId', '==', userUid),
+      limit(50)
+    );
+    unsubMatches = onSnapshot(
+      qMatches,
       snap => {
-        const matches: OnlineMatchSession[] = [];
+        firestoreMatchRooms = {};
         snap.forEach(docSnap => {
           const data = docSnap.data() as OnlineMatchSession;
-          if (data.status === 'waiting' || data.status === 'in_progress') {
-            matches.push(data);
-          }
+          const code = (data.code || data.id || docSnap.id).toUpperCase();
+          const isHostWhite = data.whitePlayer?.uid === userUid;
+          const opponent = isHostWhite ? data.blackPlayer : data.whitePlayer;
+
+          firestoreMatchRooms[code] = {
+            id: data.id || docSnap.id,
+            code,
+            timeControl: data.timeControl || {
+              id: 'rapid',
+              name: 'Rapid 10m',
+              initialSeconds: 600,
+              incrementSeconds: 0,
+              category: 'rapid'
+            },
+            status: data.status || 'waiting',
+            createdAt: data.createdAt || new Date().toISOString(),
+            opponent: opponent ? {
+              uid: opponent.uid,
+              displayName: opponent.displayName,
+              avatar: opponent.avatar || opponent.photoURL,
+              elo: opponent.elo
+            } : null,
+            side: isHostWhite ? 'w' : 'b',
+            isHost: true
+          };
         });
-        callback(matches);
+        emitMerged();
       },
       err => {
-        console.warn('User rooms listener warning:', err);
-        callback([]);
+        console.warn('User matches stream notice:', err?.message);
       }
     );
-
-    return unsub;
   } catch (e) {
-    console.error('Failed to listen to user rooms:', e);
-    return () => {};
+    console.warn('Could not subscribe to online_matches by hostId:', e);
   }
+
+  // Listen to /rooms where creatorId == userUid
+  let unsubRooms = () => {};
+  try {
+    const qRooms = query(
+      collection(db, 'rooms'),
+      where('creatorId', '==', userUid),
+      limit(50)
+    );
+    unsubRooms = onSnapshot(
+      qRooms,
+      snap => {
+        firestorePrivateRooms = {};
+        snap.forEach(docSnap => {
+          const data = docSnap.data() as any;
+          const code = (data.roomCode || docSnap.id).toUpperCase();
+          const tc: TimeControl = {
+            id: data.settings?.timeControlId || 'rapid',
+            name: data.settings?.timeControlName || 'Rapid 10m',
+            initialSeconds: Number(data.settings?.initialSeconds) || 600,
+            incrementSeconds: Number(data.settings?.incrementSeconds) || 0,
+            category: (Number(data.settings?.initialSeconds) || 600) < 180 ? 'bullet' : (Number(data.settings?.initialSeconds) || 600) < 600 ? 'blitz' : 'rapid'
+          };
+
+          firestorePrivateRooms[code] = {
+            id: docSnap.id,
+            code,
+            timeControl: tc,
+            status: data.status || 'waiting',
+            createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : (data.createdAt || new Date().toISOString()),
+            opponent: data.opponentId ? {
+              uid: data.opponentId,
+              displayName: data.opponentName || 'Challenger',
+              avatar: data.opponentPhotoURL,
+              elo: data.opponentElo
+            } : null,
+            side: data.creatorColor === 'white' ? 'w' : data.creatorColor === 'black' ? 'b' : 'random',
+            isHost: true
+          };
+        });
+        emitMerged();
+      },
+      err => {
+        console.warn('User private rooms stream notice:', err?.message);
+      }
+    );
+  } catch (e) {
+    console.warn('Could not subscribe to rooms by creatorId:', e);
+  }
+
+  return () => {
+    unsubMatches();
+    unsubRooms();
+  };
 };
 
 /**
- * Fetches rooms created by or joined by the user from the local server engine
+ * Cancels a waiting room created by the current user
  */
-export const fetchUserRoomsFromServer = async (userId: string): Promise<any[]> => {
-  if (!userId) return [];
+export const cancelUserCreatedRoom = async (roomCode: string, userUid: string): Promise<void> => {
+  const cleanCode = roomCode.trim().toUpperCase();
+
+  // 1. Update local storage
   try {
-    const res = await fetch(`/api/rooms/my?uid=${encodeURIComponent(userId)}`);
-    if (res.ok) {
-      const data = await res.json();
-      return Array.isArray(data?.rooms) ? data.rooms : [];
+    const raw = localStorage.getItem(LOCAL_CREATED_ROOMS_KEY);
+    if (raw) {
+      const list = JSON.parse(raw);
+      if (Array.isArray(list)) {
+        const updated = list.map((item: any) => {
+          if (item.code === cleanCode) {
+            return { ...item, status: 'aborted' };
+          }
+          return item;
+        });
+        localStorage.setItem(LOCAL_CREATED_ROOMS_KEY, JSON.stringify(updated));
+      }
     }
   } catch {}
-  return [];
+
+  // 2. Update online_matches
+  try {
+    const mRef = doc(db, 'online_matches', cleanCode);
+    const mSnap = await getDoc(mRef);
+    if (mSnap.exists()) {
+      const data = mSnap.data();
+      if (data.hostId === userUid || data.status === 'waiting') {
+        await safeUpdateDoc(mRef, {
+          status: 'aborted',
+          reason: 'Cancelled by host',
+          updatedAt: new Date().toISOString()
+        });
+      }
+    }
+  } catch (e) {
+    console.warn('Error updating match on cancel:', e);
+  }
+
+  // 3. Update rooms
+  try {
+    const rRef = doc(db, 'rooms', cleanCode);
+    const rSnap = await getDoc(rRef);
+    if (rSnap.exists()) {
+      const data = rSnap.data();
+      if (data.creatorId === userUid && data.status === 'waiting') {
+        await safeDeleteDoc(rRef);
+      }
+    }
+  } catch (e) {
+    console.warn('Error deleting room on cancel:', e);
+  }
 };
+
 

@@ -69,8 +69,6 @@ export interface MatchSession {
   gameInterval?: NodeJS.Timeout;
   reconnectTimeout?: NodeJS.Timeout;
   chess: import('chess.js').Chess;
-  hostUid?: string;
-  isPrivate?: boolean;
   blurCountWhite: number;
   blurCountBlack: number;
   drawOfferedBy?: string | null;

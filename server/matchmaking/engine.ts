@@ -77,19 +77,7 @@ export class MatchmakingEngine {
     socket.on('createGame', (data, cb) =>
       this.handleCreateGame(socket, data, cb),
     );
-    socket.on('createRoom', (data, cb) =>
-      this.handleCreateGame(socket, data, cb),
-    );
-    socket.on('create_room', (data, cb) =>
-      this.handleCreateGame(socket, data, cb),
-    );
     socket.on('cancelGame', (data, cb) =>
-      this.handleCancelWaiting(socket, data, cb),
-    );
-    socket.on('cancelRoom', (data, cb) =>
-      this.handleCancelWaiting(socket, data, cb),
-    );
-    socket.on('cancel_room', (data, cb) =>
       this.handleCancelWaiting(socket, data, cb),
     );
     socket.on('cancel_game', (data, cb) =>
@@ -98,20 +86,8 @@ export class MatchmakingEngine {
     socket.on('cancelWaiting', (data, cb) =>
       this.handleCancelWaiting(socket, data, cb),
     );
-    socket.on('getMyRooms', (data, cb) =>
-      this.handleGetMyRooms(socket, data, cb),
-    );
-    socket.on('get_my_rooms', (data, cb) =>
-      this.handleGetMyRooms(socket, data, cb),
-    );
-    socket.on('getUserRooms', (data, cb) =>
-      this.handleGetMyRooms(socket, data, cb),
-    );
 
     socket.on('joinGame', (data, cb) =>
-      this.handleJoinGame(socket, data, cb),
-    );
-    socket.on('joinRoom', (data, cb) =>
       this.handleJoinGame(socket, data, cb),
     );
 
@@ -144,9 +120,6 @@ export class MatchmakingEngine {
     socket.on('leave_queue', (data) => this.handleLeaveQueue(socket, data));
     socket.on('tab_blur', (data) => this.handleTabBlur(socket, data));
     socket.on('abort_match', (data) => this.handleAbortMatch(socket, data));
-    socket.on('ping', (cb) => {
-      if (typeof cb === 'function') cb();
-    });
 
     socket.on('disconnect', () => this.handleDisconnect(socket));
   }
@@ -232,42 +205,19 @@ export class MatchmakingEngine {
       socket.emit('gameCreated', {
         gameCode: res.gameCode,
         gameId: res.gameId,
-        roomCode: res.gameCode,
-        roomId: res.gameId,
-      });
-      socket.emit('roomCreated', {
-        roomCode: res.gameCode,
-        roomId: res.gameId,
-        gameCode: res.gameCode,
-        gameId: res.gameId,
-        timeControl: res.session.timeControl,
-        status: 'waiting',
-        createdAt: res.session.createdAt,
-        playersCount: 1,
       });
       socket.emit('waitingForOpponent', {
         gameCode: res.gameCode,
         gameId: res.gameId,
-        roomCode: res.gameCode,
-        roomId: res.gameId,
         message: `Waiting for opponent... Share code: ${res.gameCode}`,
         expiresInSeconds: 300,
       });
 
       if (typeof cb === 'function')
-        cb({
-          gameCode: res.gameCode,
-          gameId: res.gameId,
-          roomCode: res.gameCode,
-          roomId: res.gameId,
-          timeControl: res.session.timeControl,
-        });
+        cb({ gameCode: res.gameCode, gameId: res.gameId });
     } catch (err: any) {
       if (typeof cb === 'function') cb({ error: err.message });
-      else {
-        socket.emit('createError', { error: err.message });
-        socket.emit('roomError', { error: err.message });
-      }
+      else socket.emit('createError', { error: err.message });
     }
   }
 
@@ -276,45 +226,23 @@ export class MatchmakingEngine {
     data: any,
     cb?: any,
   ): void {
-    const { gameCode, roomCode, matchId, gameId, roomId } = data ?? {};
-    const target = roomCode ?? gameCode ?? matchId ?? gameId ?? roomId;
+    const { gameCode, matchId, gameId } = data ?? {};
+    const target = gameCode ?? matchId ?? gameId;
     const match = this.getMatch(target);
-    if (!match || match.status !== 'waiting') {
-      if (typeof cb === 'function') cb({ error: 'Room not found or not waiting' });
-      return;
-    }
+    if (!match || match.status !== 'waiting') return;
 
     if (match.waitingTimer) {
       clearTimeout(match.waitingTimer);
       match.waitingTimer = undefined;
     }
     match.status = 'cancelled';
-    const payload = {
+    this.io.to(match.matchId).emit('gameCancelled', {
       gameId: match.matchId,
       gameCode: match.gameCode,
-      roomId: match.matchId,
-      roomCode: match.gameCode,
-      reason: 'Game room was cancelled by the host.',
-    };
-    this.io.to(match.matchId).emit('gameCancelled', payload);
-    this.io.to(match.matchId).emit('roomCancelled', payload);
-    if (match.gameCode) {
-      this.io.to(match.gameCode).emit('gameCancelled', payload);
-      this.io.to(match.gameCode).emit('roomCancelled', payload);
-    }
+      reason: 'Game was cancelled by the host.',
+    });
     this.cleanupMatch(match.matchId);
     if (typeof cb === 'function') cb({ success: true });
-  }
-
-  private handleGetMyRooms(
-    socket: Socket,
-    data: any,
-    cb?: (res: any) => void,
-  ): void {
-    const uid = data?.uid || socket.data.uid || socket.handshake.auth?.uid || socket.id;
-    const rooms = this.getUserRooms(uid);
-    socket.emit('myRooms', rooms);
-    if (typeof cb === 'function') cb(rooms);
   }
 
   private handleJoinGame(
@@ -323,8 +251,8 @@ export class MatchmakingEngine {
     cb?: (res: any) => void,
   ): void {
     try {
-      const { gameCode, roomCode, matchId, roomId, playerInfo } = data ?? {};
-      const code = (roomCode ?? gameCode ?? matchId ?? roomId ?? '').toString();
+      const { gameCode, matchId, playerInfo } = data ?? {};
+      const code = (gameCode ?? matchId ?? '').toString();
       const uid = playerInfo?.uid ?? socket.id;
 
       const res = this.joinCustomRoom(code, {
@@ -341,25 +269,21 @@ export class MatchmakingEngine {
       socket.join(res.match.matchId);
       if (res.match.gameCode) socket.join(res.match.gameCode);
 
-      const joinPayload = {
+      socket.emit('gameJoined', {
         color: res.playerColor,
         gameId: res.match.matchId,
         gameCode: res.match.gameCode,
-        roomId: res.match.matchId,
-        roomCode: res.match.gameCode,
-      };
-
-      socket.emit('gameJoined', joinPayload);
-      socket.emit('roomJoined', joinPayload);
+      });
 
       if (typeof cb === 'function')
-        cb(joinPayload);
+        cb({
+          color: res.playerColor,
+          gameId: res.match.matchId,
+          gameCode: res.match.gameCode,
+        });
     } catch (err: any) {
       if (typeof cb === 'function') cb({ error: err.message });
-      else {
-        socket.emit('joinError', { error: err.message });
-        socket.emit('roomError', { error: err.message });
-      }
+      else socket.emit('joinError', { error: err.message });
     }
   }
 
@@ -1074,8 +998,6 @@ export class MatchmakingEngine {
     const session: MatchSession = {
       matchId,
       gameCode,
-      hostUid: params.hostUid,
-      isPrivate: true,
       whiteUid: hostColor === 'w' ? params.hostUid : '',
       blackUid: hostColor === 'b' ? params.hostUid : '',
       whiteName:
@@ -1135,60 +1057,6 @@ export class MatchmakingEngine {
     this.userToMatch.set(params.hostUid, matchId);
 
     return { gameId: matchId, gameCode, session };
-  }
-
-  public getUserRooms(uid: string) {
-    const list: Array<{
-      matchId: string;
-      gameCode: string;
-      roomId: string;
-      roomCode: string;
-      status: MatchStatus;
-      timeControl: TimeControl;
-      playersCount: number;
-      createdAt: number;
-      rated: boolean;
-      hostUid: string;
-      hostName: string;
-      opponentName?: string;
-    }> = [];
-    const seen = new Set<string>();
-
-    for (const session of this.activeMatches.values()) {
-      if (seen.has(session.matchId)) continue;
-      seen.add(session.matchId);
-
-      const isUser =
-        session.hostUid === uid ||
-        session.whiteUid === uid ||
-        session.blackUid === uid;
-
-      if (
-        isUser &&
-        (session.status === 'waiting' ||
-          session.status === 'starting' ||
-          session.status === 'active')
-      ) {
-        const playersCount =
-          (session.whiteUid ? 1 : 0) + (session.blackUid ? 1 : 0);
-        list.push({
-          matchId: session.matchId,
-          gameCode: session.gameCode,
-          roomId: session.matchId,
-          roomCode: session.gameCode,
-          status: session.status,
-          timeControl: session.timeControl,
-          playersCount,
-          createdAt: session.createdAt,
-          rated: session.rated,
-          hostUid: session.hostUid || session.whiteUid || session.blackUid,
-          hostName: session.whiteName || session.blackName || 'Host',
-          opponentName:
-            session.whiteUid === uid ? session.blackName : session.whiteName,
-        });
-      }
-    }
-    return list;
   }
 
   public joinCustomRoom(
@@ -1291,13 +1159,6 @@ export class MatchmakingEngine {
     };
 
     this.io.to(match.matchId).emit('gameStarted', startPayload);
-    this.io.to(match.matchId).emit('roomStarted', startPayload);
-    this.io.to(match.matchId).emit('roomJoined', startPayload);
-    if (match.gameCode && match.gameCode !== match.matchId) {
-      this.io.to(match.gameCode).emit('gameStarted', startPayload);
-      this.io.to(match.gameCode).emit('roomStarted', startPayload);
-      this.io.to(match.gameCode).emit('roomJoined', startPayload);
-    }
     this.io.to(match.matchId).emit('match_found', {
       matchId: match.matchId,
       white: { uid: match.whiteUid, rating: match.whiteRating },

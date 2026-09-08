@@ -15,10 +15,10 @@ import {
   joinWorldwideMatchmaking,
   listenToOnlineMatchSession,
   listenToPublicOpenMatches,
-  listenToUserRooms,
-  fetchUserRoomsFromServer,
-  cancelOnlineMatch,
-  generateGameRoomCode
+  generateGameRoomCode,
+  listenToUserCreatedRooms,
+  cancelUserCreatedRoom,
+  UserCreatedRoomItem
 } from '../services/onlineMatchService';
 import { 
   listenToTournaments,
@@ -28,6 +28,7 @@ import {
 } from '../services/tournamentService';
 import { soundManager } from '../utils/audio';
 import { getLocalPlayerUid } from '../utils/identity';
+import { socketService } from '../utils/socket';
 import { 
   Swords, 
   Globe, 
@@ -45,9 +46,10 @@ import {
   RefreshCw,
   Search,
   Trophy,
+  DoorOpen,
   Trash2,
   ExternalLink,
-  Key
+  X
 } from 'lucide-react';
 import { Tournament, TournamentPlayer } from '../types/chess';
 import { ModernWaitingRoom } from './multiplayer/ModernWaitingRoom';
@@ -68,18 +70,6 @@ export const MultiplayerLobbyView: React.FC<MultiplayerLobbyViewProps> = ({
 
   const [activeTab, setActiveTab] = useState<'quick' | 'create' | 'join' | 'my_rooms' | 'open_challenges' | 'tournaments'>('quick');
 
-  // My Rooms state
-  const [userRooms, setUserRooms] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('chess_user_rooms_cache');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-  const [copiedRoomCode, setCopiedRoomCode] = useState<string | null>(null);
-  const [isRefreshingRooms, setIsRefreshingRooms] = useState(false);
-
   // Quick matchmaking
   const [isSearching, setIsSearching] = useState(false);
   const [searchTimer, setSearchTimer] = useState(0);
@@ -97,6 +87,13 @@ export const MultiplayerLobbyView: React.FC<MultiplayerLobbyViewProps> = ({
   const [pregeneratedCode, setPregeneratedCode] = useState<string>(() => generateGameRoomCode());
   const [copiedCode, setCopiedCode] = useState(false);
   const [showCreationModal, setShowCreationModal] = useState(false);
+
+  // My Rooms state
+  const [myRooms, setMyRooms] = useState<UserCreatedRoomItem[]>([]);
+  const [copiedRoomCode, setCopiedRoomCode] = useState<string | null>(null);
+  const [roomFilter, setRoomFilter] = useState<'all' | 'waiting' | 'in_progress' | 'completed'>('all');
+  const [roomSearchQuery, setRoomSearchQuery] = useState('');
+  const [isCancellingRoom, setIsCancellingRoom] = useState<string | null>(null);
 
   // Join Room state
   const [joinMatchId, setJoinMatchId] = useState('');
@@ -186,13 +183,135 @@ export const MultiplayerLobbyView: React.FC<MultiplayerLobbyViewProps> = ({
     return () => unsub();
   }, [createdMatchId, onStartMatch]);
 
+  // Stable identifier for the local user
+  const currentUid = profile?.uid || user?.uid || guestUidRef.current;
+
+  // Listen to all rooms created by the current user
+  useEffect(() => {
+    if (!currentUid) return;
+    const unsub = listenToUserCreatedRooms(currentUid, rooms => {
+      setMyRooms(rooms);
+    });
+    return () => unsub();
+  }, [currentUid]);
+
+  const handleCopyRoomCode = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedRoomCode(code);
+      soundManager.playCapture();
+      setTimeout(() => {
+        setCopiedRoomCode(prev => (prev === code ? null : prev));
+      }, 2000);
+    } catch (err) {
+      console.warn('Clipboard write error:', err);
+    }
+  };
+
+  const handleCancelRoom = async (code: string) => {
+    if (!currentUid) return;
+    setIsCancellingRoom(code);
+    try {
+      await cancelUserCreatedRoom(code, currentUid);
+      soundManager.playMove();
+    } catch (err) {
+      console.warn('Error cancelling room:', err);
+    } finally {
+      setIsCancellingRoom(null);
+    }
+  };
+
+  const formatRoomTimeAgo = (isoString?: string) => {
+    if (!isoString) return 'Recently';
+    try {
+      const diffMs = Date.now() - new Date(isoString).getTime();
+      if (isNaN(diffMs)) return 'Recently';
+      const diffSec = Math.floor(diffMs / 1000);
+      if (diffSec < 60) return 'Just now';
+      const diffMin = Math.floor(diffSec / 60);
+      if (diffMin < 60) return `${diffMin}m ago`;
+      const diffHours = Math.floor(diffMin / 60);
+      if (diffHours < 24) return `${diffHours}h ago`;
+      const diffDays = Math.floor(diffHours / 24);
+      return `${diffDays}d ago`;
+    } catch {
+      return 'Recently';
+    }
+  };
+
+  const filteredMyRooms = myRooms.filter(room => {
+    if (roomFilter === 'waiting' && room.status !== 'waiting') return false;
+    if (roomFilter === 'in_progress' && room.status !== 'in_progress' && room.status !== 'ready') return false;
+    if (roomFilter === 'completed' && ['waiting', 'in_progress', 'ready'].includes(room.status)) return false;
+
+    if (roomSearchQuery.trim()) {
+      const q = roomSearchQuery.trim().toLowerCase();
+      const matchCode = room.code.toLowerCase().includes(q);
+      const matchTC = (room.timeControl?.name || '').toLowerCase().includes(q);
+      const matchOpponent = (room.opponent?.displayName || '').toLowerCase().includes(q);
+      if (!matchCode && !matchTC && !matchOpponent) return false;
+    }
+
+    return true;
+  });
+
+  const waitingCount = myRooms.filter(r => r.status === 'waiting').length;
+  const inProgressCount = myRooms.filter(r => r.status === 'in_progress' || r.status === 'ready').length;
+  const completedCount = myRooms.filter(r => !['waiting', 'in_progress', 'ready'].includes(r.status)).length;
+  const activeWaitingRooms = myRooms.filter(r => r.status === 'waiting');
+
   // Listen to open public challenges
   useEffect(() => {
     const unsub = listenToPublicOpenMatches(matches => {
       setOpenMatches(matches);
     });
+
+    const socket = socketService.getSocket();
+    const handleRoomListUpdate = (data: any) => {
+      console.log('[MultiplayerLobbyView] Received roomListUpdate:', data);
+      if (data?.action === 'create' && data?.room) {
+        // Optimistically append to openMatches
+        setOpenMatches(prev => {
+          if (prev.some(m => m.code === data.room.code)) return prev;
+          const newMatch = {
+            id: data.room.code,
+            code: data.room.code,
+            hostId: data.room.hostId || 'unknown',
+            whitePlayer: data.room.side === 'w' ? { displayName: data.room.hostName } : null,
+            blackPlayer: data.room.side === 'b' ? { displayName: data.room.hostName } : null,
+            status: data.room.status,
+            timeControl: data.room.timeControl,
+            createdAt: data.room.createdAt,
+          } as any;
+          return [newMatch, ...prev];
+        });
+
+        // Also update myRooms if the current user is the host
+        if (data.room.hostId === currentUid) {
+          setMyRooms((prev: UserCreatedRoomItem[]) => {
+            if (prev.some(m => m.code === data.room.code)) return prev;
+            const newMyRoom: UserCreatedRoomItem = {
+              id: data.room.code,
+              code: data.room.code,
+              timeControl: data.room.timeControl,
+              side: data.room.side,
+              status: data.room.status,
+              createdAt: data.room.createdAt,
+              isHost: true,
+            };
+            return [newMyRoom, ...prev];
+          });
+        }
+      }
+    };
+
+    if (socket) {
+      socket.on('roomListUpdate', handleRoomListUpdate);
+    }
+
     return () => {
       if (unsub) unsub();
+      if (socket) socket.off('roomListUpdate', handleRoomListUpdate);
     };
   }, []);
 
@@ -205,134 +324,6 @@ export const MultiplayerLobbyView: React.FC<MultiplayerLobbyViewProps> = ({
       if (unsub) unsub();
     };
   }, []);
-
-  // Listen to and fetch rooms created by current user
-  useEffect(() => {
-    const localUid = buildLocalPlayer().uid;
-    if (!localUid) return;
-
-    // 1. Initial fetch from server
-    fetchUserRoomsFromServer(localUid).then(serverRooms => {
-      if (serverRooms && serverRooms.length > 0) {
-        setUserRooms(prev => {
-          const merged = [...prev];
-          for (const sr of serverRooms) {
-            const id = sr.roomCode || sr.gameCode || sr.roomId || sr.matchId;
-            if (!id) continue;
-            const idx = merged.findIndex(r => (r.code || r.id) === id);
-            const item = {
-              id,
-              code: id,
-              timeControl: sr.timeControl || TIME_CONTROLS[5],
-              status: sr.status || 'waiting',
-              createdAt: sr.createdAt,
-              playersCount: sr.playersCount || 1,
-              side: 'random' as const,
-            };
-            if (idx >= 0) merged[idx] = { ...merged[idx], ...item };
-            else merged.unshift(item);
-          }
-          try {
-            localStorage.setItem('chess_user_rooms_cache', JSON.stringify(merged));
-          } catch {}
-          return merged;
-        });
-      }
-    });
-
-    // 2. Realtime listener from Firestore
-    const unsub = listenToUserRooms(localUid, matches => {
-      if (matches && matches.length > 0) {
-        setUserRooms(prev => {
-          const merged = [...prev];
-          for (const m of matches) {
-            const id = m.code || m.id;
-            if (!id) continue;
-            const idx = merged.findIndex(r => (r.code || r.id) === id);
-            const item = {
-              id,
-              code: id,
-              timeControl: m.timeControl,
-              status: m.status,
-              createdAt: m.createdAt,
-              playersCount: m.guestId ? 2 : 1,
-              side: m.whitePlayer?.uid === localUid ? 'w' : m.blackPlayer?.uid === localUid ? 'b' : 'random',
-            };
-            if (idx >= 0) merged[idx] = { ...merged[idx], ...item };
-            else merged.unshift(item);
-          }
-          try {
-            localStorage.setItem('chess_user_rooms_cache', JSON.stringify(merged));
-          } catch {}
-          return merged;
-        });
-      }
-    });
-
-    return () => unsub();
-  }, [buildLocalPlayer]);
-
-  const handleRefreshUserRooms = async () => {
-    setIsRefreshingRooms(true);
-    const localUid = buildLocalPlayer().uid;
-    try {
-      const serverRooms = await fetchUserRoomsFromServer(localUid);
-      if (serverRooms && serverRooms.length > 0) {
-        setUserRooms(prev => {
-          const merged = [...prev];
-          for (const sr of serverRooms) {
-            const id = sr.roomCode || sr.gameCode || sr.roomId || sr.matchId;
-            if (!id) continue;
-            const idx = merged.findIndex(r => (r.code || r.id) === id);
-            const item = {
-              id,
-              code: id,
-              timeControl: sr.timeControl || TIME_CONTROLS[5],
-              status: sr.status || 'waiting',
-              createdAt: sr.createdAt,
-              playersCount: sr.playersCount || 1,
-              side: 'random' as const,
-            };
-            if (idx >= 0) merged[idx] = { ...merged[idx], ...item };
-            else merged.unshift(item);
-          }
-          try {
-            localStorage.setItem('chess_user_rooms_cache', JSON.stringify(merged));
-          } catch {}
-          return merged;
-        });
-      }
-    } catch (e) {
-      console.warn('Refresh user rooms error:', e);
-    } finally {
-      setTimeout(() => setIsRefreshingRooms(false), 400);
-    }
-  };
-
-  const handleCancelUserRoom = async (code: string) => {
-    try {
-      await cancelOnlineMatch(code);
-      setUserRooms(prev => {
-        const next = prev.filter(r => (r.code || r.id) !== code);
-        try {
-          localStorage.setItem('chess_user_rooms_cache', JSON.stringify(next));
-        } catch {}
-        return next;
-      });
-      if (createdMatchId === code) {
-        setCreatedMatchId(null);
-      }
-      soundManager.playCapture();
-    } catch (e) {
-      console.error('Cancel room error:', e);
-    }
-  };
-
-  const handleCopyUserRoomCode = (code: string) => {
-    navigator.clipboard.writeText(code);
-    setCopiedRoomCode(code);
-    setTimeout(() => setCopiedRoomCode(null), 2000);
-  };
 
   // Quick Match Finder Logic — Firestore live queue, engine challenger as fallback
   const handleQuickMatch = async (tc: TimeControl) => {
@@ -382,24 +373,6 @@ export const MultiplayerLobbyView: React.FC<MultiplayerLobbyViewProps> = ({
       setCreatedMatchId(matchId);
       setIsCreating(false);
       soundManager.playCapture();
-
-      // Immediately register in userRooms
-      const newRoom = {
-        id: matchId,
-        code: matchId,
-        timeControl: selectedTimeControl,
-        side: selectedSide,
-        status: 'waiting',
-        createdAt: new Date().toISOString(),
-        playersCount: 1,
-      };
-      setUserRooms(prev => {
-        const next = [newRoom, ...prev.filter(r => (r.code || r.id) !== matchId)];
-        try {
-          localStorage.setItem('chess_user_rooms_cache', JSON.stringify(next));
-        } catch {}
-        return next;
-      });
     } catch (e) {
       console.error('Create room error:', e);
       setIsCreating(false);
@@ -421,25 +394,6 @@ export const MultiplayerLobbyView: React.FC<MultiplayerLobbyViewProps> = ({
     setCreatedMatchId(matchId);
     setSelectedTimeControl(config.timeControl);
     setSelectedSide(config.colorPreference);
-
-    // Immediately register in userRooms
-    const newRoom = {
-      id: matchId,
-      code: matchId,
-      timeControl: config.timeControl,
-      side: config.colorPreference,
-      status: 'waiting',
-      createdAt: new Date().toISOString(),
-      playersCount: 1,
-    };
-    setUserRooms(prev => {
-      const next = [newRoom, ...prev.filter(r => (r.code || r.id) !== matchId)];
-      try {
-        localStorage.setItem('chess_user_rooms_cache', JSON.stringify(next));
-      } catch {}
-      return next;
-    });
-
     return matchId;
   };
 
@@ -582,7 +536,6 @@ export const MultiplayerLobbyView: React.FC<MultiplayerLobbyViewProps> = ({
           </button>
 
           <button
-            id="tab-my-rooms"
             onClick={() => setActiveTab('my_rooms')}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
               activeTab === 'my_rooms'
@@ -591,7 +544,14 @@ export const MultiplayerLobbyView: React.FC<MultiplayerLobbyViewProps> = ({
             }`}
           >
             <Crown className="w-3.5 h-3.5 text-[#F5C453]" />
-            <span>My Rooms ({userRooms.length})</span>
+            <span>My Rooms</span>
+            {myRooms.length > 0 && (
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
+                activeTab === 'my_rooms' ? 'bg-[#F5C453] text-black' : 'bg-white/10 text-[#DFD0B0]'
+              }`}>
+                {myRooms.length}
+              </span>
+            )}
           </button>
 
           <button
@@ -653,6 +613,50 @@ export const MultiplayerLobbyView: React.FC<MultiplayerLobbyViewProps> = ({
           )}
         </div>
       </div>
+
+      {/* Active Waiting Room Alert (When not on My Rooms tab and not currently in the Create waiting room) */}
+      {activeWaitingRooms.length > 0 && activeTab !== 'my_rooms' && !createdMatchId && (
+        <div className="p-3.5 rounded-2xl bg-amber-950/40 border border-amber-500/40 flex items-center justify-between gap-3 flex-wrap animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse flex-shrink-0" />
+            <div className="text-xs text-amber-200">
+              <span className="font-bold">Active Waiting Room:</span>{' '}
+              <span className="font-mono font-black text-[#F5C453] bg-black/60 px-2 py-0.5 rounded border border-amber-500/30">
+                {activeWaitingRooms[0].code}
+              </span>
+              <span className="text-white/60 ml-2 hidden sm:inline">
+                ({activeWaitingRooms[0].timeControl?.name || 'Rapid 10m'})
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleCopyRoomCode(activeWaitingRooms[0].code)}
+              className="px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer border border-white/10"
+              title="Copy code to clipboard"
+            >
+              {copiedRoomCode === activeWaitingRooms[0].code ? (
+                <>
+                  <Check className="w-3 h-3 text-emerald-400" />
+                  <span>Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3 h-3 text-[#F5C453]" />
+                  <span>Copy Code</span>
+                </>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('my_rooms')}
+              className="px-3 py-1 rounded-xl bg-[#52673A] hover:bg-[#627c45] text-white text-xs font-black flex items-center gap-1 cursor-pointer border border-[#F5C453]/40 shadow-sm"
+            >
+              <span>View in My Rooms</span>
+              <ArrowRight className="w-3 h-3" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* TAB 1: QUICK MATCHMAKING */}
       {activeTab === 'quick' && (
@@ -878,20 +882,42 @@ export const MultiplayerLobbyView: React.FC<MultiplayerLobbyViewProps> = ({
                   <Sparkles className="w-4 h-4 text-amber-400" />
                   <span>Custom Game Creator</span>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('my_rooms')}
+                  className="px-4 py-3.5 rounded-2xl bg-[#52673A]/30 hover:bg-[#52673A]/50 text-[#DFD0B0] font-bold text-xs flex items-center justify-center gap-2 border border-[#F5C453]/30 transition-all cursor-pointer"
+                  title="View all rooms created by you"
+                >
+                  <Crown className="w-4 h-4 text-[#F5C453]" />
+                  <span>My Rooms ({myRooms.length})</span>
+                </button>
               </div>
             </div>
           ) : (
-            <ModernWaitingRoom
-              gameCode={createdMatchId}
-              timeControlName={selectedTimeControl.name}
-              isRated={true}
-              playerSide={selectedSide}
-              onCancel={() => {
-                setCreatedMatchId(null);
-                setPregeneratedCode(generateGameRoomCode());
-              }}
-              onEnterBoard={() => onStartMatch(createdMatchId)}
-            />
+            <div className="space-y-3">
+              <ModernWaitingRoom
+                gameCode={createdMatchId}
+                timeControlName={selectedTimeControl.name}
+                isRated={true}
+                playerSide={selectedSide}
+                onCancel={() => {
+                  setCreatedMatchId(null);
+                  setPregeneratedCode(generateGameRoomCode());
+                }}
+                onEnterBoard={() => onStartMatch(createdMatchId)}
+              />
+              <div className="flex items-center justify-between text-xs px-2 text-[#DFD0B0]/70">
+                <span>Room is saved to your history.</span>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('my_rooms')}
+                  className="text-[#F5C453] hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                >
+                  <span>Go to My Rooms</span>
+                  <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
           )}
         </div>
       )}
@@ -938,171 +964,339 @@ export const MultiplayerLobbyView: React.FC<MultiplayerLobbyViewProps> = ({
         </div>
       )}
 
-      {/* TAB: MY CREATED ROOMS */}
+      {/* TAB: DEDICATED MY ROOMS SECTION */}
       {activeTab === 'my_rooms' && (
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-[#52673A]/40 border border-[#F5C453]/40 flex items-center justify-center text-[#F5C453]">
-                <Crown className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-black text-white flex items-center gap-2">
+        <div className="space-y-5 animate-in fade-in duration-200">
+          {/* Section Header */}
+          <div className="glass-panel p-5 rounded-3xl border border-[#F5C453]/30 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-[#52673A]/40 border border-[#F5C453]/40 flex items-center justify-center text-[#F5C453]">
+                  <Crown className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-black text-white flex items-center gap-2">
                   <span>My Created Rooms</span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#52673A] text-white border border-[#F5C453]/30">
-                    {userRooms.length}
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#52673A] text-[#F5C453] font-mono font-bold border border-[#F5C453]/40">
+                    {myRooms.length}
                   </span>
                 </h3>
-                <p className="text-xs text-[#DFD0B0]/70">
-                  Manage active private rooms you created. Share the code with friends to start playing.
-                </p>
               </div>
+              <p className="text-xs text-[#DFD0B0]/70 max-w-xl">
+                Dedicated list of rooms created by you. Copy codes to invite friends, enter your waiting rooms, or review completed games.
+              </p>
             </div>
 
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <button
-                onClick={handleRefreshUserRooms}
-                disabled={isRefreshingRooms}
-                className="px-3 py-2 rounded-xl bg-black/40 hover:bg-black/60 border border-white/10 text-xs font-bold text-[#DFD0B0] hover:text-white flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
-                title="Refresh your rooms"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 text-[#F5C453] ${isRefreshingRooms ? 'animate-spin' : ''}`} />
-                <span>Refresh</span>
-              </button>
-              <button
                 onClick={() => setActiveTab('create')}
-                className="px-3.5 py-2 rounded-xl bg-[#52673A] hover:bg-[#52673A]/90 text-xs font-black text-white flex items-center gap-1.5 transition-all cursor-pointer shadow-md border border-[#F5C453]/40"
+                className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#52673A] to-[#F5C453] hover:brightness-110 text-white font-black text-xs inline-flex items-center justify-center gap-2 cursor-pointer shadow-md border border-[#F5C453]/40 transition-all"
               >
-                <Plus className="w-3.5 h-3.5 text-[#F5C453]" />
+                <Plus className="w-4 h-4" />
                 <span>Create New Room</span>
               </button>
             </div>
           </div>
 
-          {userRooms.length === 0 ? (
-            <div className="glass-panel p-8 sm:p-12 rounded-3xl border border-white/10 text-center space-y-4 max-w-lg mx-auto">
-              <div className="w-16 h-16 rounded-3xl bg-[#161c12] border border-[#F5C453]/30 flex items-center justify-center text-[#F5C453] mx-auto shadow-inner">
-                <Crown className="w-8 h-8 opacity-70" />
-              </div>
-              <div className="space-y-1">
-                <h4 className="text-base font-bold text-white">No Active Rooms Created Yet</h4>
-                <p className="text-xs text-[#DFD0B0]/70 max-w-sm mx-auto">
-                  When you create a private room, its room code, time controls, and live status will be tracked here so you can invite friends and manage your games easily.
-                </p>
-              </div>
+          {/* Filter Bar & Search */}
+          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+            {/* Status Filter Buttons */}
+            <div className="flex items-center gap-1.5 bg-[#161c12] p-1.5 rounded-2xl border border-white/10 overflow-x-auto">
               <button
-                onClick={() => setActiveTab('create')}
-                className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-[#8C2425] via-[#52673A] to-[#F5C453] text-white text-xs font-black inline-flex items-center gap-2 shadow-lg shadow-[#F5C453]/20 border border-[#F5C453]/50 cursor-pointer hover:brightness-110 transition-all"
+                onClick={() => setRoomFilter('all')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  roomFilter === 'all'
+                    ? 'bg-[#52673A] text-white shadow-sm border border-[#F5C453]/40'
+                    : 'text-[#DFD0B0]/70 hover:text-white'
+                }`}
               >
-                <Plus className="w-4 h-4" />
-                <span>Create Private Room Now</span>
+                All ({myRooms.length})
+              </button>
+
+              <button
+                onClick={() => setRoomFilter('waiting')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                  roomFilter === 'waiting'
+                    ? 'bg-amber-600/70 text-white shadow-sm border border-amber-400/50'
+                    : 'text-[#DFD0B0]/70 hover:text-white'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse inline-block" />
+                <span>Waiting ({waitingCount})</span>
+              </button>
+
+              <button
+                onClick={() => setRoomFilter('in_progress')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                  roomFilter === 'in_progress'
+                    ? 'bg-emerald-600/70 text-white shadow-sm border border-emerald-400/50'
+                    : 'text-[#DFD0B0]/70 hover:text-white'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-ping" />
+                <span>In Progress ({inProgressCount})</span>
+              </button>
+
+              <button
+                onClick={() => setRoomFilter('completed')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  roomFilter === 'completed'
+                    ? 'bg-slate-700 text-white shadow-sm border border-white/20'
+                    : 'text-[#DFD0B0]/70 hover:text-white'
+                }`}
+              >
+                Finished ({completedCount})
               </button>
             </div>
+
+            {/* Search Input */}
+            <div className="relative flex-1 max-w-sm">
+              <Search className="w-3.5 h-3.5 text-white/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={roomSearchQuery}
+                onChange={e => setRoomSearchQuery(e.target.value)}
+                placeholder="Search room code or time control..."
+                className="w-full pl-9 pr-8 py-2 rounded-2xl bg-black/50 border border-white/15 text-white text-xs placeholder:text-white/30 focus:border-[#F5C453] focus:outline-none transition-all"
+              />
+              {roomSearchQuery && (
+                <button
+                  onClick={() => setRoomSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Rooms Grid / Empty State */}
+          {filteredMyRooms.length === 0 ? (
+            <div className="glass-panel p-10 rounded-3xl border border-white/10 text-center space-y-4">
+              <div className="w-14 h-14 rounded-2xl bg-[#52673A]/20 border border-[#F5C453]/30 mx-auto flex items-center justify-center text-[#F5C453]">
+                <Crown className="w-7 h-7" />
+              </div>
+              <div className="space-y-1 max-w-sm mx-auto">
+                <h4 className="text-sm font-black text-white">
+                  {myRooms.length === 0
+                    ? 'No Rooms Created Yet'
+                    : 'No Matching Rooms Found'}
+                </h4>
+                <p className="text-xs text-[#DFD0B0]/60">
+                  {myRooms.length === 0
+                    ? "You haven't created any custom multiplayer rooms yet. Create a room and share the 6-character code with a friend to begin!"
+                    : 'No rooms match your filter or search query. Try switching to "All" or clearing the search.'}
+                </p>
+              </div>
+              {myRooms.length === 0 ? (
+                <button
+                  onClick={() => setActiveTab('create')}
+                  className="px-5 py-2.5 rounded-xl bg-[#52673A] hover:bg-[#627c45] text-white font-bold text-xs inline-flex items-center gap-2 cursor-pointer shadow-md border border-[#F5C453]/40"
+                >
+                  <Plus className="w-4 h-4 text-[#F5C453]" />
+                  <span>Create Your First Room</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setRoomFilter('all');
+                    setRoomSearchQuery('');
+                  }}
+                  className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs inline-flex items-center gap-1.5 cursor-pointer border border-white/10"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Show All Rooms</span>
+                </button>
+              )}
+            </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-              {userRooms.map(room => {
-                const code = (room.code || room.id || '').toUpperCase();
-                const isWaiting = room.status === 'waiting' || !room.status;
-                const isInProgress = room.status === 'in_progress';
-                const isCopied = copiedRoomCode === code;
-                const tcName = room.timeControl?.name || (typeof room.timeControl === 'string' ? room.timeControl : '10 min Rapid');
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredMyRooms.map(room => {
+                const isWaiting = room.status === 'waiting';
+                const isInProgress = room.status === 'in_progress' || room.status === 'ready';
+                const isFinished = !isWaiting && !isInProgress;
+                const isCopied = copiedRoomCode === room.code;
 
                 return (
                   <div
-                    key={code}
-                    className="glass-panel p-4 rounded-2xl border border-white/10 hover:border-[#F5C453]/40 transition-all flex flex-col justify-between gap-3 shadow-lg bg-[#141A11]/70"
+                    key={room.id || room.code}
+                    className="glass-panel p-5 rounded-2xl border border-white/10 hover:border-[#F5C453]/40 transition-all flex flex-col justify-between gap-4 shadow-lg group relative overflow-hidden"
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <span className="text-[10px] font-black uppercase text-[#F5C453] tracking-widest block">
-                          Game Room Code
-                        </span>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="font-mono text-xl font-black text-white tracking-widest bg-black/50 px-2.5 py-1 rounded-lg border border-white/10">
-                            {code}
-                          </span>
-                          <button
-                            onClick={() => handleCopyUserRoomCode(code)}
-                            className="p-1.5 rounded-lg bg-black/40 hover:bg-black/70 border border-white/10 text-xs text-[#DFD0B0] hover:text-white transition-all cursor-pointer flex items-center gap-1"
-                            title="Copy Room Code"
-                          >
-                            {isCopied ? (
-                              <>
-                                <Check className="w-3.5 h-3.5 text-emerald-400" />
-                                <span className="text-[10px] text-emerald-400 font-bold">Copied!</span>
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="w-3.5 h-3.5 text-[#F5C453]" />
-                                <span className="text-[10px] font-bold">Copy</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col items-end gap-1">
-                        {isWaiting ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 shadow-sm">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                            Waiting (1/2)
-                          </span>
-                        ) : isInProgress ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black bg-amber-950/80 border border-amber-500/50 text-amber-300 shadow-sm">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
-                            In Progress (2/2)
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black bg-gray-900/80 border border-white/20 text-gray-400">
-                            {room.status}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 text-xs bg-black/30 p-2.5 rounded-xl border border-white/5">
-                      <div className="flex items-center gap-1.5 text-[#DFD0B0]">
-                        <Clock className="w-3.5 h-3.5 text-[#F5C453]" />
-                        <span className="font-bold truncate">{tcName}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-[#DFD0B0] justify-end">
-                        <Users className="w-3.5 h-3.5 text-[#F5C453]" />
-                        <span>{room.playersCount || (isWaiting ? 1 : 2)}/2 Players</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/5">
-                      <button
-                        onClick={() => handleCancelUserRoom(code)}
-                        className="px-3 py-1.5 rounded-xl bg-rose-950/40 hover:bg-rose-900/70 border border-rose-500/30 text-rose-300 hover:text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
-                        title="Cancel and close room"
-                      >
-                        <Trash2 className="w-3 h-3 text-rose-400" />
-                        <span>Cancel Room</span>
-                      </button>
-
+                    {/* Top Row: Room Code with Copy Button & Status Badge */}
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
                       <div className="flex items-center gap-2">
-                        {isWaiting ? (
-                          <button
-                            onClick={() => {
-                              setCreatedMatchId(code);
-                              setActiveTab('create');
-                            }}
-                            className="px-3.5 py-1.5 rounded-xl bg-[#52673A] hover:bg-[#52673A]/90 text-white font-black text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow-md border border-[#F5C453]/40"
-                          >
-                            <ExternalLink className="w-3 h-3 text-[#F5C453]" />
-                            <span>Open Waiting Room</span>
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => onStartMatch(code)}
-                            className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#8C2425] to-[#52673A] hover:brightness-110 text-white font-black text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow-md border border-[#F5C453]/40"
-                          >
-                            <Play className="w-3 h-3 text-[#F5C453]" />
-                            <span>Enter Game</span>
-                          </button>
+                        {/* Room Code Badge */}
+                        <div className="px-3 py-1.5 rounded-xl bg-black/80 border border-[#F5C453]/40 flex items-center gap-2 shadow-inner">
+                          <span className="text-[10px] text-[#DFD0B0]/60 uppercase font-bold tracking-wider">
+                            Code
+                          </span>
+                          <span className="font-mono font-black text-base tracking-[0.15em] text-[#F5C453] select-all">
+                            {room.code}
+                          </span>
+                        </div>
+
+                        {/* Copy Code to Clipboard Button */}
+                        <button
+                          id={`copy-btn-${room.code}`}
+                          onClick={() => handleCopyRoomCode(room.code)}
+                          title="Copy room code to clipboard"
+                          className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer border shadow-sm ${
+                            isCopied
+                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-emerald-500/20'
+                              : 'bg-white/10 hover:bg-white/20 text-[#DFD0B0] hover:text-white border-white/15'
+                          }`}
+                        >
+                          {isCopied ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              <span>Copied!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5 text-[#F5C453]" />
+                              <span>Copy Code</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Status Badge */}
+                      <div>
+                        {isWaiting && (
+                          <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40 inline-flex items-center gap-1.5 shadow-sm">
+                            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse inline-block" />
+                            <span>Waiting</span>
+                          </span>
+                        )}
+                        {isInProgress && (
+                          <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 inline-flex items-center gap-1.5 shadow-sm">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block" />
+                            <span>In Progress</span>
+                          </span>
+                        )}
+                        {isFinished && (
+                          <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-slate-500/20 text-slate-300 border border-slate-500/30 inline-flex items-center gap-1.5">
+                            <span>{room.status === 'aborted' ? 'Cancelled' : 'Finished'}</span>
+                          </span>
                         )}
                       </div>
+                    </div>
+
+                    {/* Middle Info Block: Time Control & Opponent / Side details */}
+                    <div className="bg-black/40 p-3.5 rounded-xl border border-white/5 space-y-2.5">
+                      <div className="flex items-center justify-between text-xs">
+                        {/* Time Control details */}
+                        <div className="flex items-center gap-2">
+                          <div className="p-1 rounded-lg bg-[#52673A]/40 border border-[#F5C453]/20 text-[#F5C453]">
+                            <Clock className="w-3.5 h-3.5" />
+                          </div>
+                          <div>
+                            <span className="font-black text-white text-xs">
+                              {room.timeControl?.name || 'Rapid 10m'}
+                            </span>
+                            <span className="text-[10px] text-white/50 ml-1.5 font-mono">
+                              ({room.timeControl?.initialSeconds ? `${Math.round(room.timeControl.initialSeconds / 60)}m` : '10m'}
+                              {room.timeControl?.incrementSeconds ? ` + ${room.timeControl.incrementSeconds}s` : ''})
+                            </span>
+                          </div>
+                        </div>
+
+                        <span className="text-[10px] text-[#DFD0B0]/60">
+                          {formatRoomTimeAgo(room.createdAt)}
+                        </span>
+                      </div>
+
+                      {/* Opponent & Side Information */}
+                      <div className="text-xs text-[#DFD0B0]/70 flex items-center justify-between pt-1 border-t border-white/5">
+                        <div className="flex items-center gap-2">
+                          {room.opponent ? (
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-5 h-5 rounded-full overflow-hidden bg-[#52673A] border border-white/20 flex items-center justify-center text-[10px] text-white font-bold">
+                                {room.opponent.avatar ? (
+                                  <img
+                                    src={room.opponent.avatar}
+                                    alt="Opponent"
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  room.opponent.displayName?.charAt(0) || '?'
+                                )}
+                              </div>
+                              <span className="text-white font-bold truncate max-w-[120px]">
+                                {room.opponent.displayName}
+                              </span>
+                              {room.opponent.elo && (
+                                <span className="text-[10px] text-[#F5C453] font-mono">
+                                  ({room.opponent.elo})
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-[11px] text-white/50 italic flex items-center gap-1">
+                              {isWaiting ? (
+                                <>
+                                  <Users className="w-3 h-3 text-amber-400" />
+                                  <span>Waiting for challenger</span>
+                                </>
+                              ) : (
+                                <span>No opponent record</span>
+                              )}
+                            </span>
+                          )}
+                        </div>
+
+                        <span className="text-[10px] font-mono text-[#F5C453] uppercase tracking-wider bg-white/5 px-2 py-0.5 rounded border border-white/10">
+                          Side: {room.side === 'w' ? 'White' : room.side === 'b' ? 'Black' : 'Random'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Bottom Row: Actions */}
+                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/5">
+                      {/* Enter Room / Board Action */}
+                      {isWaiting && (
+                        <button
+                          onClick={() => onStartMatch(room.code)}
+                          className="flex-1 py-2 rounded-xl bg-[#52673A] hover:bg-[#627c45] text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-md border border-[#F5C453]/40 transition-all cursor-pointer"
+                        >
+                          <DoorOpen className="w-3.5 h-3.5 text-[#F5C453]" />
+                          <span>Enter Waiting Room</span>
+                        </button>
+                      )}
+
+                      {isInProgress && (
+                        <button
+                          onClick={() => onStartMatch(room.code)}
+                          className="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-md border border-emerald-400/50 transition-all cursor-pointer"
+                        >
+                          <Play className="w-3.5 h-3.5 fill-current" />
+                          <span>Resume Match</span>
+                        </button>
+                      )}
+
+                      {isFinished && (
+                        <button
+                          onClick={() => onStartMatch(room.code)}
+                          className="flex-1 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs flex items-center justify-center gap-1.5 border border-white/10 transition-all cursor-pointer"
+                        >
+                          <Play className="w-3.5 h-3.5" />
+                          <span>Review Match</span>
+                        </button>
+                      )}
+
+                      {/* Cancel Room Action (available for waiting rooms) */}
+                      {isWaiting && (
+                        <button
+                          onClick={() => handleCancelRoom(room.code)}
+                          disabled={isCancellingRoom === room.code}
+                          title="Close this waiting room"
+                          className="px-3 py-2 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 hover:text-rose-200 border border-rose-500/30 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline">
+                            {isCancellingRoom === room.code ? 'Closing...' : 'Close Room'}
+                          </span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
