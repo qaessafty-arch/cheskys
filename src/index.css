@@ -1,0 +1,540 @@
+@import "tailwindcss";
+
+:root {
+  --app-bg: #87CEEB;
+  --surface-base: #B0E0E6;
+  --panel-surface: rgba(255, 255, 255, 0.7);
+  --panel-border: rgba(0, 0, 0, 0.1);
+  --accent-amber: #0056b3;
+  --accent-win: #22c55e;
+  --accent-loss: #ef4444;
+  --primary-accent: #0056b3;
+  --primary-accent-hover: #004494;
+  --secondary-accent: #00BFFF;
+  --accent-glow: rgba(0, 91, 187, 0.3);
+  --mesh-1: rgba(255, 255, 255, 0.6);
+  --mesh-2: rgba(135, 206, 235, 0.5);
+  --mesh-3: rgba(0, 191, 255, 0.4);
+  --glass-bg: rgba(255, 255, 255, 0.4);
+  --glass-bg-hover: rgba(255, 255, 255, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.3);
+  --glass-border-hover: rgba(0, 91, 187, 0.4);
+  --glass-panel: rgba(255, 255, 255, 0.5);
+  --text-main: #0f172a;
+  --text-muted: #475569;
+  --board-light: #dee2e6;
+  --board-dark: #7ba5c1;
+  --board-border: rgba(0, 0, 0, 0.1);
+}
+
+@layer base {
+  body {
+    margin: 0;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: var(--app-bg, #0a0a0c);
+    color: var(--text-main, #f8fafc);
+    min-height: 100vh;
+    transition: background-color 0.3s ease;
+  }
+
+  h1, h2, h3, .font-heading {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  .font-ui {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  .font-mono {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  }
+
+  .font-vazirmatn {
+    font-family: 'Vazirmatn', 'Inter', system-ui, sans-serif;
+  }
+}
+
+/* Dynamic Ambient Frosted Glass Mesh Gradient */
+.mesh-gradient {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
+  pointer-events: none;
+  background: 
+    radial-gradient(circle at 12% 12%, var(--mesh-1, rgba(59, 130, 246, 0.22)) 0px, transparent 48%),
+    radial-gradient(circle at 88% 18%, var(--mesh-2, rgba(139, 92, 246, 0.20)) 0px, transparent 48%),
+    radial-gradient(circle at 50% 85%, var(--mesh-3, rgba(236, 72, 153, 0.15)) 0px, transparent 50%),
+    radial-gradient(circle at 80% 82%, var(--mesh-1, rgba(96, 165, 250, 0.12)) 0px, transparent 40%),
+    var(--app-bg, #0a0a0c);
+  transition: background 0.4s ease;
+}
+
+/* Frosted Glass Card Utilities */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  transition: border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+}
+
+.glass-card-hover {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card-hover:hover {
+  background: var(--glass-bg-hover);
+  border-color: var(--glass-border-hover);
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.45), 0 0 20px 0 var(--accent-glow);
+}
+
+.glass-panel {
+  background: var(--glass-panel, rgba(15, 18, 28, 0.75));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.12));
+  box-shadow: 0 16px 48px 0 rgba(0, 0, 0, 0.5);
+}
+
+.glass-pill {
+  background: var(--glass-bg, rgba(255, 255, 255, 0.08));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.14));
+}
+
+.glass-pill:hover {
+  background: var(--glass-bg-hover, rgba(255, 255, 255, 0.14));
+  border-color: var(--glass-border-hover, rgba(255, 255, 255, 0.24));
+}
+
+/* Theme Button Utilities */
+.theme-btn-gradient {
+  background: linear-gradient(135deg, var(--primary-accent), var(--secondary-accent));
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 18px 0 var(--accent-glow);
+  transition: all 0.2s ease;
+}
+
+.theme-btn-gradient:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 6px 24px 0 var(--accent-glow);
+}
+
+.theme-glow-accent {
+  box-shadow: 0 0 25px 0 var(--accent-glow);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+/* Hide scrollbar for clean horizontal sub-nav */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Chess board animations and effects with GPU acceleration */
+@keyframes piece-drop {
+  0% { transform: scale(1.15) translateZ(0); opacity: 0.9; }
+  100% { transform: scale(1) translateZ(0); opacity: 1; }
+}
+
+.piece-drop-anim {
+  animation: piece-drop 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, opacity;
+  transform: translateZ(0);
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 0.95; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(0.98); }
+}
+
+.pulse-check {
+  animation: pulse-subtle 1.4s infinite cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: opacity, transform;
+}
+
+/* RTL auto-flip for directional icons */
+[dir="rtl"] .rtl-flip {
+  transform: scaleX(-1);
+}
+[dir="rtl"] .rtl-flip-group-hover:hover .rtl-flip {
+  transform: scaleX(-1) translateX(2px);
+}
+
+.gpu-accelerate {
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+}
+
+/* Silky smooth modal animations */
+@keyframes modal-enter {
+  0% {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modal-smooth-enter {
+  animation: modal-enter 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Smooth drag piece styling */
+.chess-drag-piece {
+  will-change: transform, left, top;
+  transform: translate3d(0, 0, 0);
+  pointer-events: none;
+  touch-action: none;
+}
+
+/* ========================================================================= */
+/* RESPECT HONOR BADGE & POINTS REWARD CSS ANIMATIONS                         */
+/* ========================================================================= */
+
+@keyframes respect-badge-enter {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(6px);
+    box-shadow: 0 0 0 0 rgba(245, 196, 83, 0);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.04) translateY(-1px);
+    box-shadow: 0 0 20px 2px rgba(245, 196, 83, 0.35);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    box-shadow: 0 0 10px 0 rgba(245, 196, 83, 0.15);
+  }
+}
+
+.respect-badge-entry {
+  animation: respect-badge-enter 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  will-change: transform, opacity, box-shadow;
+}
+
+@keyframes respect-points-pop {
+  0% {
+    transform: scale(1);
+    color: #F5C453;
+    text-shadow: 0 0 0px transparent;
+  }
+  40% {
+    transform: scale(1.22) translateY(-2px);
+    color: #FFF6D6;
+    text-shadow: 0 0 14px rgba(245, 196, 83, 0.85), 0 0 24px rgba(245, 196, 83, 0.4);
+  }
+  75% {
+    transform: scale(1.06) translateY(-0.5px);
+    color: #FEE79A;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    color: #F5C453;
+    text-shadow: 0 0 4px rgba(245, 196, 83, 0.25);
+  }
+}
+
+.respect-points-bump {
+  animation: respect-points-pop 0.65s cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: transform, color, text-shadow;
+}
+
+@keyframes respect-glow-sweep {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.respect-shimmer-sheen {
+  background: linear-gradient(
+    90deg,
+    rgba(245, 196, 83, 0) 0%,
+    rgba(245, 196, 83, 0.18) 50%,
+    rgba(245, 196, 83, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: respect-glow-sweep 3s infinite ease-in-out;
+}
+
+@keyframes respect-ring-bloom {
+  0% {
+    box-shadow: 0 0 0 0 rgba(245, 196, 83, 0.65);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(245, 196, 83, 0.2);
+  }
+  100% {
+    box-shadow: 0 0 0 14px rgba(245, 196, 83, 0);
+  }
+}
+
+.respect-bloom-active {
+  animation: respect-ring-bloom 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes respect-delta-float {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.85);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.1);
+  }
+  80% {
+    opacity: 0.9;
+    transform: translateY(-16px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-26px) scale(0.9);
+  }
+}
+
+.respect-delta-pill {
+  animation: respect-delta-float 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ========================================================================= */
+/* ATTACK ON TITAN: WALL MARIA THEME & EFFECTS                               */
+/* ========================================================================= */
+
+/* Weathered Wall Maria Stone Textures */
+.wall-maria-stone-dark {
+  background-color: #1f232b;
+  background-image: 
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.04) 0%, transparent 80%),
+    linear-gradient(135deg, rgba(0, 0, 0, 0.25) 25%, transparent 25%), 
+    linear-gradient(225deg, rgba(0, 0, 0, 0.25) 25%, transparent 25%), 
+    linear-gradient(45deg, rgba(255, 255, 255, 0.02) 25%, transparent 25%), 
+    linear-gradient(315deg, rgba(0, 0, 0, 0.3) 25%, transparent 25%);
+  background-position: 12px 0, 12px 0, 0 0, 0 0;
+  background-size: 24px 24px;
+}
+
+.wall-maria-stone-light {
+  background-color: #5d6f54;
+  background-image: 
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.07) 0%, transparent 80%),
+    linear-gradient(135deg, rgba(0, 0, 0, 0.15) 25%, transparent 25%), 
+    linear-gradient(225deg, rgba(0, 0, 0, 0.15) 25%, transparent 25%), 
+    linear-gradient(45deg, rgba(255, 255, 255, 0.04) 25%, transparent 25%), 
+    linear-gradient(315deg, rgba(0, 0, 0, 0.2) 25%, transparent 25%);
+  background-position: 12px 0, 12px 0, 0 0, 0 0;
+  background-size: 24px 24px;
+}
+
+/* Green ODM Gas Glow Aura Animation for Active Moves & Selected Squares */
+@keyframes aot-odm-gas-pulse {
+  0%, 100% {
+    box-shadow: 
+      inset 0 0 14px rgba(34, 197, 94, 0.4),
+      0 0 16px rgba(34, 197, 94, 0.45);
+    border-color: rgba(74, 222, 128, 0.85);
+  }
+  50% {
+    box-shadow: 
+      inset 0 0 22px rgba(34, 197, 94, 0.7),
+      0 0 28px rgba(34, 197, 94, 0.75),
+      0 0 38px rgba(34, 197, 94, 0.35);
+    border-color: rgba(134, 239, 172, 1);
+  }
+}
+
+.aot-odm-gas-aura {
+  animation: aot-odm-gas-pulse 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  will-change: box-shadow, border-color;
+}
+
+@keyframes aot-odm-vapor-drift {
+  0% {
+    opacity: 0.35;
+    transform: scale(0.95) translateY(2px);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.06) translateY(-2px);
+  }
+  100% {
+    opacity: 0.35;
+    transform: scale(0.95) translateY(2px);
+  }
+}
+
+.aot-odm-vapor {
+  animation: aot-odm-vapor-drift 2s ease-in-out infinite;
+}
+
+/* Red Steam Boiling Danger / Check Animation */
+@keyframes aot-check-steam-pulse {
+  0% {
+    background-color: rgba(239, 68, 68, 0.6);
+    box-shadow: 
+      inset 0 0 20px rgba(239, 68, 68, 0.85),
+      0 0 24px rgba(220, 38, 38, 0.6);
+    filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.7));
+  }
+  50% {
+    background-color: rgba(185, 28, 28, 0.82);
+    box-shadow: 
+      inset 0 0 35px rgba(239, 68, 68, 1),
+      0 0 45px rgba(239, 68, 68, 0.95),
+      0 0 60px rgba(248, 113, 113, 0.5);
+    filter: drop-shadow(0 0 20px rgba(239, 68, 68, 0.9));
+  }
+  100% {
+    background-color: rgba(239, 68, 68, 0.6);
+    box-shadow: 
+      inset 0 0 20px rgba(239, 68, 68, 0.85),
+      0 0 24px rgba(220, 38, 38, 0.6);
+    filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.7));
+  }
+}
+
+.aot-steam-danger {
+  animation: aot-check-steam-pulse 1.1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  will-change: background-color, box-shadow, filter;
+}
+
+/* Colossal Titan billowing thermal steam particles */
+@keyframes aot-steam-particle-rise {
+  0% {
+    opacity: 0.8;
+    transform: translateY(0) scale(0.8) rotate(0deg);
+    filter: blur(1px);
+  }
+  50% {
+    opacity: 0.5;
+    transform: translateY(-8px) scale(1.2) rotate(8deg);
+    filter: blur(3px);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-18px) scale(1.6) rotate(-10deg);
+    filter: blur(5px);
+  }
+}
+
+.aot-steam-particle {
+  animation: aot-steam-particle-rise 1.4s ease-out infinite;
+}
+
+
+
+
+
+/* ========================================================================= */
+/* ONE PIECE WANO: CONQUEROR'S HAKI AURAS AND LIGHTNING                      */
+/* ========================================================================= */
+
+@keyframes haki-lightning-flash {
+  0%, 100% {
+    box-shadow: 
+      inset 0 0 15px rgba(168, 85, 247, 0.4),
+      0 0 20px rgba(168, 85, 247, 0.5);
+    border-color: rgba(192, 132, 252, 0.7);
+  }
+  20%, 40% {
+    box-shadow: 
+      inset 0 0 40px rgba(168, 85, 247, 0.8),
+      inset 0 0 10px rgba(239, 68, 68, 0.5),
+      0 0 45px rgba(168, 85, 247, 0.9),
+      0 0 20px rgba(0, 0, 0, 0.8);
+    border-color: rgba(233, 213, 255, 1);
+  }
+  30% {
+    box-shadow: 
+      inset 0 0 15px rgba(168, 85, 247, 0.4),
+      0 0 20px rgba(168, 85, 247, 0.5);
+    border-color: rgba(192, 132, 252, 0.7);
+  }
+}
+
+.haki-aura-active {
+  animation: haki-lightning-flash 2.5s infinite;
+  will-change: box-shadow, border-color;
+  background: radial-gradient(circle at center, rgba(168, 85, 247, 0.1) 0%, transparent 70%);
+}
+
+@keyframes haki-lightning-strike {
+  0% { opacity: 0; transform: scale(0.8) rotate(0deg); }
+  10% { opacity: 1; transform: scale(1.1) rotate(15deg); filter: brightness(1.5); }
+  15% { opacity: 0.2; transform: scale(1.15) rotate(5deg); }
+  20% { opacity: 1; transform: scale(1.2) rotate(-10deg); filter: brightness(1.2); }
+  30% { opacity: 0; transform: scale(1.25) rotate(-5deg); }
+  100% { opacity: 0; }
+}
+
+.haki-lightning-particle {
+  position: absolute;
+  width: 2px;
+  background-color: #d8b4fe;
+  box-shadow: 0 0 8px 2px rgba(168, 85, 247, 0.8), 0 0 4px 1px rgba(239, 68, 68, 0.6);
+  transform-origin: bottom center;
+  animation: haki-lightning-strike 1.5s infinite;
+  border-radius: 4px;
+}
+
+/* One Piece Board wrapper background */
+
+.one-piece-board-bg {
+  position: relative;
+}
+
+.one-piece-board-bg::before {
+  content: '';
+  position: absolute;
+  inset: -1rem;
+  background-image: url('https://static.vecteezy.com/system/resources/previews/051/895/582/non_2x/logo-one-piece-free-vector.jpg');
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.45;
+  mix-blend-mode: screen;
+  filter: contrast(1.1) brightness(1.1) drop-shadow(0 0 20px rgba(168,85,247,0.6));
+  pointer-events: none;
+  z-index: 0;
+}
