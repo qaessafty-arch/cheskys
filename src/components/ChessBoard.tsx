@@ -5,6 +5,7 @@ import confetti from 'canvas-confetti';
 import { ChessPiece } from './ChessPiece';
 import { PieceThemeId, BoardThemeId, PieceColor, PieceType } from '../types/chess';
 import { UkhLogo } from './UkhLogo';
+import { ComponentErrorBoundary } from "./ComponentErrorBoundary";
 
 interface ChessBoardProps {
   game: Chess;
@@ -323,7 +324,7 @@ interface ActivePiece {
   square: Square;
 }
 
-export const ChessBoard: React.FC<ChessBoardProps> = React.memo(({
+const ChessBoardInner: React.FC<ChessBoardProps> = React.memo(({
   game,
   isFlipped,
   boardTheme,
@@ -1241,3 +1242,12 @@ export const ChessBoard: React.FC<ChessBoardProps> = React.memo(({
     </div>
   );
 });
+
+export const ChessBoard: React.FC<ChessBoardProps> = (props) => {
+  return (
+    <ComponentErrorBoundary componentName="ChessBoard">
+      <ChessBoardInner {...props} />
+    </ComponentErrorBoundary>
+  );
+};
+

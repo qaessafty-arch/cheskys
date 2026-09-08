@@ -1,6 +1,7 @@
 import React from 'react';
 import { Timer, CheckCircle2, Trophy, Swords, Shield, Flame } from 'lucide-react';
 import { motion } from 'motion/react';
+import { ComponentErrorBoundary } from "./ComponentErrorBoundary";
 
 interface ChessClockProps {
   timeSeconds: number;
@@ -20,7 +21,7 @@ interface ChessClockProps {
   isVerified?: boolean;
 }
 
-export const ChessClock: React.FC<ChessClockProps> = ({
+const ChessClockInner: React.FC<ChessClockProps> = ({
   timeSeconds,
   totalTimeSeconds,
   isActive,
@@ -223,3 +224,12 @@ export const ChessClock: React.FC<ChessClockProps> = ({
     </div>
   );
 };
+
+export const ChessClock: React.FC<ChessClockProps> = (props) => {
+  return (
+    <ComponentErrorBoundary componentName="ChessClock">
+      <ChessClockInner {...props} />
+    </ComponentErrorBoundary>
+  );
+};
+

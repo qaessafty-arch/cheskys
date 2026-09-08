@@ -229,7 +229,13 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!docSnap.exists()) {
           // Room was canceled or deleted
           if (currentRoomRef.current?.status === 'waiting') {
-            setCurrentRoom(null);
+            const timeSinceCreation = Date.now() - (new Date(currentRoomRef.current?.createdAt).getTime() || 0);
+            if (timeSinceCreation > 15000) {
+              console.warn("[RoomContext] Resetting currentRoom to null because docSnap does not exist");
+              setCurrentRoom(null);
+            } else {
+              console.warn("[RoomContext] docSnap does not exist, but room was just created. Bypassing reset.");
+            }
           }
           return;
         }
@@ -804,7 +810,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (err) {} finally {
         if (currentRoom?.roomCode === targetCode) {
-          setCurrentRoom(null);
+          console.warn("[RoomContext] Resetting currentRoom to null because docSnap does not exist"); setCurrentRoom(null);
           setCountdown(null);
         }
       }
@@ -818,7 +824,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
       countdownTimerRef.current = null;
     }
     setCountdown(null);
-    setCurrentRoom(null);
+    console.warn("[RoomContext] Resetting currentRoom to null because docSnap does not exist"); setCurrentRoom(null);
     setJoinError(null);
     setConnectionStatus('disconnected');
   }, []);
@@ -1014,7 +1020,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const dismissActiveGame = useCallback(() => {
     setActiveGameId(null);
-    setCurrentRoom(null);
+    console.warn("[RoomContext] Resetting currentRoom to null because docSnap does not exist"); setCurrentRoom(null);
   }, []);
 
   return (
