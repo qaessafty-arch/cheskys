@@ -13,6 +13,8 @@ interface GameOverModalProps {
   onPracticePuzzles?: () => void;
   onClose: () => void;
   pgn?: string;
+  rematchState?: 'none' | 'offered_by_me' | 'offered_by_opponent';
+  onAcceptRematch?: () => void;
 }
 
 export const GameOverModal: React.FC<GameOverModalProps> = ({
@@ -22,7 +24,9 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   onAnalyze,
   onPracticePuzzles,
   onClose,
-  pgn
+  pgn,
+  rematchState = 'none',
+  onAcceptRematch
 }) => {
   const isWhiteWin = result.winner === 'w';
   const isBlackWin = result.winner === 'b';
@@ -79,16 +83,34 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
         <p className="text-xs font-black text-[#94A3B8] uppercase tracking-[0.2em] mb-8 opacity-80">
           {result.reason}
         </p>
-
         {/* Action Buttons */}
         <div className="space-y-3">
-          <button
-            onClick={onRematch}
-            className="w-full flex items-center justify-center gap-2 py-4 px-4 rounded-2xl bg-[#F59E0B] text-[#0B0F19] font-black text-sm transition-all shadow-xl shadow-[#F59E0B]/20 active:scale-95 cursor-pointer uppercase tracking-widest"
-          >
-            <RefreshCw className="w-4 h-4" />
-            <span>Rematch</span>
-          </button>
+
+          {rematchState === "offered_by_opponent" ? (
+            <button
+              onClick={onAcceptRematch || onRematch}
+              className="w-full flex items-center justify-center gap-2 py-4 px-4 rounded-2xl bg-emerald-500 text-white font-black text-sm transition-all shadow-xl shadow-emerald-500/20 active:scale-95 cursor-pointer uppercase tracking-widest animate-pulse"
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span>Accept Rematch</span>
+            </button>
+          ) : rematchState === "offered_by_me" ? (
+            <button
+              disabled
+              className="w-full flex items-center justify-center gap-2 py-4 px-4 rounded-2xl bg-[#F59E0B]/50 text-[#0B0F19]/50 font-black text-sm transition-all shadow-xl shadow-[#F59E0B]/10 cursor-not-allowed uppercase tracking-widest"
+            >
+              <RefreshCw className="w-4 h-4 animate-spin" />
+              <span>Waiting...</span>
+            </button>
+          ) : (
+            <button
+              onClick={onRematch}
+              className="w-full flex items-center justify-center gap-2 py-4 px-4 rounded-2xl bg-[#F59E0B] text-[#0B0F19] font-black text-sm transition-all shadow-xl shadow-[#F59E0B]/20 active:scale-95 cursor-pointer uppercase tracking-widest"
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span>Rematch</span>
+            </button>
+          )}
 
           <button
             onClick={onNewGame}

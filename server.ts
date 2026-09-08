@@ -139,7 +139,7 @@ async function getCachedLeaderboard(mode: string, period: string = 'all', userId
 
 
 const app = express();
-const PORT = parseInt(process.env.PORT || '3000', 10);
+const PORT = 3000;
 
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser(process.env.SESSION_SECRET || 'chesskys-pro-secret-key-9f82'));

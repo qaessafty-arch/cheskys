@@ -152,7 +152,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       type: notif.type,
       title: notif.title,
       message: notif.message,
-      duration: notif.type === 'challenge' ? 30000 : 6000,
+      duration: (notif.type === 'challenge' || notif.type === 'room_invite') ? 30000 : 6000,
       action: (notif.type === 'challenge' || notif.type === 'room_invite') ? {
         label: 'Accept',
         color: 'emerald',

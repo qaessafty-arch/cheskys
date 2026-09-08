@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { GameOverModal } from "./GameOverModal";
 import { PanelContainer } from './PanelContainer';
 import { Chess, Square, Move } from 'chess.js';
 import { AppSettings, OnlineMatchSession, PieceColor, PieceType } from '../types/chess';
@@ -8,7 +9,7 @@ import {
   resignOnlineMatch, 
   offerDrawOnlineMatch, 
   acceptDrawOnlineMatch,
-  finalizeOnlineMatch 
+  finalizeOnlineMatch, offerRematchOnlineMatch, acceptRematchOnlineMatch 
 } from '../services/onlineMatchService';
 import { 
   sendInGameMessage, 
@@ -635,6 +636,16 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
     await finalizeOnlineMatch(matchId, 'draw', 'Game drawn by 50-move rule or threefold repetition.');
   };
 
+  const handleRematch = async () => {
+    if (!session || !myUid) return;
+    await offerRematchOnlineMatch(matchId, myUid);
+  };
+
+  const handleAcceptRematch = async () => {
+    if (!session) return;
+    await acceptRematchOnlineMatch(matchId, session);
+  };
+
   const handleResign = async () => {
     if (!session || session.status !== 'in_progress') return;
     if (window.confirm('Are you sure you want to resign the online match?')) {
@@ -1146,37 +1157,27 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
             </div>
           </div>
 
-          {/* Match Outcome Banner */}
+          {/* Match Outcome Banner -> GameOverModal */}
           {session?.status && session.status !== 'in_progress' && session.status !== 'waiting' && (
-            <div className="glass-panel p-5 rounded-3xl border border-[#F5C453]/40 shadow-xl space-y-3 animate-in zoom-in-95 text-center">
-              <div className="text-3xl">
-                {session.winner === myColor ? '👑' : session.winner === 'draw' ? '🤝' : '⚔️'}
-              </div>
-              <h3 className="text-lg font-black text-white">
-                {session.winner === myColor
-                  ? 'Victorious Grandmaster!'
-                  : session.winner === 'draw'
-                  ? 'Game Drawn'
-                  : 'Match Concluded'}
-              </h3>
-              <p className="text-xs text-[#DFD0B0]/80">{session.reason}</p>
-
-              {session.winner === myColor && (
-                <div className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/40">
-                  +30 Respect Points & +20 Elo Awarded! ☀️
-                </div>
-              )}
-
-              <div className="pt-2">
-                <button
-                  onClick={() => window.location.reload()}
-                  className="w-full py-3 rounded-2xl bg-[#F5C453] hover:bg-[#D4AF37] text-black font-black text-sm flex items-center justify-center gap-2 transition-transform active:scale-95 cursor-pointer shadow-lg"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  New Match / Rematch
-                </button>
-              </div>
-            </div>
+            <GameOverModal
+              result={{
+                winner: session.winner || 'draw',
+                reason: session.reason || 'Match Concluded'
+              }}
+              pgn={session.pgn}
+              rematchState={
+                session.rematchOfferFrom
+                  ? session.rematchOfferFrom === myUid
+                    ? 'offered_by_me'
+                    : 'offered_by_opponent'
+                  : 'none'
+              }
+              onRematch={handleRematch}
+              onAcceptRematch={handleAcceptRematch}
+              onNewGame={() => window.location.reload()}
+              onAnalyze={onClose}
+              onClose={onClose}
+            />
           )}
 
           {/* In-Game Action Buttons */}

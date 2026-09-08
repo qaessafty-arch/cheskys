@@ -7,7 +7,7 @@ import {
   where,
   limit,
   onSnapshot, 
-  serverTimestamp 
+  serverTimestamp, deleteField 
 } from 'firebase/firestore';
 import { 
   db, 
@@ -1252,3 +1252,36 @@ export const cancelUserCreatedRoom = async (roomCode: string, userUid: string): 
 };
 
 
+
+export const offerRematchOnlineMatch = async (matchId: string, playerUid: string): Promise<void> => {
+  const matchDocRef = doc(db, 'online_matches', matchId);
+  await safeUpdateDoc(matchDocRef, {
+    rematchOfferFrom: playerUid,
+    updatedAt: new Date().toISOString()
+  });
+};
+
+export const acceptRematchOnlineMatch = async (matchId: string, session: OnlineMatchSession): Promise<void> => {
+  const matchDocRef = doc(db, 'online_matches', matchId);
+  
+  const currentWhite = session.whitePlayer;
+  const currentBlack = session.blackPlayer;
+  
+  await safeUpdateDoc(matchDocRef, {
+    rematchOfferFrom: deleteField(),
+    whitePlayer: currentBlack,
+    blackPlayer: currentWhite,
+    fen: session.startFen || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+    pgn: '',
+    moves: [],
+    ucis: [],
+    moveCount: 0,
+    turn: 'w',
+    status: 'in_progress',
+    winner: null,
+    reason: deleteField(),
+    whiteSecondsRemaining: session.timeControl.initialSeconds,
+    blackSecondsRemaining: session.timeControl.initialSeconds,
+    updatedAt: new Date().toISOString()
+  });
+};

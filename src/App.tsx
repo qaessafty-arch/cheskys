@@ -147,6 +147,7 @@ export default function App() {
 
   // Game Mode
   const [activeMode, setActiveMode] = useState<GameMode>('ai');
+  const [activeOnlineMatchId, setActiveOnlineMatchId] = useState<string | null>(null);
 
   useEffect(() => {
     const handleRoomInviteResponse = async (e: Event) => {
@@ -164,17 +165,30 @@ export default function App() {
   }, [acceptInvite, declineInvite]);
 
   useEffect(() => {
+    const handleAcceptChallenge = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const { matchId } = customEvent.detail || {};
+      if (matchId) {
+        setActiveOnlineMatchId(matchId);
+        setActiveMode('online_match');
+      }
+    };
+    window.addEventListener('accept-challenge', handleAcceptChallenge);
+    return () => window.removeEventListener('accept-challenge', handleAcceptChallenge);
+  }, []);
+
+  useEffect(() => {
     if (currentRoom && activeMode !== 'private_room' && activeMode !== 'online_match') {
       setActiveMode('private_room');
     }
   }, [currentRoom, activeMode]);
 
   useEffect(() => {
-    if (activeGameId && activeMode !== 'online_match') {
+    if (activeGameId && (activeMode !== 'online_match' || activeOnlineMatchId !== activeGameId)) {
       setActiveOnlineMatchId(activeGameId);
       setActiveMode('online_match');
     }
-  }, [activeGameId, activeMode]);
+  }, [activeGameId, activeMode, activeOnlineMatchId]);
 
   // Match Configuration
   const [currentBot, setCurrentBot] = useState<BotProfile>(BOT_PROFILES[2]); // Bishop Tactician (1400 Elo)
@@ -209,7 +223,6 @@ export default function App() {
   const [isWorldwideMatchModalOpen, setIsWorldwideMatchModalOpen] = useState(false);
   const [isAboutUsModalOpen, setIsAboutUsModalOpen] = useState(false);
   const [activeChatFriend, setActiveChatFriend] = useState<FriendUser | null>(null);
-  const [activeOnlineMatchId, setActiveOnlineMatchId] = useState<string | null>(null);
   const [isJudgmentModalOpen, setIsJudgmentModalOpen] = useState(false);
   const [pendingCheckmateResult, setPendingCheckmateResult] = useState<GameResult | null>(null);
   const [hintMessage, setHintMessage] = useState<string | null>(null);

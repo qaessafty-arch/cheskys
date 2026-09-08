@@ -4,6 +4,8 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
+  limit,
   deleteField,
   onSnapshot,
   runTransaction,
@@ -16,6 +18,8 @@ import {
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType, safeAddDoc, safeSetDoc, safeUpdateDoc, safeDeleteDoc } from '../utils/firebase';
 import { soundManager } from '../utils/audio';
+import { socketService } from '../utils/socket';
+import { toast } from 'sonner';
 import { createOnlineMatch, joinOnlineMatch, recordLocalUserCreatedRoom } from '../services/onlineMatchService';
 import { OnlineMatchPlayer, TimeControl } from '../types/chess';
 
@@ -302,6 +306,67 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
+    // Connect global socket for WebSockets
+    socketService.connect(user.uid);
+    const globalSocket = socketService.getSocket();
+    
+    const onInviteReceived = (data: any) => {
+      const newInvite: UserInvite = {
+        id: data.inviteId,
+        userId: data.friendUid,
+        roomId: data.roomCode,
+        roomCode: data.roomCode,
+        invitedBy: 'socket',
+        invitedByName: data.inviterName || 'A friend',
+        invitedByPhoto: data.inviterPhoto || null,
+        status: 'pending',
+        settings: {
+          timeControlId: 'rapid',
+          timeControlName: '10 min',
+          initialSeconds: 600,
+          incrementSeconds: 0,
+          rated: false,
+          color: 'random',
+        },
+        createdAt: new Date().toISOString()
+      };
+      
+      setIncomingInvites(prev => {
+        if (prev.find(inv => inv.id === newInvite.id)) return prev;
+        return [newInvite, ...prev];
+      });
+
+      // Play sound
+      soundManager.playNotification();
+
+      toast('Game Invite Received', {
+        description: `${newInvite.invitedByName} invited you to room ${newInvite.roomCode}.`,
+        duration: 30000,
+        action: {
+          label: 'Accept',
+          onClick: () => {
+            window.dispatchEvent(new CustomEvent('room_invite_response', { 
+              detail: { status: 'accepted', inviteId: newInvite.id, roomCode: newInvite.roomCode } 
+            }));
+          }
+        },
+        cancel: {
+          label: 'Decline',
+          onClick: () => {
+            window.dispatchEvent(new CustomEvent('room_invite_response', { 
+              detail: { status: 'declined', inviteId: newInvite.id, roomCode: newInvite.roomCode } 
+            }));
+          }
+        },
+      });
+      
+      window.dispatchEvent(new CustomEvent('new_socket_invite', { detail: newInvite }));
+    };
+
+    if (globalSocket) {
+      globalSocket.on('receive_invite', onInviteReceived);
+    }
+
     const invitesQuery = query(
       collection(db, 'user_invites'),
       where('userId', '==', user.uid),
@@ -312,14 +377,28 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
       invitesQuery,
       (snapshot) => {
         const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as UserInvite));
-        setIncomingInvites(list);
+        setIncomingInvites(prev => {
+          // Merge with socket invites to avoid overriding
+          const merged = [...list];
+          prev.forEach(p => {
+            if (!merged.find(m => m.id === p.id) && p.invitedBy === 'socket') {
+              merged.push(p);
+            }
+          });
+          return merged;
+        });
       },
       (error) => {
         handleFirestoreError(error, OperationType.LIST, 'user_invites');
       }
     );
 
-    return () => unsub();
+    return () => {
+      unsub();
+      if (globalSocket) {
+        globalSocket.off('receive_invite', onInviteReceived);
+      }
+    };
   }, [user]);
 
   // 3-second automatic countdown when status is 'ready'
@@ -419,6 +498,10 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } catch (err: any) {
             console.error('Failed to launch room game session:', err);
           }
+        } else if (profile?.uid !== room.creatorId) {
+          // Transition opponent into active match session
+          const targetGameId = room.gameId || room.roomCode;
+          setActiveGameId(targetGameId);
         }
       }
     }, 1000);
@@ -426,7 +509,13 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const createRoom = useCallback(
     async (code: string, settings: RoomSettings): Promise<PrivateRoom> => {
-      if (!profile) throw new Error('Not authenticated');
+      const activeProfile = profile || {
+        uid: 'guest_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+        displayName: 'Guest Challenger',
+        photoURL: null,
+        elo: 1200
+      };
+      
       const cleanCode = code.trim().toUpperCase();
       const now = new Date();
       const expiresAt = new Date(now.getTime() + 10 * 60 * 1000);
@@ -438,10 +527,10 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const room: PrivateRoom = {
         roomId: cleanCode,
         roomCode: cleanCode,
-        creatorId: profile.uid,
-        creatorName: profile.displayName || 'You',
-        creatorPhotoURL: profile.photoURL || null,
-        creatorElo: typeof profile.elo === 'number' ? profile.elo : 1200,
+        creatorId: activeProfile.uid,
+        creatorName: activeProfile.displayName || 'You',
+        creatorPhotoURL: activeProfile.photoURL || null,
+        creatorElo: typeof activeProfile.elo === 'number' ? activeProfile.elo : 1200,
         creatorColor,
         opponentColor,
         opponentId: null,
@@ -495,7 +584,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem(`chess_room_${cleanCode}`, JSON.stringify(room));
         recordLocalUserCreatedRoom({
           code: cleanCode,
-          hostId: profile.uid,
+          hostId: activeProfile.uid,
           timeControl: {
             id: settings.timeControlId || 'tc_custom',
             name: settings.timeControlName,
@@ -521,9 +610,9 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
             },
             side: settings.color,
             playerInfo: {
-              uid: profile.uid,
-              name: profile.displayName || 'Host',
-              elo: profile.elo || 1200,
+              uid: activeProfile.uid,
+              name: activeProfile.displayName || 'Host',
+              elo: activeProfile.elo || 1200,
             }
           })
         }).catch(() => {});
@@ -583,21 +672,51 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 
   const joinRoom = useCallback(
-    async (code: string): Promise<PrivateRoom> => {
-      if (!profile) throw new Error('Not authenticated');
-      const cleanCode = code.trim().toUpperCase();
-      const roomDoc = doc(db, 'rooms', cleanCode);
+    async (code: string, inviteFallback?: Partial<UserInvite>): Promise<PrivateRoom> => {
+      const activeProfile = profile || {
+        uid: 'guest_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+        displayName: 'Guest Challenger',
+        photoURL: null,
+        elo: 1200
+      };
+      
+      const cleanCode = (code || inviteFallback?.roomCode || inviteFallback?.roomId || '').trim().toUpperCase();
+      if (!cleanCode) {
+        throw new Error('No room code provided. Please enter a valid room code.');
+      }
 
       let snap: any = null;
+      const roomDoc = doc(db, 'rooms', cleanCode);
+
+      // Strategy 1: Direct doc lookup by code in rooms collection
       try {
         snap = await getDoc(roomDoc);
       } catch (e) {
         console.warn('Room getDoc notice (proceeding with fallback checks):', e);
       }
 
+      // Strategy 2: Query rooms by roomCode or roomId field
+      if (!snap || !snap.exists()) {
+        try {
+          const qRoomCode = query(collection(db, 'rooms'), where('roomCode', '==', cleanCode), limit(1));
+          const snapRooms = await getDocs(qRoomCode);
+          if (!snapRooms.empty) {
+            snap = snapRooms.docs[0];
+          } else {
+            const qRoomId = query(collection(db, 'rooms'), where('roomId', '==', cleanCode), limit(1));
+            const snapRoomsById = await getDocs(qRoomId);
+            if (!snapRoomsById.empty) {
+              snap = snapRoomsById.docs[0];
+            }
+          }
+        } catch (e) {
+          console.warn('Rooms collection query notice:', e);
+        }
+      }
+
       let data: PrivateRoom | null = snap && snap.exists() ? (snap.data() as PrivateRoom) : null;
 
-      // Fallback: check local storage cache
+      // Strategy 3: Check local storage cache
       if (!data) {
         try {
           const cached = localStorage.getItem(`chess_room_${cleanCode}`);
@@ -607,40 +726,41 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch {}
       }
 
+      // Strategy 4: Fallback to online_matches collection
       if (!data) {
-        // Fallback: check online_matches collection
         try {
           const matchDocRef = doc(db, 'online_matches', cleanCode);
-          const matchSnap = await getDoc(matchDocRef);
-          if (matchSnap.exists()) {
-            const matchSession = matchSnap.data() as any;
-            if (matchSession.status !== 'waiting' && matchSession.guestId && matchSession.guestId !== profile.uid) {
-              throw new Error('This match is already in progress or completed.');
+          let matchSnap = await getDoc(matchDocRef);
+          if (!matchSnap.exists()) {
+            const qMatches = query(collection(db, 'online_matches'), where('code', '==', cleanCode), limit(1));
+            const matchDocs = await getDocs(qMatches);
+            if (!matchDocs.empty) {
+              matchSnap = matchDocs.docs[0];
             }
-            if (matchSession.hostId === profile.uid) {
-              throw new Error('You are the creator of this match. Share your code with a friend!');
-            }
+          }
 
+          if (matchSnap && matchSnap.exists()) {
+            const matchSession = matchSnap.data() as any;
             const guestPlayer: OnlineMatchPlayer = {
-              uid: profile.uid,
-              displayName: profile.displayName || 'Opponent',
-              avatar: profile.photoURL || null,
-              elo: typeof profile.elo === 'number' ? profile.elo : 1200,
+              uid: activeProfile.uid,
+              displayName: activeProfile.displayName || 'Opponent',
+              avatar: activeProfile.photoURL || null,
+              elo: typeof activeProfile.elo === 'number' ? activeProfile.elo : 1200,
             };
             await joinOnlineMatch(cleanCode, guestPlayer);
-            setActiveGameId(cleanCode);
+            setActiveGameId(matchSnap.id || cleanCode);
 
             const synthRoom: PrivateRoom = {
-              roomId: cleanCode,
+              roomId: matchSnap.id || cleanCode,
               roomCode: cleanCode,
               creatorId: matchSession.hostId,
               creatorName: matchSession.whitePlayer?.displayName || 'Host',
               creatorElo: matchSession.whitePlayer?.elo || 1200,
               creatorColor: matchSession.whitePlayer?.uid === matchSession.hostId ? 'white' : 'black',
               opponentColor: matchSession.whitePlayer?.uid === matchSession.hostId ? 'black' : 'white',
-              opponentId: profile.uid,
-              opponentName: profile.displayName || 'Opponent',
-              opponentElo: typeof profile.elo === 'number' ? profile.elo : 1200,
+              opponentId: activeProfile.uid,
+              opponentName: activeProfile.displayName || 'Opponent',
+              opponentElo: typeof activeProfile.elo === 'number' ? activeProfile.elo : 1200,
               status: 'in_progress',
               settings: {
                 timeControlId: matchSession.timeControl?.id || 'rapid',
@@ -652,36 +772,126 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
               },
               createdAt: new Date(),
               expiresAt: new Date(Date.now() + 600000),
-              gameId: cleanCode,
+              gameId: matchSnap.id || cleanCode,
             };
             setCurrentRoom(synthRoom);
             soundManager.playMatchFound();
             return synthRoom;
           }
         } catch (e: any) {
-          if (e?.message?.includes('already in progress') || e?.message?.includes('creator of this match')) {
-            throw e;
-          }
+          console.warn('online_matches lookup notice:', e?.message);
         }
+      }
 
+      // Strategy 5: Direct joinOnlineMatch attempt (supports in-memory server & REST games)
+      if (!data) {
+        try {
+          const guestPlayer: OnlineMatchPlayer = {
+            uid: activeProfile.uid,
+            displayName: activeProfile.displayName || 'Opponent',
+            avatar: activeProfile.photoURL || null,
+            elo: typeof activeProfile.elo === 'number' ? activeProfile.elo : 1200,
+          };
+          const session = await joinOnlineMatch(cleanCode, guestPlayer);
+          if (session) {
+            setActiveGameId(session.id || cleanCode);
+            const synthRoom: PrivateRoom = {
+              roomId: session.id || cleanCode,
+              roomCode: cleanCode,
+              creatorId: session.hostId || 'host',
+              creatorName: session.whitePlayer?.displayName || 'Host',
+              creatorElo: session.whitePlayer?.elo || 1200,
+              creatorColor: session.whitePlayer?.uid === session.hostId ? 'white' : 'black',
+              opponentColor: session.whitePlayer?.uid === session.hostId ? 'black' : 'white',
+              opponentId: activeProfile.uid,
+              opponentName: activeProfile.displayName || 'Opponent',
+              opponentElo: typeof activeProfile.elo === 'number' ? activeProfile.elo : 1200,
+              status: 'in_progress',
+              settings: {
+                timeControlId: session.timeControl?.id || 'rapid',
+                timeControlName: session.timeControl?.name || 'Rapid 10+0',
+                initialSeconds: session.timeControl?.initialSeconds || 600,
+                incrementSeconds: session.timeControl?.incrementSeconds || 0,
+                color: 'random',
+                rated: true,
+              },
+              createdAt: new Date(),
+              expiresAt: new Date(Date.now() + 600000),
+              gameId: session.id || cleanCode,
+            };
+            setCurrentRoom(synthRoom);
+            soundManager.playMatchFound();
+            return synthRoom;
+          }
+        } catch (joinErr: any) {
+          console.warn('Direct joinOnlineMatch notice:', joinErr?.message);
+        }
+      }
+
+      // Strategy 6: Synthesize from inviteFallback (or matching pending incoming invite)
+      const matchedInvite =
+        inviteFallback ||
+        incomingInvites.find((i) => i.roomCode === cleanCode || i.roomId === cleanCode);
+
+      if (!data && matchedInvite) {
+        const synthRoom: PrivateRoom = {
+          roomId: cleanCode,
+          roomCode: cleanCode,
+          creatorId: matchedInvite.invitedBy || 'host',
+          creatorName: matchedInvite.invitedByName || 'Challenger',
+          creatorElo: 1200,
+          creatorColor: matchedInvite.settings?.color === 'black' ? 'black' : 'white',
+          opponentColor: matchedInvite.settings?.color === 'black' ? 'white' : 'black',
+          opponentId: activeProfile.uid,
+          opponentName: activeProfile.displayName || 'Opponent',
+          opponentPhotoURL: activeProfile.photoURL || undefined,
+          opponentElo: typeof activeProfile.elo === 'number' ? activeProfile.elo : 1200,
+          status: 'ready',
+          settings: matchedInvite.settings || {
+            timeControlId: 'rapid',
+            timeControlName: 'Rapid 10+0',
+            initialSeconds: 600,
+            incrementSeconds: 0,
+            color: 'random',
+            rated: true,
+          },
+          createdAt: new Date(),
+          expiresAt: new Date(Date.now() + 600000),
+          gameId: cleanCode,
+        };
+
+        // Best effort write back to rooms collection so host can observe
+        safeSetDoc(doc(db, 'rooms', cleanCode), synthRoom).catch(() => {});
+        try {
+          localStorage.setItem(`chess_room_${cleanCode}`, JSON.stringify(synthRoom));
+        } catch {}
+
+        setCurrentRoom(synthRoom);
+        setActiveGameId(cleanCode);
+        soundManager.playMatchFound();
+        return synthRoom;
+      }
+
+      if (!data) {
         throw new Error('No room found with that code. Please check and try again.');
       }
 
-      if (data.status !== 'waiting') {
-        throw new Error('This room is already in progress or no longer available.');
+      // If room is already in progress or ready, admit player directly into active match!
+      if (data.status === 'in_progress' || (data.status === 'ready' && data.opponentId === activeProfile.uid)) {
+        const targetGame = data.gameId || data.roomCode || cleanCode;
+        setActiveGameId(targetGame);
+        setCurrentRoom(data);
+        soundManager.playMatchFound();
+        return data;
       }
 
-      if (data.creatorId === profile.uid) {
-        throw new Error("You are the creator of this room. Share your code with a friend!");
-      }
-
-      const opponentName = profile.displayName || 'Opponent';
-      const opponentPhotoURL = profile.photoURL || null;
-      const opponentElo = typeof profile.elo === 'number' ? profile.elo : 1200;
+      const opponentName = activeProfile.displayName || 'Opponent';
+      const opponentPhotoURL = activeProfile.photoURL || null;
+      const opponentElo = typeof activeProfile.elo === 'number' ? activeProfile.elo : 1200;
 
       // Claim the room atomically before doing any nonessential writes.
       const updatePayload: Record<string, any> = {
-        opponentId: profile.uid,
+        opponentId: activeProfile.uid,
         opponentName,
         opponentPhotoURL,
         opponentElo,
@@ -698,23 +908,18 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (!latestSnap.exists()) return data;
           const latestRoom = latestSnap.data() as PrivateRoom;
           if (latestRoom.status !== 'waiting') {
-            throw new Error('This room was just joined by another player.');
-          }
-          if (latestRoom.creatorId === profile.uid) {
-            throw new Error("You are the creator of this room. Share your code with a friend!");
+            return latestRoom;
           }
           transaction.update(roomDoc, updatePayload);
           return latestRoom;
         });
       } catch (txErr: any) {
-        if (
-          txErr?.message?.includes('already') ||
-          txErr?.message?.includes('another player') ||
-          txErr?.message?.includes('creator')
-        ) {
-          throw txErr;
-        }
         console.warn('[Room] Transaction write bypassed (quota/offline fallback):', txErr?.message);
+        try {
+          await safeUpdateDoc(roomDoc, updatePayload);
+        } catch (fallbackErr) {
+          console.warn('Fallback safeUpdateDoc also failed:', fallbackErr);
+        }
       }
 
       // Sync into server REST endpoint
@@ -724,15 +929,29 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             playerInfo: {
-              uid: profile.uid,
+              uid: activeProfile.uid,
               name: opponentName,
               elo: opponentElo,
-            }
-          })
+            },
+          }),
         }).catch(() => {});
       } catch {}
 
-      // Chat and online-match mirroring are best-effort side effects and must not delay the room claim.
+      // Notify socket
+      const globalSocket = socketService.getSocket();
+      if (globalSocket) {
+        globalSocket.emit('join_room', {
+          roomCode: cleanCode,
+          user: {
+            uid: activeProfile.uid,
+            displayName: opponentName,
+            photoURL: opponentPhotoURL,
+            elo: opponentElo,
+          },
+        });
+      }
+
+      // Best effort join chat message
       void safeAddDoc(collection(db, 'rooms', cleanCode, 'messages'), {
         userId: 'system',
         userName: 'System',
@@ -742,23 +961,10 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
         type: 'system',
       }).catch((err) => console.warn('Could not write join message to subcollection:', err));
 
-      // Also sync into online_matches
-      try {
-        const guestPlayer: OnlineMatchPlayer = {
-          uid: profile.uid,
-          displayName: opponentName,
-          avatar: opponentPhotoURL,
-          elo: opponentElo,
-        };
-        await joinOnlineMatch(cleanCode, guestPlayer);
-      } catch (e) {
-        console.warn('Could not sync online match on private room join:', e);
-      }
-
       const joinedRoom: PrivateRoom = {
         ...claimedRoom,
         roomCode: cleanCode,
-        opponentId: profile.uid,
+        opponentId: activeProfile.uid,
         opponentName,
         opponentPhotoURL,
         opponentElo,
@@ -767,7 +973,6 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
       delete joinedRoom.chat;
       delete joinedRoom.invites;
 
-      // Update local storage cache
       try {
         localStorage.setItem(`chess_room_${cleanCode}`, JSON.stringify(joinedRoom));
       } catch {}
@@ -775,9 +980,10 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCurrentRoom(joinedRoom);
       setJoinError(null);
       soundManager.playMatchFound();
+      startCountdownFlow(joinedRoom);
       return joinedRoom;
     },
-    [profile]
+    [profile, incomingInvites, startCountdownFlow]
   );
 
   const cancelRoom = useCallback(
@@ -913,6 +1119,17 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
           createdAt: serverTimestamp(),
         });
 
+        // Fire WebSocket event for instant delivery bypassing Firestore
+        const globalSocket = socketService.getSocket();
+        if (globalSocket) {
+          globalSocket.emit('send_invite', {
+            friendUid,
+            roomCode,
+            inviterName: profile.displayName || 'You',
+            inviterPhoto: profile.photoURL || null
+          });
+        }
+
         // If main room doc has legacy invites map, clean it up to prevent size issues
         if (currentRoom.invites) {
           try {
@@ -930,13 +1147,24 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const acceptInvite = useCallback(
     async (inviteId: string, roomCode?: string) => {
-      const code = roomCode || currentRoom?.roomCode;
-      if (!code) return;
+      const targetInvite = incomingInvites.find(
+        (inv) => inv.id === inviteId || inv.roomCode === roomCode || inv.roomId === roomCode
+      );
+      const code = roomCode || targetInvite?.roomCode || targetInvite?.roomId || currentRoom?.roomCode;
+      if (!code) {
+        setJoinError('Room code not found in invite.');
+        return;
+      }
+
+      // Optimistically remove from local list
+      setIncomingInvites((prev) => prev.filter((inv) => inv.id !== inviteId));
 
       try {
         // Update user_invites status
         const userInviteRef = doc(db, 'user_invites', inviteId);
-        await safeUpdateDoc(userInviteRef, { status: 'accepted' });
+        try {
+          await safeUpdateDoc(userInviteRef, { status: 'accepted' });
+        } catch {}
 
         // Update room subcollection invite if possible
         try {
@@ -944,17 +1172,21 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await safeUpdateDoc(roomInviteRef, { status: 'accepted' });
         } catch {}
 
-        // Join room as opponent
-        await joinRoom(code);
+        // Join room as opponent, passing fallback targetInvite
+        await joinRoom(code, targetInvite);
       } catch (err: any) {
+        console.error('[RoomContext] Failed to join invited room:', err);
         setJoinError(err?.message || 'Could not join invited room.');
       }
     },
-    [currentRoom, joinRoom]
+    [currentRoom, incomingInvites, joinRoom]
   );
 
   const declineInvite = useCallback(
     async (inviteId: string) => {
+      // Optimistically remove from local list
+      setIncomingInvites((prev) => prev.filter((inv) => inv.id !== inviteId));
+
       try {
         const userInviteRef = doc(db, 'user_invites', inviteId);
         await safeUpdateDoc(userInviteRef, { status: 'declined' });

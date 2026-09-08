@@ -271,11 +271,49 @@ const NotificationListItem: React.FC<{
           
           {!notification.isRead && (
             <div className="flex items-center gap-2 mt-3">
-              <button 
-                className="px-3 py-1.5 rounded-lg bg-[var(--secondary-accent)] text-[var(--app-bg)] text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
-              >
-                View Action
-              </button>
+              {(notification.type === 'challenge' || notification.type === 'room_invite') ? (
+                <>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (notification.type === 'room_invite' && notification.actionData?.roomCode) {
+                        window.dispatchEvent(new CustomEvent('room_invite_response', { 
+                          detail: { status: 'accepted', inviteId: notification.id, roomCode: notification.actionData.roomCode } 
+                        }));
+                      } else if (notification.type === 'challenge' && notification.actionData?.matchId) {
+                        window.dispatchEvent(new CustomEvent('accept-challenge', { 
+                          detail: { matchId: notification.actionData.matchId } 
+                        }));
+                      }
+                      onRead();
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-500 text-black text-[10px] font-black uppercase tracking-widest hover:bg-emerald-400 hover:scale-105 active:scale-95 transition-all"
+                  >
+                    Accept
+                  </button>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (notification.type === 'room_invite') {
+                        window.dispatchEvent(new CustomEvent('room_invite_response', { 
+                          detail: { status: 'declined', inviteId: notification.id, roomCode: notification.actionData?.roomCode } 
+                        }));
+                      }
+                      onRead();
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-red-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-red-400 hover:scale-105 active:scale-95 transition-all"
+                  >
+                    Decline
+                  </button>
+                </>
+              ) : (
+                <button 
+                  onClick={(e) => { e.stopPropagation(); onRead(); }}
+                  className="px-3 py-1.5 rounded-lg bg-[var(--secondary-accent)] text-[var(--app-bg)] text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
+                >
+                  View Action
+                </button>
+              )}
               <button 
                 onClick={(e) => {
                   e.stopPropagation();

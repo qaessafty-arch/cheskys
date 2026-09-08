@@ -139,34 +139,35 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
       </AnimatePresence>
 
       {/* 1. Header Bar */}
-      <div className="room-glass-card px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#F5C453]/15 border border-[#F5C453]/30 flex items-center justify-center text-[#F5C453]">
-            <Crown className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-base font-black uppercase tracking-wider text-white">
-                Private Room
-              </h2>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-black uppercase tracking-wider ${
-                isOpponentJoined
-                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                  : 'bg-amber-400/20 text-amber-300 border border-amber-400/30'
-              }`}>
-                {isOpponentJoined ? 'Ready' : 'Waiting'}
-              </span>
+      <div className="room-glass-card px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-0">
+        <div className="flex items-center justify-between w-full sm:w-auto">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#F5C453]/15 border border-[#F5C453]/30 flex shrink-0 items-center justify-center text-[#F5C453]">
+              <Crown className="w-5 h-5" />
             </div>
-            <p className="text-xs text-white/40">
-              {isCreator ? 'You are the host' : 'You joined as challenger'}
-            </p>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-base font-black uppercase tracking-wider text-white">
+                  Private Room
+                </h2>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-black uppercase tracking-wider ${
+                  isOpponentJoined
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                    : 'bg-amber-400/20 text-amber-300 border border-amber-400/30'
+                }`}>
+                  {isOpponentJoined ? 'Ready' : 'Waiting'}
+                </span>
+              </div>
+              <p className="text-xs text-white/40">
+                {isCreator ? 'You are the host' : 'You joined as challenger'}
+              </p>
+            </div>
           </div>
         </div>
-
         <button
           type="button"
           onClick={handleCancelOrLeave}
-          className="room-btn-action danger"
+          className="room-btn-action danger w-full sm:w-auto mt-1 sm:mt-0 py-3 sm:py-2"
           title={isCreator ? 'Cancel and delete room' : 'Leave room'}
         >
           <X className="w-4 h-4" />
@@ -175,20 +176,20 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
       </div>
 
       {/* 2. Room Code & Game Settings Summary Card */}
-      <div className="room-glass-card p-6 sm:p-8 flex flex-col items-center text-center gap-5">
-        <div className="flex flex-col items-center gap-2">
+      <div className="room-glass-card p-5 sm:p-8 flex flex-col items-center text-center gap-5">
+        <div className="flex flex-col items-center gap-3 w-full">
           <span className="text-[11px] font-black uppercase tracking-[0.25em] text-[#F5C453]">
             Room Code
           </span>
-          <div className="flex items-center gap-3">
-            <div className="room-code-badge">
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto justify-center">
+            <div className="room-code-badge text-3xl sm:text-4xl tracking-widest sm:tracking-[0.25em] px-5 py-3 sm:px-6">
               {roomCode}
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-auto mt-1 sm:mt-0">
               <button
                 type="button"
                 onClick={handleCopyCode}
-                className="room-btn-action ghost !p-2.5"
+                className="room-btn-action ghost flex-1 sm:flex-initial !p-2.5"
                 title="Copy code"
               >
                 {copied ? (
@@ -201,7 +202,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
               <button
                 type="button"
                 onClick={handleShare}
-                className="room-btn-action ghost !p-2.5"
+                className="room-btn-action ghost flex-1 sm:flex-initial !p-2.5"
                 title="Share link"
               >
                 {shared ? (

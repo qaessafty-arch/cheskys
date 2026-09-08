@@ -25,6 +25,7 @@ interface ModernWaitingRoomProps {
   playerSide: 'w' | 'b' | 'random';
   onCancel: () => void;
   onEnterBoard: () => void;
+  opponentJoined?: boolean;
 }
 
 export const ModernWaitingRoom: React.FC<ModernWaitingRoomProps> = ({
@@ -33,7 +34,8 @@ export const ModernWaitingRoom: React.FC<ModernWaitingRoomProps> = ({
   isRated,
   playerSide,
   onCancel,
-  onEnterBoard
+  onEnterBoard,
+  opponentJoined
 }) => {
   const [copied, setCopied] = useState(false);
   const [secondsElapsed, setSecondsElapsed] = useState(0);
@@ -54,6 +56,13 @@ export const ModernWaitingRoom: React.FC<ModernWaitingRoomProps> = ({
   }, []);
 
   // Animated ticking seconds clock
+  useEffect(() => {
+    if (secondsElapsed >= 300) {
+      alert("Room expired. Please create a new game.");
+      onCancel();
+    }
+  }, [secondsElapsed, onCancel]);
+
   useEffect(() => {
     const timer = setInterval(() => {
       setSecondsElapsed(prev => prev + 1);
@@ -131,7 +140,11 @@ export const ModernWaitingRoom: React.FC<ModernWaitingRoomProps> = ({
       <div className="space-y-1.5 mb-6">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-xs font-semibold text-white/90">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-          <span>Waiting For Opponent...</span>
+          {opponentJoined ? (
+            <span className="text-emerald-400">Opponent joined! Starting game...</span>
+          ) : (
+            <span>Waiting For Opponent...</span>
+          )}
         </div>
         <h3 className="text-2xl font-black tracking-tight text-white">
           Game Room Active
@@ -149,24 +162,24 @@ export const ModernWaitingRoom: React.FC<ModernWaitingRoomProps> = ({
         <div className="font-mono text-4xl sm:text-5xl font-black tracking-[0.25em] bg-gradient-to-r from-[var(--secondary-accent)] via-purple-300 to-[var(--primary-accent)] bg-clip-text text-transparent my-2 select-all">
           {gameCode}
         </div>
-        <div className="flex items-center justify-center gap-2 mt-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2 mt-4 w-full">
           <button
             onClick={handleCopyCode}
-            className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 transition-all text-xs font-bold text-white flex items-center gap-2 border border-white/15 shadow-md"
+            className="flex-1 px-4 py-3 sm:py-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 transition-all text-sm sm:text-xs font-bold text-white flex items-center justify-center gap-2 border border-white/15 shadow-md min-h-[44px]"
           >
             {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-amber-300" />}
             <span>{copied ? 'Code Copied!' : 'Copy Code'}</span>
           </button>
           <button
             onClick={handleCopyLink}
-            className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 transition-all text-xs font-bold text-white flex items-center gap-2 border border-white/15 shadow-md"
+            className="flex-1 px-4 py-3 sm:py-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 transition-all text-sm sm:text-xs font-bold text-white flex items-center justify-center gap-2 border border-white/15 shadow-md min-h-[44px]"
           >
             <Share2 className="w-4 h-4 text-cyan-300" />
             <span>Copy Join Link</span>
           </button>
           <button
             onClick={() => setShowQr(!showQr)}
-            className={`p-2 rounded-xl border text-xs font-bold transition-all ${
+            className={`px-4 py-3 sm:py-2 sm:px-3 rounded-xl border text-sm sm:text-xs font-bold transition-all flex items-center justify-center min-h-[44px] ${
               showQr ? 'bg-white/25 border-white/40 text-white' : 'bg-white/10 hover:bg-white/20 border-white/15 text-white/80'
             }`}
             title="Toggle QR Code"
@@ -267,10 +280,10 @@ export const ModernWaitingRoom: React.FC<ModernWaitingRoomProps> = ({
       </div>
 
       {/* ACTION CONTROLS */}
-      <div className="flex items-center justify-between gap-3 pt-2 border-t border-white/10">
+      <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-4 sm:gap-3 pt-4 border-t border-white/10 mt-2">
         <button
           onClick={onCancel}
-          className="px-4 py-2.5 rounded-xl bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/30 text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95"
+          className="px-4 py-4 sm:py-2.5 rounded-xl bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/30 text-sm sm:text-xs font-bold transition-all flex items-center justify-center gap-2 active:scale-95 min-h-[44px]"
         >
           <X className="w-4 h-4" />
           <span>Cancel Room</span>
@@ -278,7 +291,7 @@ export const ModernWaitingRoom: React.FC<ModernWaitingRoomProps> = ({
 
         <button
           onClick={onEnterBoard}
-          className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[var(--primary-accent)] to-[var(--secondary-accent)] hover:brightness-110 text-white text-xs font-black transition-all flex items-center gap-2 shadow-lg active:scale-95"
+          className="px-6 py-4 sm:py-2.5 rounded-xl bg-gradient-to-r from-[var(--primary-accent)] to-[var(--secondary-accent)] hover:brightness-110 text-white text-sm sm:text-xs font-black transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95 min-h-[44px]"
         >
           <Play className="w-4 h-4 fill-current" />
           <span>Enter Board View</span>

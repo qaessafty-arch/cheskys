@@ -67,8 +67,24 @@ export class MatchmakingEngine {
 
     const authUid = socket.data.uid || socket.handshake.auth?.uid;
     if (authUid) {
+      socket.join(authUid); // Join personal room for invites
       this.handleIdentify(socket, authUid);
     }
+
+    // Direct Invite Routing
+    socket.on('send_invite', (data) => {
+      if (!authUid) return;
+      const { friendUid, roomCode, inviterName, inviterPhoto } = data;
+      if (friendUid) {
+        this.io.to(friendUid).emit('receive_invite', {
+          inviteId: `inv_${Date.now()}`,
+          roomCode,
+          inviterName,
+          inviterPhoto,
+          friendUid
+        });
+      }
+    });
 
     socket.on('ping', (cb) => {
       if (typeof cb === 'function') cb(Date.now());

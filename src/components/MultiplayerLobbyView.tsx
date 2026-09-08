@@ -84,6 +84,7 @@ export const MultiplayerLobbyView: React.FC<MultiplayerLobbyViewProps> = ({
   const [selectedSide, setSelectedSide] = useState<'w' | 'b' | 'random'>('random');
   const [isCreating, setIsCreating] = useState(false);
   const [createdMatchId, setCreatedMatchId] = useState<string | null>(null);
+  const [opponentJoined, setOpponentJoined] = useState(false);
   const [pregeneratedCode, setPregeneratedCode] = useState<string>(() => generateGameRoomCode());
   const [copiedCode, setCopiedCode] = useState(false);
   const [showCreationModal, setShowCreationModal] = useState(false);
@@ -109,14 +110,19 @@ export const MultiplayerLobbyView: React.FC<MultiplayerLobbyViewProps> = ({
         (session.status === 'in_progress' ||
           (session.guestId && session.guestId !== buildLocalPlayer().uid))
       ) {
+        setOpponentJoined(true);
         soundManager.playVictory();
-        onStartMatch(createdMatchId);
+        // Brief delay before starting
+        setTimeout(() => {
+          onStartMatch(createdMatchId);
+          setOpponentJoined(false);
+        }, 1500);
       }
     });
     return () => {
       if (unsub) unsub();
     };
-  }, [createdMatchId]);
+  }, [createdMatchId, onStartMatch]);
 
   // Open Public Matches from Firestore
   const [openMatches, setOpenMatches] = useState<OnlineMatchSession[]>([]);
@@ -171,17 +177,7 @@ export const MultiplayerLobbyView: React.FC<MultiplayerLobbyViewProps> = ({
     return player;
   }, [profile, user]);
 
-  // Take the host into the arena as soon as a challenger joins the room
-  useEffect(() => {
-    if (!createdMatchId) return;
-    const unsub = listenToOnlineMatchSession(createdMatchId, session => {
-      if (session?.status === 'in_progress') {
-        soundManager.playVictory();
-        onStartMatch(createdMatchId);
-      }
-    });
-    return () => unsub();
-  }, [createdMatchId, onStartMatch]);
+
 
   // Stable identifier for the local user
   const currentUid = profile?.uid || user?.uid || guestUidRef.current;
@@ -471,6 +467,26 @@ export const MultiplayerLobbyView: React.FC<MultiplayerLobbyViewProps> = ({
       console.error(e);
     }
   };
+
+
+  if (createdMatchId) {
+    return (
+      <div className="w-full h-full min-h-screen flex items-center justify-center p-4 sm:p-8 bg-black/60 backdrop-blur-sm animate-in fade-in">
+        <ModernWaitingRoom
+          gameCode={createdMatchId}
+          timeControlName={selectedTimeControl.name || 'Custom'}
+          isRated={true}
+          playerSide={selectedSide || 'random'}
+          onCancel={() => {
+            setCreatedMatchId(null);
+            setPregeneratedCode(generateGameRoomCode());
+          }}
+          onEnterBoard={() => onStartMatch(createdMatchId)}
+          opponentJoined={opponentJoined}
+        />
+      </div>
+    );
+  }
 
   return (
     <PanelContainer>
@@ -770,7 +786,7 @@ export const MultiplayerLobbyView: React.FC<MultiplayerLobbyViewProps> = ({
             </div>
           </div>
 
-          {!createdMatchId ? (
+          {true ? (
             <div className="space-y-4">
               {/* Unique 6-character Game Code Banner */}
               <div className="p-4 rounded-2xl bg-gradient-to-r from-black/90 via-[#182214] to-black/90 border border-[#F5C453]/40 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
@@ -880,7 +896,7 @@ export const MultiplayerLobbyView: React.FC<MultiplayerLobbyViewProps> = ({
                   className="px-5 py-3.5 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs flex items-center justify-center gap-2 border border-white/20 transition-all cursor-pointer"
                 >
                   <Sparkles className="w-4 h-4 text-amber-400" />
-                  <span>Custom Game Creator</span>
+                  <span>Create Private Room</span>
                 </button>
                 <button
                   type="button"
