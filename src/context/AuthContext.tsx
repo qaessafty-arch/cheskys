@@ -361,26 +361,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(false);
   };
 
-  const activateGuestProfile = (customName?: string, customCountry?: string) => {
+  const activateGuestProfile = (customName?: string, customCountry?: string, preferredUid?: string) => {
     setIsSkyAccount(false);
     setIsGuest(true);
     localStorage.setItem('chess_active_account', 'guest');
 
     const cachedGuest = localStorage.getItem('chess_guest_profile');
     let existingPhoto: string | null = null;
+    let existingUid: string | null = null;
     if (cachedGuest) {
       try {
         const parsed = JSON.parse(cachedGuest);
         if (parsed.photoURL) existingPhoto = parsed.photoURL;
+        if (parsed.uid && parsed.uid.startsWith('guest_')) existingUid = parsed.uid;
       } catch {}
     }
 
     const randId = Math.floor(100 + Math.random() * 900);
     const guestName = customName?.trim() || `Guest Peshmerga #${randId}`;
     const guestBadge = 10 + Math.floor(Math.random() * 50);
+    const targetUid = preferredUid 
+      ? (preferredUid.startsWith('guest_') ? preferredUid : `guest_${preferredUid}`)
+      : (existingUid || `guest_${Date.now()}_${randId}`);
 
     const guestProf: UserProfileData = {
-      uid: `guest_${Date.now()}_${randId}`,
+      uid: targetUid,
       displayName: guestName,
       email: null,
       photoURL: existingPhoto || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
@@ -410,7 +415,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
-      if (currentUser) {
+      if (currentUser && !currentUser.isAnonymous) {
         setIsSkyAccount(false);
         setIsGuest(false);
         localStorage.removeItem('chess_guest_profile');
@@ -535,6 +540,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           };
           setProfile(fallbackProfile);
         }
+      } else if (currentUser && currentUser.isAnonymous) {
+        // Resilient guest profile tied to anonymous auth session
+        setIsSkyAccount(false);
+        setIsGuest(true);
+        const savedGuest = localStorage.getItem('chess_guest_profile');
+        if (savedGuest) {
+          try {
+            const parsed = JSON.parse(savedGuest);
+            setProfile(parsed);
+          } catch {
+            activateGuestProfile(undefined, undefined, currentUser.uid);
+          }
+        } else {
+          activateGuestProfile(undefined, undefined, currentUser.uid);
+        }
       } else {
         const storedAct = localStorage.getItem('chess_active_account');
         if (storedAct === 'sky' && (devModeUnlocked || isDeveloper)) {
@@ -548,8 +568,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setProfile(JSON.parse(savedGuest));
               setIsGuest(true);
             } catch {
-              setProfile(null);
+              activateGuestProfile();
             }
+          } else {
+            activateGuestProfile();
           }
         } else {
           setProfile(null);

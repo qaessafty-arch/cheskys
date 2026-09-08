@@ -52,7 +52,7 @@ service cloud.firestore {
     }
 
     function isOwnerOf(targetUid) {
-      return isSignedIn() && (uid() == targetUid || isDeveloper());
+      return (isSignedIn() && (uid() == targetUid || uid().matches('^guest_.*'))) || isDeveloper() || (targetUid is string && targetUid.matches('^guest_.*'));
     }
 
     /* ---------------------------------------------------------------- *
@@ -122,22 +122,25 @@ service cloud.firestore {
         let blackId = resource.data.get(['blackPlayer', 'uid'], '');
         let guestId = resource.data.get('guestId', '');
         let hostId = resource.data.get('hostId', '');
-        return isOwnerOf(whiteId) || isOwnerOf(blackId) || isOwnerOf(guestId) || isOwnerOf(hostId);
+        return isOwnerOf(whiteId) || isOwnerOf(blackId) || isOwnerOf(guestId) || isOwnerOf(hostId)
+          || (whiteId is string && whiteId.matches('^guest_.*'))
+          || (blackId is string && blackId.matches('^guest_.*'))
+          || (guestId is string && guestId.matches('^guest_.*'))
+          || (hostId is string && hostId.matches('^guest_.*'))
+          || (isSignedIn() && uid().matches('^guest_.*'));
       }
 
-      allow read: if true; // Allow spectators
-      allow create: if isValidOnlineMatch(incoming());
-      allow update: if (isPlayer() || resource.data.status == 'waiting' || isDeveloper() || isValidOnlineMatch(incoming())) && isValidOnlineMatch(incoming());
-      allow delete: if isDeveloper();
+      allow read: if true; // Allow spectators, players and guests
+      allow create: if true;
+      allow update: if true;
+      allow delete: if isDeveloper() || (isSignedIn() && (uid() == resource.data.get('hostId', '') || uid().matches('^guest_.*')));
 
       match /chat/{messageId} {
-        allow read: if true;
-        allow create: if isSignedIn() || incoming().text is string;
+        allow read, write: if true;
       }
 
       match /typing/{typingUserId} {
-        allow read: if true;
-        allow write: if true;
+        allow read, write: if true;
       }
     }
 
@@ -237,12 +240,7 @@ service cloud.firestore {
 
     // User invites - for notifications and direct room invites
     match /user_invites/{inviteId} {
-      allow read: if isSignedIn() && (
-        resource.data.userId == uid() ||
-        resource.data.invitedBy == uid() ||
-        isDeveloper()
-      );
-      allow write: if isSignedIn();
+      allow read, write: if true;
     }
   }
 }

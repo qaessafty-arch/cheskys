@@ -517,8 +517,20 @@ async function startServer() {
   // 7. REST API ENDPOINTS FOR CHESS GAMES
   // ==========================================
 
-  // POST /api/games → Create game with unique 6-character code
-  app.post('/api/games', (req, res) => {
+  // GET /api/rooms/my or /api/games/my → List active rooms created by or joined by the user
+  app.get(['/api/rooms/my', '/api/games/my'], (req, res) => {
+    try {
+      const uid = (req.query.uid as string) || '';
+      if (!uid) return res.json({ rooms: [] });
+      const rooms = matchmaking.getUserRooms(uid);
+      res.json({ rooms, count: rooms.length });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message || 'Failed to get user rooms' });
+    }
+  });
+
+  // POST /api/games & /api/rooms → Create game with unique 6-character code
+  app.post(['/api/games', '/api/rooms'], (req, res) => {
     try {
       const { timeControl, side, playerInfo, customCode } = req.body || {};
       const game = matchmaking.createCustomRoom({
@@ -532,6 +544,8 @@ async function startServer() {
       res.status(201).json({
         gameId: game.gameId,
         gameCode: game.gameCode,
+        roomId: game.gameId,
+        roomCode: game.gameCode,
         status: 'waiting',
         timeControl: game.session.timeControl,
         fen: game.session.chess.fen(),
@@ -542,8 +556,11 @@ async function startServer() {
     }
   });
 
-  // POST /api/games/:id/cancel → Cancel waiting game
-  app.post('/api/games/:id/cancel', (req, res) => {
+  // POST /api/games/:id/cancel & POST /api/rooms/:id/cancel & DELETE /api/rooms/:id
+  app.all(['/api/games/:id/cancel', '/api/rooms/:id/cancel', '/api/rooms/:id'], (req, res) => {
+    if (req.method !== 'POST' && req.method !== 'DELETE') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
     try {
       const { id } = req.params;
       const match = matchmaking.getMatch(id);
@@ -553,19 +570,27 @@ async function startServer() {
       }
       match.status = 'cancelled';
       if (match.waitingTimer) clearTimeout(match.waitingTimer);
-      io.to(match.matchId).emit('gameCancelled', {
+      const payload = {
         gameId: match.matchId,
         gameCode: match.gameCode,
+        roomId: match.matchId,
+        roomCode: match.gameCode,
         reason: 'Host cancelled the game.'
-      });
+      };
+      io.to(match.matchId).emit('gameCancelled', payload);
+      io.to(match.matchId).emit('roomCancelled', payload);
+      if (match.gameCode) {
+        io.to(match.gameCode).emit('gameCancelled', payload);
+        io.to(match.gameCode).emit('roomCancelled', payload);
+      }
       res.json({ success: true, message: 'Game cancelled successfully' });
     } catch (e: any) {
       res.status(500).json({ error: e.message || 'Failed to cancel game' });
     }
   });
 
-  // POST /api/games/:id/join → Join game with 6-character code or ID
-  app.post('/api/games/:id/join', (req, res) => {
+  // POST /api/games/:id/join & /api/rooms/:id/join → Join game with 6-character code or ID
+  app.post(['/api/games/:id/join', '/api/rooms/:id/join'], (req, res) => {
     try {
       const { id } = req.params;
       const { playerInfo } = req.body || {};
@@ -579,6 +604,8 @@ async function startServer() {
         playerColor: result.playerColor,
         gameId: result.match.matchId,
         gameCode: result.match.gameCode,
+        roomId: result.match.matchId,
+        roomCode: result.match.gameCode,
         game: matchmaking.getGameState(result.match.matchId)
       });
     } catch (e: any) {
@@ -671,7 +698,7 @@ PGN: ${pgn}` }]
     }
   });
 
-if (process.env.NODE_ENV !== 'production') {
+  if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: {
         middlewareMode: true,
@@ -685,8 +712,9 @@ if (process.env.NODE_ENV !== 'production') {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
+    app.use('/cheskys', express.static(distPath));
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
+    app.get(['/cheskys/*', '*'], (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }

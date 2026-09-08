@@ -621,6 +621,37 @@ export const createOnlineMatch = async (
 
   await safeSetDoc(matchDocRef, initialSession);
 
+  // Also mirror to 'rooms' collection so RoomContext and PrivateRoom can immediately discover it
+  try {
+    const roomDocRef = doc(db, 'rooms', matchId);
+    await safeSetDoc(roomDocRef, {
+      roomId: matchId,
+      roomCode: matchId,
+      creatorId: hostPlayer.uid,
+      creatorName: hostPlayer.displayName || 'Host',
+      creatorPhotoURL: hostPlayer.avatar || null,
+      creatorElo: hostPlayer.elo || 1200,
+      creatorColor: isHostWhite ? 'white' : 'black',
+      opponentColor: isHostWhite ? 'black' : 'white',
+      opponentId: null,
+      opponentName: null,
+      opponentElo: null,
+      status: 'waiting',
+      settings: {
+        timeControlId: timeControl.id,
+        timeControlName: timeControl.name,
+        initialSeconds: timeControl.initialSeconds,
+        incrementSeconds: timeControl.incrementSeconds,
+        color: side === 'w' ? 'white' : side === 'b' ? 'black' : 'random',
+        isRated: true,
+      },
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+  } catch (err) {
+    console.warn('[onlineMatchService] rooms mirror warning:', err);
+  }
+
   // Also register with server REST endpoint in background
   try {
     fetch('/api/games', {
@@ -836,13 +867,22 @@ export const joinOnlineMatch = async (
             incrementSeconds: 0,
             category: 'rapid'
           };
+          const isGuestWhite = data.playerColor === 'w' || data.playerColor === 'white';
+          const hostPlayerObj = {
+            uid: data.game?.whitePlayer?.uid || data.game?.blackPlayer?.uid || 'host_server',
+            displayName: data.game?.whitePlayer?.displayName || data.game?.blackPlayer?.displayName || 'Host',
+            elo: data.game?.whitePlayer?.rating || data.game?.blackPlayer?.rating || 1200,
+          };
+          const whitePlayer = isGuestWhite ? guestPlayer : hostPlayerObj;
+          const blackPlayer = isGuestWhite ? hostPlayerObj : guestPlayer;
+
           const serverSession: OnlineMatchSession = {
             id: data.gameId || cleanCode,
             code: data.gameCode || cleanCode,
-            hostId: 'host_server',
+            hostId: hostPlayerObj.uid,
             guestId: guestPlayer.uid,
-            whitePlayer: data.playerColor === 'white' ? guestPlayer : { uid: 'host_server', displayName: 'Host', elo: 1200 },
-            blackPlayer: data.playerColor === 'black' ? guestPlayer : { uid: 'host_server', displayName: 'Host', elo: 1200 },
+            whitePlayer,
+            blackPlayer,
             fen: data.game?.fen || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
             pgn: data.game?.pgn || '',
             moves: data.game?.moves || [],
@@ -855,7 +895,7 @@ export const joinOnlineMatch = async (
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
           };
-          await safeSetDoc(doc(db, 'online_matches', cleanCode), serverSession);
+          await safeSetDoc(doc(db, 'online_matches', cleanCode), serverSession).catch(() => {});
           return serverSession;
         }
       }
@@ -916,6 +956,37 @@ export const joinOnlineMatch = async (
 };
 
 /**
+ * Cancels an active or waiting online match across cloud and backend state
+ */
+export const cancelOnlineMatch = async (matchId: string): Promise<void> => {
+  const cleanId = matchId.trim().toUpperCase();
+
+  // 1. Update online_matches
+  try {
+    const matchRef = doc(db, 'online_matches', cleanId);
+    await safeUpdateDoc(matchRef, {
+      status: 'cancelled',
+      updatedAt: new Date().toISOString(),
+    });
+  } catch {}
+
+  // 2. Update rooms collection
+  try {
+    const roomRef = doc(db, 'rooms', cleanId);
+    await safeUpdateDoc(roomRef, {
+      status: 'cancelled',
+      updatedAt: serverTimestamp(),
+    });
+  } catch {}
+
+  // 3. Notify backend REST endpoints
+  try {
+    fetch(`/api/games/${encodeURIComponent(cleanId)}/cancel`, { method: 'POST' }).catch(() => {});
+    fetch(`/api/rooms/${encodeURIComponent(cleanId)}/cancel`, { method: 'POST' }).catch(() => {});
+  } catch {}
+};
+
+/**
  * Listens to active open challenges waiting for a player
  */
 export const listenToPublicOpenMatches = (
@@ -944,5 +1015,63 @@ export const listenToPublicOpenMatches = (
     console.error('Failed to listen to open matches:', e);
     return () => {};
   }
+};
+
+/**
+ * Listens to rooms created by the current user
+ */
+export const listenToUserRooms = (
+  userId: string,
+  callback: (matches: OnlineMatchSession[]) => void
+) => {
+  if (!userId) {
+    callback([]);
+    return () => {};
+  }
+  try {
+    const q = query(
+      collection(db, 'online_matches'),
+      where('hostId', '==', userId),
+      limit(20)
+    );
+
+    const unsub = onSnapshot(
+      q,
+      snap => {
+        const matches: OnlineMatchSession[] = [];
+        snap.forEach(docSnap => {
+          const data = docSnap.data() as OnlineMatchSession;
+          if (data.status === 'waiting' || data.status === 'in_progress') {
+            matches.push(data);
+          }
+        });
+        callback(matches);
+      },
+      err => {
+        console.warn('User rooms listener warning:', err);
+        callback([]);
+      }
+    );
+
+    return unsub;
+  } catch (e) {
+    console.error('Failed to listen to user rooms:', e);
+    return () => {};
+  }
+};
+
+/**
+ * Fetches rooms created by or joined by the user from the local server engine
+ */
+export const fetchUserRoomsFromServer = async (userId: string): Promise<any[]> => {
+  if (!userId) return [];
+  try {
+    const res = await fetch(`/api/rooms/my?uid=${encodeURIComponent(userId)}`);
+    if (res.ok) {
+      const data = await res.json();
+      return Array.isArray(data?.rooms) ? data.rooms : [];
+    }
+  } catch {}
+  return [];
 };
 
