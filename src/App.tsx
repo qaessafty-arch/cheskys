@@ -149,6 +149,14 @@ export default function App() {
   const [activeMode, setActiveMode] = useState<GameMode>('ai');
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const roomParam = params.get('room') || params.get('join');
+    if (roomParam) {
+      setActiveMode('private_room');
+    }
+  }, []);
+
+  useEffect(() => {
     const handleRoomInviteResponse = async (e: Event) => {
       const customEvent = e as CustomEvent;
       const { status, inviteId, roomCode } = customEvent.detail;
@@ -891,6 +899,7 @@ export default function App() {
         isSidebarOpen={isSidebarOpen}
         onOpenProfile={() => setActiveMode('profile_page')}
         onOpenLogin={() => setActiveMode('login')}
+        onOpenPrivateRoom={() => setActiveMode('private_room')}
         respectProfile={respectProfile}
       />
 

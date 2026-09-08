@@ -164,6 +164,7 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   signInWithApple: () => Promise<void>;
   signInAsGuest: (guestName?: string, country?: string) => Promise<void>;
+  activateGuestProfile: (customName?: string, customCountry?: string) => void;
   signInWithEmail: (email: string, pass: string) => Promise<void>;
   signUpWithEmail: (email: string, pass: string, displayName?: string) => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
@@ -1151,6 +1152,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signInWithGoogle,
         signInWithApple,
         signInAsGuest,
+        activateGuestProfile,
         signInWithEmail,
         signUpWithEmail,
         sendPasswordReset,

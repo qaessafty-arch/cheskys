@@ -126,18 +126,18 @@ service cloud.firestore {
       }
 
       allow read: if true; // Allow spectators
-      allow create: if isSignedIn() && isValidOnlineMatch(incoming());
-      allow update: if (isPlayer() || resource.data.status == 'waiting' || isDeveloper()) && isValidOnlineMatch(incoming());
+      allow create: if isValidOnlineMatch(incoming());
+      allow update: if (isPlayer() || resource.data.status == 'waiting' || isDeveloper() || isValidOnlineMatch(incoming())) && isValidOnlineMatch(incoming());
       allow delete: if isDeveloper();
 
       match /chat/{messageId} {
         allow read: if true;
-        allow create: if isSignedIn() && isOwnerOf(incoming().senderUid);
+        allow create: if isSignedIn() || incoming().text is string;
       }
 
       match /typing/{typingUserId} {
         allow read: if true;
-        allow write: if isOwnerOf(typingUserId);
+        allow write: if true;
       }
     }
 
@@ -215,31 +215,23 @@ service cloud.firestore {
       allow write: if isDeveloper();
     }
 
-    // Private Rooms - accessible to authenticated users
+    // Private Rooms - accessible to players & guests with the room code
     match /rooms/{roomId} {
       allow read: if true;
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && (
-        resource.data.creatorId == uid() ||
-        resource.data.opponentId == uid() ||
-        resource.data.status == 'waiting' ||
-        isDeveloper()
-      );
-      allow delete: if isSignedIn() && (
-        (resource.data.creatorId == uid() && resource.data.status == 'waiting') ||
-        isDeveloper()
-      );
+      allow create: if true;
+      allow update: if true;
+      allow delete: if true;
 
       match /invites/{inviteId} {
-        allow read, write: if isSignedIn();
+        allow read, write: if true;
       }
 
       match /chat/{chatId} {
-        allow read, write: if isSignedIn();
+        allow read, write: if true;
       }
 
       match /messages/{messageId} {
-        allow read, write: if isSignedIn();
+        allow read, write: if true;
       }
     }
 

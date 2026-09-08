@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useAuth } from './AuthContext';
 import {
   collection,
@@ -14,7 +14,8 @@ import {
   enableNetwork,
   disableNetwork,
 } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType, safeAddDoc, safeSetDoc, safeUpdateDoc, safeDeleteDoc } from '../utils/firebase';
+import { signInAnonymously } from 'firebase/auth';
+import { db, auth, handleFirestoreError, OperationType, safeAddDoc, safeSetDoc, safeUpdateDoc, safeDeleteDoc } from '../utils/firebase';
 import { soundManager } from '../utils/audio';
 import { createOnlineMatch, joinOnlineMatch } from '../services/onlineMatchService';
 import { OnlineMatchPlayer, TimeControl } from '../types/chess';
@@ -87,8 +88,14 @@ export interface PrivateRoom {
   invites?: Record<string, RoomInvite>;
 }
 
+export interface SocketController {
+  connect: () => Promise<void>;
+  disconnect: () => Promise<void>;
+}
+
 interface RoomContextType {
   connectionStatus: ConnectionStatus;
+  socketInstance: SocketController;
   currentRoom: PrivateRoom | null;
   incomingInvites: UserInvite[];
   loading: boolean;
@@ -117,30 +124,35 @@ interface RoomContextType {
 }
 
 export function useSocketHealthMonitor(
-  socket: { connect: () => Promise<void>; disconnect: () => Promise<void> },
+  socket: SocketController,
   status: ConnectionStatus
 ) {
   useEffect(() => {
-    let innerTimer: ReturnType<typeof setTimeout>;
+    let innerTimer: ReturnType<typeof setTimeout> | null = null;
     let isCancelled = false;
 
+    // Monitor connection state. If it remains in 'connecting' for over 5 seconds,
+    // force a disconnect and initiate a reconnection with randomized jitter delay to prevent thundering herd issues.
     if (status === 'connecting') {
       const timer = setTimeout(() => {
         if (isCancelled) return;
-        console.warn('SocketHealthMonitor: connection stalled, forcing reconnect...');
-        const jitter = Math.random() * 2000;
+        console.warn('[SocketHealthMonitor] Connection stalled in "connecting" for >5s. Scheduling forced reconnect...');
+        // Randomized jitter delay (250ms - 2250ms) to prevent thundering herd issues
+        const jitter = 250 + Math.random() * 2000;
         innerTimer = setTimeout(async () => {
           if (isCancelled) return;
           try {
+            console.info('[SocketHealthMonitor] Forcing disconnect and reconnecting with jitter...');
             await socket.disconnect();
             if (isCancelled) return;
             await socket.connect();
-            console.log('Socket reconnect attempt executed.');
+            console.info('[SocketHealthMonitor] Reconnect sequence initiated successfully.');
           } catch (e) {
-            console.error('Forced reconnect failed:', e);
+            console.error('[SocketHealthMonitor] Forced reconnection error:', e);
           }
         }, jitter);
       }, 5000);
+
       return () => {
         isCancelled = true;
         clearTimeout(timer);
@@ -149,6 +161,20 @@ export function useSocketHealthMonitor(
     }
   }, [status, socket]);
 }
+
+export const SocketHealthMonitor: React.FC<{
+  socket?: SocketController;
+  status?: ConnectionStatus;
+}> = ({ socket, status }) => {
+  const room = useContext(RoomContext);
+  const activeSocket = socket || room?.socketInstance || {
+    connect: async () => {},
+    disconnect: async () => {},
+  };
+  const activeStatus = status || room?.connectionStatus || 'disconnected';
+  useSocketHealthMonitor(activeSocket, activeStatus);
+  return null;
+};
 
 const RoomContext = createContext<RoomContextType | undefined>(undefined);
 
@@ -166,6 +192,97 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const currentRoomRef = useRef<PrivateRoom | null>(null);
   const launchedRoomRef = useRef<string | null>(null);
   currentRoomRef.current = currentRoom;
+
+  // Socket adapter for Firebase network state
+  const socketInstance: SocketController = useMemo(() => ({
+    connect: async () => {
+      try {
+        await enableNetwork(db);
+        console.log('[RoomContext] Firestore network enabled');
+      } catch (err: any) {
+        console.warn('[RoomContext] enableNetwork warning:', err?.message);
+      }
+    },
+    disconnect: async () => {
+      try {
+        await disableNetwork(db);
+        console.log('[RoomContext] Firestore network disabled');
+      } catch (err: any) {
+        console.warn('[RoomContext] disableNetwork warning:', err?.message);
+      }
+    },
+  }), []);
+
+  // Socket Health Monitor (Connection stabilization)
+  useSocketHealthMonitor(socketInstance, connectionStatus);
+
+  // Resilient player profile resolution (authenticated user or active guest)
+  const getActiveProfile = useCallback((): {
+    uid: string;
+    displayName: string;
+    photoURL?: string | null;
+    elo: number;
+    isGuest: boolean;
+  } => {
+    if (profile?.uid) {
+      return {
+        uid: profile.uid,
+        displayName: profile.displayName || user?.displayName || 'Player',
+        photoURL: profile.photoURL || user?.photoURL || null,
+        elo: typeof profile.elo === 'number' ? profile.elo : 1200,
+        isGuest: Boolean(profile.isGuest),
+      };
+    }
+    if (user?.uid) {
+      return {
+        uid: user.uid,
+        displayName: user.displayName || user.email?.split('@')[0] || 'Player',
+        photoURL: user.photoURL || null,
+        elo: 1200,
+        isGuest: false,
+      };
+    }
+    // Check localStorage cached guest
+    try {
+      const cached = localStorage.getItem('chess_guest_profile');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed?.uid) {
+          return {
+            uid: parsed.uid,
+            displayName: parsed.displayName || 'Guest Player',
+            photoURL: parsed.photoURL || null,
+            elo: typeof parsed.elo === 'number' ? parsed.elo : 1200,
+            isGuest: true,
+          };
+        }
+      }
+    } catch {}
+
+    // Fallback: create resilient guest player and save
+    const randId = Math.floor(100 + Math.random() * 900);
+    const guestObj = {
+      uid: auth.currentUser?.uid || `guest_${Date.now()}_${randId}`,
+      displayName: `Guest #${randId}`,
+      photoURL: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
+      elo: 1200,
+      isGuest: true,
+    };
+    try {
+      localStorage.setItem('chess_guest_profile', JSON.stringify(guestObj));
+      localStorage.setItem('chess_active_account', 'guest');
+    } catch {}
+    return guestObj;
+  }, [profile, user]);
+
+  // Ensure background anonymous auth if not signed in
+  useEffect(() => {
+    if (!auth.currentUser && !user) {
+      signInAnonymously(auth).catch((e) => {
+        console.warn('[RoomContext] Anonymous sign-in notice:', e?.message);
+      });
+    }
+  }, [user]);
 
   // Migration helper: Strip legacy bloated fields and backfill subcollections if present
   const cleanUpLegacyRoomDoc = useCallback(async (roomCode: string, data: PrivateRoom) => {
@@ -218,116 +335,8 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  // Real-time listener for current room
-  useEffect(() => {
-    if (!currentRoom?.roomCode) {
-      setConnectionStatus('disconnected');
-      return;
-    }
-
-    setConnectionStatus('connecting');
-    const roomRef = doc(db, 'rooms', currentRoom.roomCode);
-    const unsub = onSnapshot(
-      roomRef,
-      { includeMetadataChanges: true },
-      (docSnap) => {
-        // If we received data from the server, mark as connected
-        if (!docSnap.metadata.fromCache) {
-          setConnectionStatus('connected');
-        }
-
-        if (!docSnap.exists()) {
-          // Room was canceled or deleted
-          if (currentRoomRef.current?.status === 'waiting') {
-            setCurrentRoom(null);
-          }
-          return;
-        }
-
-        const data = docSnap.data() as PrivateRoom;
-        const prevStatus = currentRoomRef.current?.status;
-        const prevOpponent = currentRoomRef.current?.opponentId;
-
-        // Auto-cleanup legacy bloated fields if found on existing room
-        if (data.chat || data.invites) {
-          cleanUpLegacyRoomDoc(currentRoom.roomCode, data);
-        }
-
-        setCurrentRoom(data);
-
-        // Opponent just joined
-        if (!prevOpponent && data.opponentId && (data.status === 'ready' || data.status === 'waiting')) {
-          soundManager.playMatchFound();
-        }
-
-        // Handle game start countdown if ready
-        if (
-          data.status === 'ready' &&
-          prevStatus !== 'ready' &&
-          prevStatus !== 'in_progress' &&
-          launchedRoomRef.current !== data.roomCode
-        ) {
-          startCountdownFlow(data);
-        }
-
-        // If gameId is set and status in_progress, transition to active match
-        if (data.status === 'in_progress' && data.gameId) {
-          setActiveGameId(data.gameId);
-        }
-      },
-      (error) => {
-        handleFirestoreError(error, OperationType.GET, `rooms/${currentRoom.roomCode}`);
-      }
-    );
-
-    return () => {
-      unsub();
-      if (countdownTimerRef.current) {
-        clearInterval(countdownTimerRef.current);
-        countdownTimerRef.current = null;
-        setCountdown(null);
-      }
-    };
-  }, [currentRoom?.roomCode, cleanUpLegacyRoomDoc]);
-
-  // Socket adapter for Firebase network state
-  const socketInstance = useRef({
-    connect: () => enableNetwork(db),
-    disconnect: () => disableNetwork(db),
-  }).current;
-
-  // Socket Health Monitor (Connection stabilization)
-  useSocketHealthMonitor(socketInstance, connectionStatus);
-
-  // Real-time listener for incoming user invites
-  useEffect(() => {
-    if (!user) {
-      setIncomingInvites([]);
-      return;
-    }
-
-    const invitesQuery = query(
-      collection(db, 'user_invites'),
-      where('userId', '==', user.uid),
-      where('status', '==', 'pending')
-    );
-
-    const unsub = onSnapshot(
-      invitesQuery,
-      (snapshot) => {
-        const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as UserInvite));
-        setIncomingInvites(list);
-      },
-      (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'user_invites');
-      }
-    );
-
-    return () => unsub();
-  }, [user]);
-
   // 3-second automatic countdown when status is 'ready'
-  const startCountdownFlow = (room: PrivateRoom) => {
+  const startCountdownFlow = useCallback((room: PrivateRoom) => {
     if (countdownTimerRef.current || launchedRoomRef.current === room.roomCode) return;
 
     let count = 3;
@@ -340,13 +349,14 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCountdown(count);
         soundManager.playCountdownTick(false);
       } else {
-        clearInterval(countdownTimerRef.current);
+        clearInterval(countdownTimerRef.current!);
         countdownTimerRef.current = null;
         setCountdown(null);
         soundManager.playCountdownTick(true);
 
         // Only the creator launches the session, and only once per room.
-        if (profile?.uid === room.creatorId && launchedRoomRef.current !== room.roomCode) {
+        const currentUid = getActiveProfile().uid;
+        if (currentUid === room.creatorId && launchedRoomRef.current !== room.roomCode) {
           launchedRoomRef.current = room.roomCode;
           try {
             const hostPlayer: OnlineMatchPlayer = {
@@ -426,11 +436,110 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
     }, 1000);
-  };
+  }, [getActiveProfile]);
+
+  // Real-time listener for current room
+  useEffect(() => {
+    if (!currentRoom?.roomCode) {
+      setConnectionStatus('disconnected');
+      return;
+    }
+
+    setConnectionStatus('connecting');
+    const roomRef = doc(db, 'rooms', currentRoom.roomCode);
+    const unsub = onSnapshot(
+      roomRef,
+      { includeMetadataChanges: true },
+      (docSnap) => {
+        // Document received from Firestore backend or cache - mark connection as active
+        setConnectionStatus('connected');
+
+        if (!docSnap.exists()) {
+          // Room was canceled or deleted
+          if (currentRoomRef.current?.status === 'waiting') {
+            setCurrentRoom(null);
+          }
+          return;
+        }
+
+        const data = docSnap.data() as PrivateRoom;
+        const prevStatus = currentRoomRef.current?.status;
+        const prevOpponent = currentRoomRef.current?.opponentId;
+
+        // Auto-cleanup legacy bloated fields if found on existing room
+        if (data.chat || data.invites) {
+          cleanUpLegacyRoomDoc(currentRoom.roomCode, data);
+        }
+
+        setCurrentRoom(data);
+
+        // Opponent just joined
+        if (!prevOpponent && data.opponentId && (data.status === 'ready' || data.status === 'waiting')) {
+          soundManager.playMatchFound();
+        }
+
+        // Handle game start countdown if ready
+        if (
+          data.status === 'ready' &&
+          prevStatus !== 'ready' &&
+          prevStatus !== 'in_progress' &&
+          launchedRoomRef.current !== data.roomCode
+        ) {
+          startCountdownFlow(data);
+        }
+
+        // If gameId is set and status in_progress, transition to active match
+        if (data.status === 'in_progress' && data.gameId) {
+          setActiveGameId(data.gameId);
+        }
+      },
+      (error) => {
+        setConnectionStatus('disconnected');
+        handleFirestoreError(error, OperationType.GET, `rooms/${currentRoom.roomCode}`);
+      }
+    );
+
+    return () => {
+      unsub();
+      setConnectionStatus('disconnected');
+      if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+        countdownTimerRef.current = null;
+        setCountdown(null);
+      }
+    };
+  }, [currentRoom?.roomCode, cleanUpLegacyRoomDoc, startCountdownFlow]);
+
+  // Real-time listener for incoming user invites
+  useEffect(() => {
+    if (!user) {
+      setIncomingInvites([]);
+      return;
+    }
+
+    const invitesQuery = query(
+      collection(db, 'user_invites'),
+      where('userId', '==', user.uid),
+      where('status', '==', 'pending')
+    );
+
+    const unsub = onSnapshot(
+      invitesQuery,
+      (snapshot) => {
+        const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as UserInvite));
+        setIncomingInvites(list);
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'user_invites');
+      }
+    );
+
+    return () => unsub();
+  }, [user]);
 
   const createRoom = useCallback(
     async (code: string, settings: RoomSettings): Promise<PrivateRoom> => {
-      if (!profile) throw new Error('Not authenticated');
+      const activePlayer = getActiveProfile();
       const cleanCode = code.trim().toUpperCase();
       const now = new Date();
       const expiresAt = new Date(now.getTime() + 10 * 60 * 1000);
@@ -442,10 +551,10 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const room: PrivateRoom = {
         roomId: cleanCode,
         roomCode: cleanCode,
-        creatorId: profile.uid,
-        creatorName: profile.displayName || 'You',
-        creatorPhotoURL: profile.photoURL || null,
-        creatorElo: typeof profile.elo === 'number' ? profile.elo : 1200,
+        creatorId: activePlayer.uid,
+        creatorName: activePlayer.displayName || 'You',
+        creatorPhotoURL: activePlayer.photoURL || null,
+        creatorElo: typeof activePlayer.elo === 'number' ? activePlayer.elo : 1200,
         creatorColor,
         opponentColor,
         opponentId: null,
@@ -467,7 +576,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (raceResult !== 'timeout' && raceResult.exists()) {
           const data = raceResult.data() as PrivateRoom;
           // If the room belongs to someone else and is still active/waiting
-          if (data.creatorId && data.creatorId !== profile.uid && data.status === 'waiting') {
+          if (data.creatorId && data.creatorId !== activePlayer.uid && data.status === 'waiting') {
             throw new Error('This room code is already active. Please generate a different code.');
           }
         }
@@ -511,9 +620,9 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
             },
             side: settings.color,
             playerInfo: {
-              uid: profile.uid,
-              name: profile.displayName || 'Host',
-              elo: profile.elo || 1200,
+              uid: activePlayer.uid,
+              name: activePlayer.displayName || 'Host',
+              elo: activePlayer.elo || 1200,
             }
           })
         }).catch(() => {});
@@ -539,10 +648,10 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // 2. Mirror into online_matches collection so the room is discoverable and joinable
         try {
           const hostPlayer: OnlineMatchPlayer = {
-            uid: profile.uid,
-            displayName: profile.displayName || 'Host',
-            avatar: profile.photoURL || null,
-            elo: typeof profile.elo === 'number' ? profile.elo : 1200,
+            uid: activePlayer.uid,
+            displayName: activePlayer.displayName || 'Host',
+            avatar: activePlayer.photoURL || null,
+            elo: typeof activePlayer.elo === 'number' ? activePlayer.elo : 1200,
           };
           const preferredSide = settings.color === 'white' ? 'w' : settings.color === 'black' ? 'b' : 'random';
           const category =
@@ -569,12 +678,12 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       return room;
     },
-    [profile]
+    [getActiveProfile]
   );
 
   const joinRoom = useCallback(
     async (code: string): Promise<PrivateRoom> => {
-      if (!profile) throw new Error('Not authenticated');
+      const activePlayer = getActiveProfile();
       const cleanCode = code.trim().toUpperCase();
       const roomDoc = doc(db, 'rooms', cleanCode);
 
@@ -604,18 +713,18 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const matchSnap = await getDoc(matchDocRef);
           if (matchSnap.exists()) {
             const matchSession = matchSnap.data() as any;
-            if (matchSession.status !== 'waiting' && matchSession.guestId && matchSession.guestId !== profile.uid) {
+            if (matchSession.status !== 'waiting' && matchSession.guestId && matchSession.guestId !== activePlayer.uid) {
               throw new Error('This match is already in progress or completed.');
             }
-            if (matchSession.hostId === profile.uid) {
+            if (matchSession.hostId === activePlayer.uid) {
               throw new Error('You are the creator of this match. Share your code with a friend!');
             }
 
             const guestPlayer: OnlineMatchPlayer = {
-              uid: profile.uid,
-              displayName: profile.displayName || 'Opponent',
-              avatar: profile.photoURL || null,
-              elo: typeof profile.elo === 'number' ? profile.elo : 1200,
+              uid: activePlayer.uid,
+              displayName: activePlayer.displayName || 'Opponent',
+              avatar: activePlayer.photoURL || null,
+              elo: typeof activePlayer.elo === 'number' ? activePlayer.elo : 1200,
             };
             await joinOnlineMatch(cleanCode, guestPlayer);
             setActiveGameId(cleanCode);
@@ -628,9 +737,9 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
               creatorElo: matchSession.whitePlayer?.elo || 1200,
               creatorColor: matchSession.whitePlayer?.uid === matchSession.hostId ? 'white' : 'black',
               opponentColor: matchSession.whitePlayer?.uid === matchSession.hostId ? 'black' : 'white',
-              opponentId: profile.uid,
-              opponentName: profile.displayName || 'Opponent',
-              opponentElo: typeof profile.elo === 'number' ? profile.elo : 1200,
+              opponentId: activePlayer.uid,
+              opponentName: activePlayer.displayName || 'Opponent',
+              opponentElo: typeof activePlayer.elo === 'number' ? activePlayer.elo : 1200,
               status: 'in_progress',
               settings: {
                 timeControlId: matchSession.timeControl?.id || 'rapid',
@@ -661,17 +770,17 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('This room is already in progress or no longer available.');
       }
 
-      if (data.creatorId === profile.uid) {
+      if (data.creatorId === activePlayer.uid) {
         throw new Error("You are the creator of this room. Share your code with a friend!");
       }
 
-      const opponentName = profile.displayName || 'Opponent';
-      const opponentPhotoURL = profile.photoURL || null;
-      const opponentElo = typeof profile.elo === 'number' ? profile.elo : 1200;
+      const opponentName = activePlayer.displayName || 'Opponent';
+      const opponentPhotoURL = activePlayer.photoURL || null;
+      const opponentElo = typeof activePlayer.elo === 'number' ? activePlayer.elo : 1200;
 
       // Claim the room atomically before doing any nonessential writes.
       const updatePayload: Record<string, any> = {
-        opponentId: profile.uid,
+        opponentId: activePlayer.uid,
         opponentName,
         opponentPhotoURL,
         opponentElo,
@@ -690,7 +799,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (latestRoom.status !== 'waiting') {
             throw new Error('This room was just joined by another player.');
           }
-          if (latestRoom.creatorId === profile.uid) {
+          if (latestRoom.creatorId === activePlayer.uid) {
             throw new Error("You are the creator of this room. Share your code with a friend!");
           }
           transaction.update(roomDoc, updatePayload);
@@ -714,7 +823,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             playerInfo: {
-              uid: profile.uid,
+              uid: activePlayer.uid,
               name: opponentName,
               elo: opponentElo,
             }
@@ -735,7 +844,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Also sync into online_matches
       try {
         const guestPlayer: OnlineMatchPlayer = {
-          uid: profile.uid,
+          uid: activePlayer.uid,
           displayName: opponentName,
           avatar: opponentPhotoURL,
           elo: opponentElo,
@@ -748,7 +857,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const joinedRoom: PrivateRoom = {
         ...claimedRoom,
         roomCode: cleanCode,
-        opponentId: profile.uid,
+        opponentId: activePlayer.uid,
         opponentName,
         opponentPhotoURL,
         opponentElo,
@@ -767,20 +876,21 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
       soundManager.playMatchFound();
       return joinedRoom;
     },
-    [profile]
+    [getActiveProfile]
   );
 
   const cancelRoom = useCallback(
     async (code?: string) => {
       const targetCode = code || currentRoom?.roomCode;
       if (!targetCode) return;
+      const activePlayer = getActiveProfile();
 
       try {
         const roomDoc = doc(db, 'rooms', targetCode);
         const snap = await getDoc(roomDoc);
         if (snap.exists()) {
           const data = snap.data() as PrivateRoom;
-          if (data.status === 'waiting' && (!profile || data.creatorId === profile.uid)) {
+          if (data.status === 'waiting' && (!data.creatorId || data.creatorId === activePlayer.uid)) {
             await safeDeleteDoc(roomDoc);
           }
         }
@@ -794,7 +904,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const mSnap = await getDoc(matchRef);
         if (mSnap.exists()) {
           const mData = mSnap.data();
-          if (mData.status === 'waiting' && (!profile || mData.hostId === profile.uid)) {
+          if (mData.status === 'waiting' && (!mData.hostId || mData.hostId === activePlayer.uid)) {
             await safeDeleteDoc(matchRef).catch(() => {});
           }
         }
@@ -805,7 +915,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
     },
-    [currentRoom, profile]
+    [currentRoom, getActiveProfile]
   );
 
   const leaveRoom = useCallback(() => {
@@ -870,7 +980,8 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const inviteFriend = useCallback(
     async (friendUid: string, friendName: string, friendPhotoURL?: string) => {
-      if (!currentRoom || !profile) return;
+      if (!currentRoom) return;
+      const activePlayer = getActiveProfile();
       const roomCode = currentRoom.roomCode;
       const roomDoc = doc(db, 'rooms', roomCode);
 
@@ -884,7 +995,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
           status: 'pending',
           invitedAt: serverTimestamp(),
           settings: currentRoom.settings,
-          invitedBy: profile.uid,
+          invitedBy: activePlayer.uid,
         });
 
         // Also create document in user_invites for direct notification targeting
@@ -895,9 +1006,9 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
           userId: friendUid,
           roomId: roomCode,
           roomCode: roomCode,
-          invitedBy: profile.uid,
-          invitedByName: profile.displayName || 'You',
-          invitedByPhoto: profile.photoURL || null,
+          invitedBy: activePlayer.uid,
+          invitedByName: activePlayer.displayName || 'You',
+          invitedByPhoto: activePlayer.photoURL || null,
           status: 'pending',
           settings: currentRoom.settings,
           createdAt: serverTimestamp(),
@@ -915,7 +1026,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       soundManager.playChat();
     },
-    [currentRoom, profile]
+    [currentRoom, getActiveProfile]
   );
 
   const acceptInvite = useCallback(
@@ -957,7 +1068,8 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const sendChatMessage = useCallback(
     async (message: string) => {
-      if (!currentRoom || !profile) return;
+      if (!currentRoom) return;
+      const activePlayer = getActiveProfile();
       const text = message.trim();
       if (!text) return;
 
@@ -968,9 +1080,9 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Write directly into subcollection: rooms/{roomCode}/messages
         const msgColl = collection(roomDoc, 'messages');
         await safeAddDoc(msgColl, {
-          userId: profile.uid,
-          userName: profile.displayName || 'You',
-          userPhotoURL: profile.photoURL || null,
+          userId: activePlayer.uid,
+          userName: activePlayer.displayName || 'You',
+          userPhotoURL: activePlayer.photoURL || null,
           message: text,
           timestamp: serverTimestamp(),
           isSystem: false,
@@ -989,7 +1101,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       soundManager.playChat();
     },
-    [currentRoom, profile]
+    [currentRoom, getActiveProfile]
   );
 
   const markRoomExpiredIfDue = useCallback(async (): Promise<boolean> => {
@@ -1017,6 +1129,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <RoomContext.Provider
       value={{
         connectionStatus,
+        socketInstance,
         currentRoom,
         incomingInvites,
         loading,
