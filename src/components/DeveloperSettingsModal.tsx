@@ -191,8 +191,8 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
       await updateUserRoleAndBadge(targetUid, {
         role: editRole,
         badgeNumber: Number(editBadgeNumber),
-        customBadge: editCustomBadge.trim() || undefined,
-        customStatus: editStatus.trim() || undefined,
+        customBadge: editCustomBadge.trim() || null,
+        customStatus: editStatus.trim() || null,
         elo: Number(editElo),
         respectPoints: Number(editRespect)
       });

@@ -55,9 +55,9 @@ export default defineConfig(({ mode }) => ({
     // Let Vite derive the HMR endpoint from the active preview server. A hard-coded
     // localhost:5173 endpoint makes the browser connect to a socket that does not exist
     // when the sandbox exposes the app on another port or through a preview proxy.
-    hmr: process.env.DISABLE_HMR === 'true' ? false : undefined,
+    hmr: false,
     // Disable file watching entirely in production / agent mode to save CPU.
-    watch: mode === 'production' || process.env.DISABLE_HMR === 'true' ? null : {
+    watch: mode === 'production' ? null : {
       usePolling: true,
       interval: 1000,
     },

@@ -42,7 +42,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
         title: title.trim(),
         message: message.trim(),
         userName: profile?.displayName || user?.displayName || 'Peshmerga Tactician',
-        userEmail: contactEmail.trim() || undefined,
+        userEmail: contactEmail.trim() || null,
         userBadge: profile?.badgeNumber !== undefined ? `#${profile.badgeNumber}` : undefined,
         status: 'pending'
       });

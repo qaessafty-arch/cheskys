@@ -121,13 +121,19 @@ export function useSocketHealthMonitor(
   status: ConnectionStatus
 ) {
   useEffect(() => {
+    let innerTimer: ReturnType<typeof setTimeout>;
+    let isCancelled = false;
+
     if (status === 'connecting') {
       const timer = setTimeout(() => {
+        if (isCancelled) return;
         console.warn('SocketHealthMonitor: connection stalled, forcing reconnect...');
         const jitter = Math.random() * 2000;
-        setTimeout(async () => {
+        innerTimer = setTimeout(async () => {
+          if (isCancelled) return;
           try {
             await socket.disconnect();
+            if (isCancelled) return;
             await socket.connect();
             console.log('Socket reconnect attempt executed.');
           } catch (e) {
@@ -135,7 +141,11 @@ export function useSocketHealthMonitor(
           }
         }, jitter);
       }, 5000);
-      return () => clearTimeout(timer);
+      return () => {
+        isCancelled = true;
+        clearTimeout(timer);
+        if (innerTimer) clearTimeout(innerTimer);
+      };
     }
   }, [status, socket]);
 }
@@ -434,7 +444,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
         roomCode: cleanCode,
         creatorId: profile.uid,
         creatorName: profile.displayName || 'You',
-        creatorPhotoURL: profile.photoURL || undefined,
+        creatorPhotoURL: profile.photoURL || null,
         creatorElo: typeof profile.elo === 'number' ? profile.elo : 1200,
         creatorColor,
         opponentColor,
@@ -468,12 +478,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Non-blocking for network hiccups
       }
 
-      // Immediately set the current room locally so user enters the waiting room without delay
-      setCurrentRoom(room);
-      setJoinError(null);
-      soundManager.playNotification();
-
-      // Write room document to Firestore safely
+      // Write room document to Firestore safely FIRST to prevent onSnapshot race conditions
       try {
         await safeSetDoc(roomDoc, {
           ...room,
@@ -483,6 +488,11 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (err: any) {
         console.warn('[RoomContext] Firestore room creation write bypassed (quota/offline mode):', err?.message);
       }
+
+      // Set the current room locally so user enters the waiting room
+      setCurrentRoom(room);
+      setJoinError(null);
+      soundManager.playNotification();
 
       // Persist to localStorage and server REST API
       try {
@@ -531,7 +541,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const hostPlayer: OnlineMatchPlayer = {
             uid: profile.uid,
             displayName: profile.displayName || 'Host',
-            avatar: profile.photoURL || undefined,
+            avatar: profile.photoURL || null,
             elo: typeof profile.elo === 'number' ? profile.elo : 1200,
           };
           const preferredSide = settings.color === 'white' ? 'w' : settings.color === 'black' ? 'b' : 'random';
@@ -604,7 +614,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const guestPlayer: OnlineMatchPlayer = {
               uid: profile.uid,
               displayName: profile.displayName || 'Opponent',
-              avatar: profile.photoURL || undefined,
+              avatar: profile.photoURL || null,
               elo: typeof profile.elo === 'number' ? profile.elo : 1200,
             };
             await joinOnlineMatch(cleanCode, guestPlayer);
@@ -656,7 +666,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const opponentName = profile.displayName || 'Opponent';
-      const opponentPhotoURL = profile.photoURL || undefined;
+      const opponentPhotoURL = profile.photoURL || null;
       const opponentElo = typeof profile.elo === 'number' ? profile.elo : 1200;
 
       // Claim the room atomically before doing any nonessential writes.
@@ -887,7 +897,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
           roomCode: roomCode,
           invitedBy: profile.uid,
           invitedByName: profile.displayName || 'You',
-          invitedByPhoto: profile.photoURL || undefined,
+          invitedByPhoto: profile.photoURL || null,
           status: 'pending',
           settings: currentRoom.settings,
           createdAt: serverTimestamp(),
@@ -960,7 +970,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await safeAddDoc(msgColl, {
           userId: profile.uid,
           userName: profile.displayName || 'You',
-          userPhotoURL: profile.photoURL || undefined,
+          userPhotoURL: profile.photoURL || null,
           message: text,
           timestamp: serverTimestamp(),
           isSystem: false,

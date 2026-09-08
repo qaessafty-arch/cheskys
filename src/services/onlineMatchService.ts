@@ -683,7 +683,7 @@ export const joinOnlineMatch = async (
       const hostPlayer: OnlineMatchPlayer = {
         uid: roomData.creatorId,
         displayName: roomData.creatorName || 'Host',
-        avatar: roomData.creatorPhotoURL || undefined,
+        avatar: roomData.creatorPhotoURL || null,
         elo: Number(roomData.creatorElo) || 1200,
       };
 
@@ -729,7 +729,7 @@ export const joinOnlineMatch = async (
       await safeUpdateDoc(roomDocRef, {
         opponentId: guestPlayer.uid,
         opponentName: guestPlayer.displayName || 'Challenger',
-        opponentPhotoURL: guestPlayer.avatar || guestPlayer.photoURL || undefined,
+        opponentPhotoURL: guestPlayer.avatar || guestPlayer.photoURL || null,
         opponentElo: guestPlayer.elo || 1200,
         status: 'in_progress',
         gameId: cleanCode,
@@ -765,7 +765,7 @@ export const joinOnlineMatch = async (
       const hostPlayer: OnlineMatchPlayer = {
         uid: roomData.creatorId,
         displayName: roomData.creatorName || 'Host',
-        avatar: roomData.creatorPhotoURL || undefined,
+        avatar: roomData.creatorPhotoURL || null,
         elo: Number(roomData.creatorElo) || 1200,
       };
 
@@ -809,7 +809,7 @@ export const joinOnlineMatch = async (
       await safeUpdateDoc(roomDoc.ref, {
         opponentId: guestPlayer.uid,
         opponentName: guestPlayer.displayName || 'Challenger',
-        opponentPhotoURL: guestPlayer.avatar || guestPlayer.photoURL || undefined,
+        opponentPhotoURL: guestPlayer.avatar || guestPlayer.photoURL || null,
         opponentElo: guestPlayer.elo || 1200,
         status: 'in_progress',
         gameId: cleanCode,
@@ -892,7 +892,7 @@ export const joinOnlineMatch = async (
       await safeUpdateDoc(rRef, {
         opponentId: guestPlayer.uid,
         opponentName: guestPlayer.displayName || 'Challenger',
-        opponentPhotoURL: guestPlayer.avatar || guestPlayer.photoURL || undefined,
+        opponentPhotoURL: guestPlayer.avatar || guestPlayer.photoURL || null,
         opponentElo: guestPlayer.elo || 1200,
         status: 'in_progress',
         gameId: cleanCode,

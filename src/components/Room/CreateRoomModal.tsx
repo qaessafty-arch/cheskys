@@ -42,11 +42,16 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
   };
 
   const handleCreate = async () => {
+    const cleanCode = code.trim();
+    if (cleanCode.length < 3) {
+      setError('Room code must be at least 3 characters.');
+      return;
+    }
     setCreating(true);
     setError(null);
     try {
-      await room.createRoom(code, settings as IRoomSettings);
-      onRoomCreated?.(code);
+      await room.createRoom(cleanCode, settings as IRoomSettings);
+      onRoomCreated?.(cleanCode);
       onClose();
     } catch (err: any) {
       setError(err?.message || 'Failed to create room.');
@@ -89,13 +94,18 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
 
         {/* Room Code Preview */}
         <div className="flex items-center justify-between p-4 rounded-xl bg-black/40 border border-[#F5C453]/30">
-          <div>
+          <div className="flex-1">
             <div className="text-[10px] font-black uppercase tracking-widest text-[#F5C453]">
-              Generated Room Code
+              Room Code
             </div>
-            <div className="font-mono text-2xl font-black tracking-widest text-white mt-0.5">
-              {code}
-            </div>
+            <input
+              type="text"
+              value={code}
+              onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8))}
+              placeholder="CUSTOM CODE"
+              className="w-full font-mono text-2xl font-black tracking-widest text-white mt-0.5 bg-transparent border-none outline-none placeholder:text-white/20"
+              maxLength={8}
+            />
           </div>
           <button
             type="button"

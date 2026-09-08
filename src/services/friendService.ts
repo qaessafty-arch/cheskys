@@ -64,8 +64,8 @@ export const searchUsersInDirectory = async (searchQuery: string, currentUid?: s
         results.push({
           uid: data.uid,
           displayName: data.displayName || 'Peshmerga Tactician',
-          username: data.username || undefined,
-          photoURL: data.photoURL || undefined,
+          username: data.username || null,
+          photoURL: data.photoURL || null,
           elo: typeof data.elo === 'number' ? data.elo : parseInt(data.elo || '1200', 10),
           respectPoints: typeof data.respectPoints === 'number' ? data.respectPoints : parseInt(data.respectPoints || '100', 10),
           honorRank: data.honorRank || 'Peshmerga Tactician',

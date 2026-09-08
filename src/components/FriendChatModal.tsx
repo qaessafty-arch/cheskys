@@ -90,7 +90,7 @@ export const FriendChatModal: React.FC<FriendChatModalProps> = ({
       await sendDirectMessage(chatId, {
         senderId: profile.uid,
         senderName: profile.displayName || 'Tactician',
-        senderAvatar: profile.photoURL || undefined,
+        senderAvatar: profile.photoURL || null,
         senderBadge: profile.rankBadge || '☀️',
         text
       });
@@ -110,7 +110,7 @@ export const FriendChatModal: React.FC<FriendChatModalProps> = ({
           uid: profile.uid,
           displayName: profile.displayName || 'Tactician',
           username: profile.username,
-          photoURL: profile.photoURL || undefined,
+          photoURL: profile.photoURL || null,
           elo: typeof profile.elo === 'number' ? profile.elo : parseInt(profile.elo || '1200', 10),
           respectPoints: typeof profile.respectPoints === 'number' ? profile.respectPoints : parseInt(profile.respectPoints || '100', 10),
           honorRank: profile.honorRank,
@@ -126,7 +126,7 @@ export const FriendChatModal: React.FC<FriendChatModalProps> = ({
         await sendDirectMessage(chatId, {
           senderId: profile.uid,
           senderName: profile.displayName || 'Tactician',
-          senderAvatar: profile.photoURL || undefined,
+          senderAvatar: profile.photoURL || null,
           senderBadge: profile.rankBadge || '☀️',
           text: `⚔️ Issued an Online Match Challenge (${selectedTimeControl.name})!`,
           challengeData: {

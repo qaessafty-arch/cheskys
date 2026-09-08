@@ -541,7 +541,7 @@ export const FriendPanel: React.FC<FriendPanelProps> = ({
                 uid: profile?.uid || '',
                 displayName: profile?.displayName || 'Tactician',
                 username: currentUsername,
-                photoURL: profile?.photoURL || undefined,
+                photoURL: profile?.photoURL || null,
                 elo: profile?.elo,
                 honorRank: profile?.honorRank
               },

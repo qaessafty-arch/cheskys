@@ -228,9 +228,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
       country: country.trim(),
       flag: flag.trim(),
       customStatus: sanitizedStatus,
-      customBadge: customBadgeInput.trim() || undefined,
+      customBadge: customBadgeInput.trim() || null,
       badgeNumber: Number(badgeNumberInput),
-      photoURL: profilePhotoInput.trim() || undefined
+      photoURL: profilePhotoInput.trim() || null
     });
     setIsEditing(false);
     setPhotoSuccessMessage('Profile and picture updated and saved to cloud!');

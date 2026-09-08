@@ -31,9 +31,9 @@ export const JoinRoomModal: React.FC<JoinRoomModalProps> = ({
   const handlePaste = async () => {
     try {
       const text = await navigator.clipboard.readText();
-      const cleaned = text.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+      const cleaned = text.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
       setCode(cleaned);
-      if (cleaned.length === 6) {
+      if (cleaned.length >= 3) {
         handleJoinCode(cleaned);
       }
     } catch {
@@ -43,8 +43,8 @@ export const JoinRoomModal: React.FC<JoinRoomModalProps> = ({
 
   const handleJoinCode = async (targetCode: string) => {
     const cleanCode = targetCode.trim().toUpperCase();
-    if (cleanCode.length !== 6) {
-      setError('Room code must be exactly 6 characters.');
+    if (cleanCode.length < 3) {
+      setError('Room code must be at least 3 characters.');
       return;
     }
 
@@ -104,15 +104,15 @@ export const JoinRoomModal: React.FC<JoinRoomModalProps> = ({
               type="text"
               value={code}
               onChange={(e) => {
-                const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+                const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
                 setCode(val);
                 if (error) setError(null);
               }}
               placeholder="e.g. ABC123"
-              maxLength={6}
+              maxLength={8}
               className="w-full bg-black/50 border border-white/15 rounded-xl px-4 py-4 text-center font-mono text-3xl font-black tracking-[0.3em] uppercase text-white outline-none focus:border-[#F5C453] focus:ring-2 focus:ring-[#F5C453]/20 transition-all"
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && code.length === 6) {
+                if (e.key === 'Enter' && code.length >= 3) {
                   handleJoinCode(code);
                 }
               }}
@@ -148,7 +148,7 @@ export const JoinRoomModal: React.FC<JoinRoomModalProps> = ({
           <button
             type="button"
             onClick={() => handleJoinCode(code)}
-            disabled={joining || code.length !== 6}
+            disabled={joining || code.length < 3}
             className="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-[#F5C453] via-[#E5B543] to-[#D4A843] text-black text-xs font-black uppercase tracking-widest shadow-lg shadow-[#F5C453]/20 hover:brightness-110 active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center justify-center gap-2"
           >
             {joining ? (

@@ -50,7 +50,7 @@ export const FriendChat: React.FC<FriendChatProps> = ({
       await sendDirectMessage(chatId, {
         senderId: profile.uid,
         senderName: profile.displayName || 'Tactician',
-        senderAvatar: profile.photoURL || undefined,
+        senderAvatar: profile.photoURL || null,
         senderBadge: profile.rankBadge || '☀️',
         text: payload
       });

@@ -988,7 +988,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           id: d.uid,
           rank: index + 3,
           username: d.displayName || 'Peshmerga Tactician',
-          title: d.uid === SKY_PROFILE_DEFAULT.uid ? 'CELESTIAL IMMORTAL 🦋' : (d.honorRank || undefined),
+          title: d.uid === SKY_PROFILE_DEFAULT.uid ? 'CELESTIAL IMMORTAL 🦋' : (d.honorRank || null),
           country: d.country || 'Kurdistan',
           flag: d.flag || '☀️',
           respectPoints: d.respectPoints,
