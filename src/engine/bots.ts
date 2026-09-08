@@ -167,7 +167,7 @@ export const BOT_DEFINITIONS: BotDefinition[] = [
     avatar: '🦅',
     description: 'Maximum strength. Long thinking time, no deliberate mistakes, plays for the win in every position.',
     style: 'Relentless Calculation',
-    badgeColor: 'bg-[blue-400]/20 text-[blue-400] border-[blue-400]/40',
+    badgeColor: 'bg-blue-400/20 text-blue-400 border-blue-400/40',
     depth: 14,
     randomness: 0,
     searchDepth: 16,

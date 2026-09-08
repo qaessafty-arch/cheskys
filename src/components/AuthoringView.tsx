@@ -280,7 +280,7 @@ export const AuthoringView: React.FC<AuthoringViewProps> = ({
       <div className="glass-panel p-4 sm:p-5 rounded-3xl border border-[#0056b3]/30 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#1e3a8a] via-[#2563eb] to-[#0056b3] p-0.5 shadow-lg shadow-[#0056b3]/25 flex-shrink-0">
-            <div className="w-full h-full bg-[slate-950] rounded-[14px] flex items-center justify-center text-[#0056b3]">
+            <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center text-[#0056b3]">
               <PenTool className="w-6 h-6" />
             </div>
           </div>
@@ -300,7 +300,7 @@ export const AuthoringView: React.FC<AuthoringViewProps> = ({
         </div>
 
         {/* Studio Sub-Tabs */}
-        <div className="flex items-center gap-1.5 bg-[slate-950] p-1.5 rounded-2xl border border-white/10">
+        <div className="flex items-center gap-1.5 bg-slate-950 p-1.5 rounded-2xl border border-white/10">
           <button
             onClick={() => { setTab('create'); setTestSolving(false); }}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
@@ -346,7 +346,7 @@ export const AuthoringView: React.FC<AuthoringViewProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* LEFT: Chessboard & Solution Moves Visualizer */}
           <div className="lg:col-span-7 flex flex-col items-center">
-            <div className="p-3.5 rounded-3xl bg-[slate-950] border-2 border-[#0056b3]/30 shadow-2xl w-full max-w-[540px]">
+            <div className="p-3.5 rounded-3xl bg-slate-950 border-2 border-[#0056b3]/30 shadow-2xl w-full max-w-[540px]">
               {/* Board Header Status */}
               <div className="mb-3 px-3 py-2 rounded-2xl bg-black/60 border border-white/10 flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2">
@@ -502,7 +502,7 @@ export const AuthoringView: React.FC<AuthoringViewProps> = ({
                     className="w-full px-3 py-2.5 rounded-xl bg-black/60 border border-white/20 text-white text-xs font-bold focus:border-[#0056b3] focus:outline-none cursor-pointer"
                   >
                     {THEME_OPTIONS.map(opt => (
-                      <option key={opt} value={opt} className="bg-[slate-950] text-white">
+                      <option key={opt} value={opt} className="bg-slate-950 text-white">
                         {opt}
                       </option>
                     ))}
@@ -516,10 +516,10 @@ export const AuthoringView: React.FC<AuthoringViewProps> = ({
                     onChange={e => setDifficulty(e.target.value as any)}
                     className="w-full px-3 py-2.5 rounded-xl bg-black/60 border border-white/20 text-white text-xs font-bold focus:border-[#0056b3] focus:outline-none cursor-pointer"
                   >
-                    <option value="Easy" className="bg-[slate-950]">Easy (1000 - 1300)</option>
-                    <option value="Medium" className="bg-[slate-950]">Medium (1300 - 1700)</option>
-                    <option value="Hard" className="bg-[slate-950]">Hard (1700 - 2100)</option>
-                    <option value="Master" className="bg-[slate-950]">Master (2100+)</option>
+                    <option value="Easy" className="bg-slate-950">Easy (1000 - 1300)</option>
+                    <option value="Medium" className="bg-slate-950">Medium (1300 - 1700)</option>
+                    <option value="Hard" className="bg-slate-950">Hard (1700 - 2100)</option>
+                    <option value="Master" className="bg-slate-950">Master (2100+)</option>
                   </select>
                 </div>
               </div>
