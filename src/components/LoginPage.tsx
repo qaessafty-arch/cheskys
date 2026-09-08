@@ -248,14 +248,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           }}
         />
         {/* Radial ambient glow orbs */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-gradient-to-tr from-amber-500/10 via-emerald-500/10 to-sky-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-20 -right-20 w-[400px] h-[400px] bg-gradient-to-br from-emerald-500/10 to-transparent rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-gradient-to-tr blue-400/10 via-sky-500/10 to-sky-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-20 -right-20 w-[400px] h-[400px] bg-gradient-to-br from-sky-500/10 to-transparent rounded-full blur-3xl pointer-events-none" />
       </div>
 
       {/* Main Glassmorphic Authentication Card */}
       <div className="relative w-full max-w-md bg-slate-900/85 backdrop-blur-2xl rounded-3xl border border-slate-700/60 shadow-[0_20px_60px_rgba(0,0,0,0.8)] overflow-hidden z-10 transition-all duration-300">
         {/* Top Accent Strip */}
-        <div className="h-1.5 w-full bg-gradient-to-r from-emerald-500 via-[#F5C453] to-[#8C2425]" />
+        <div className="h-1.5 w-full bg-gradient-to-r from-sky-500 via-blue-400 to-blue-800" />
 
         <div className="p-6 sm:p-8">
           {/* Header Section */}
@@ -271,7 +271,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 <h1 className="text-2xl sm:text-3xl font-black font-heading text-white tracking-tight">
                   ChessApp
                 </h1>
-                <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-[#8C2425] text-white border border-[#F5C453]/40 tracking-wider">
+                <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-blue-800 text-white border border-blue-400/40 tracking-wider">
                   PRO
                 </span>
               </div>
@@ -288,7 +288,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 <img
                   src={profile.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60'}
                   alt={profile.displayName}
-                  className="w-10 h-10 rounded-xl object-cover border border-[#F5C453]/50 shrink-0"
+                  className="w-10 h-10 rounded-xl object-cover border border-blue-400/50 shrink-0"
                   referrerPolicy="no-referrer"
                 />
                 <div className="truncate">
@@ -296,7 +296,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     <span className="truncate">{profile.displayName}</span>
                     <span>{profile.flag}</span>
                   </div>
-                  <div className="text-[10px] text-[#F5C453] font-mono">
+                  <div className="text-[10px] text-blue-400 font-mono">
                     Rating: {profile.elo} • {profile.role?.toUpperCase()}
                   </div>
                 </div>
@@ -428,7 +428,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     placeholder="e.g. Peshmerga Knight"
                     value={displayName}
                     onChange={e => setDisplayName(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2.5 rounded-2xl bg-slate-950/80 border border-slate-800 text-white text-xs placeholder:text-slate-500 focus:border-[#F5C453] focus:ring-1 focus:ring-[#F5C453] outline-none transition-all"
+                    className="w-full pl-9 pr-3 py-2.5 rounded-2xl bg-slate-950/80 border border-slate-800 text-white text-xs placeholder:text-slate-500 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none transition-all"
                   />
                   <ShieldCheck className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
                 </div>
@@ -447,7 +447,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   placeholder="warrior@chesskys.pro"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  className="w-full px-9 py-2.5 rounded-2xl bg-slate-950/80 border border-slate-800 text-white text-xs placeholder:text-slate-500 focus:border-[#F5C453] focus:ring-1 focus:ring-[#F5C453] outline-none transition-all"
+                  className="w-full px-9 py-2.5 rounded-2xl bg-slate-950/80 border border-slate-800 text-white text-xs placeholder:text-slate-500 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none transition-all"
                 />
                 <Mail className="w-4 h-4 text-slate-500 absolute start-3 top-1/2 -translate-y-1/2" />
               </div>
@@ -467,7 +467,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       setErrorMessage(null);
                       setSuccessMessage(null);
                     }}
-                    className="text-[11px] font-semibold text-[#F5C453] hover:underline cursor-pointer"
+                    className="text-[11px] font-semibold text-blue-400 hover:underline cursor-pointer"
                   >
                     Forgot Password?
                   </button>
@@ -479,7 +479,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     placeholder="••••••••••••"
                     value={password}
                     onChange={e => setPassword(e.target.value)}
-                    className="w-full px-9 py-2.5 rounded-2xl bg-slate-950/80 border border-slate-800 text-white text-xs placeholder:text-slate-500 focus:border-[#F5C453] focus:ring-1 focus:ring-[#F5C453] outline-none transition-all"
+                    className="w-full px-9 py-2.5 rounded-2xl bg-slate-950/80 border border-slate-800 text-white text-xs placeholder:text-slate-500 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none transition-all"
                   />
                   <Lock className="w-4 h-4 text-slate-500 absolute start-3 top-1/2 -translate-y-1/2" />
                   <button
@@ -506,7 +506,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     type="checkbox"
                     checked={rememberMe}
                     onChange={e => handleRememberMeChange(e.target.checked)}
-                    className="rounded bg-slate-950 border-slate-700 text-[#F5C453] focus:ring-0 w-3.5 h-3.5 cursor-pointer"
+                    className="rounded bg-slate-950 border-slate-700 text-blue-400 focus:ring-0 w-3.5 h-3.5 cursor-pointer"
                   />
                   <span>Remember me on this device</span>
                 </label>
@@ -517,7 +517,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-[#52673A] hover:from-emerald-500 hover:to-[#5e7742] text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/30 border border-emerald-400/40 transition-all cursor-pointer disabled:opacity-50"
+              className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-sky-600 via-sky-500 to-blue-600 hover:from-sky-500 hover:to-blue-700 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-sky-900/30 border border-sky-400/40 transition-all cursor-pointer disabled:opacity-50"
             >
               {isSubmitting ? (
                 <>
@@ -563,9 +563,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               type="button"
               onClick={handleGuestLogin}
               disabled={isSubmitting}
-              className="w-full py-3 px-4 rounded-2xl bg-slate-800/90 hover:bg-slate-750 text-[#F5C453] font-bold text-xs border border-[#F5C453]/40 hover:border-[#F5C453] flex items-center justify-center gap-2.5 shadow-md transition-all cursor-pointer group"
+              className="w-full py-3 px-4 rounded-2xl bg-slate-800/90 hover:bg-slate-750 text-blue-400 font-bold text-xs border border-blue-400/40 hover:border-blue-400 flex items-center justify-center gap-2.5 shadow-md transition-all cursor-pointer group"
             >
-              <Zap className="w-4 h-4 group-hover:scale-110 transition-transform text-[#F5C453]" />
+              <Zap className="w-4 h-4 group-hover:scale-110 transition-transform text-blue-400" />
               <span>{t('login.playAsGuest')}</span>
             </button>
             <p className="text-[10px] text-center text-slate-500 mt-1.5 mb-3">
@@ -581,7 +581,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             <button
               type="button"
               onClick={() => setShowMasterAccess(!showMasterAccess)}
-              className="text-slate-500 hover:text-[#F5C453] flex items-center gap-1.5 transition-colors cursor-pointer font-mono"
+              className="text-slate-500 hover:text-blue-400 flex items-center gap-1.5 transition-colors cursor-pointer font-mono"
             >
               <KeyRound className="w-3.5 h-3.5" />
               <span>{showMasterAccess ? 'Hide Master Passkey' : 'Developer & Master Passkey'}</span>
@@ -600,9 +600,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
           {/* Master Key Input Accordion Drawer */}
           {showMasterAccess && (
-            <form onSubmit={handleDeveloperUnlock} className="mt-3 p-3 rounded-2xl bg-black/60 border border-amber-500/30 space-y-2.5 animate-in fade-in">
+            <form onSubmit={handleDeveloperUnlock} className="mt-3 p-3 rounded-2xl bg-black/60 border border-blue-500/30 space-y-2.5 animate-in fade-in">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold text-[#F5C453] uppercase tracking-wider flex items-center gap-1">
+                <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1">
                   <Crown className="w-3 h-3" />
                   <span>Master Access Passkey</span>
                 </span>
@@ -623,11 +623,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   placeholder={isSkyPasskeyInput ? 'Enter Celestial Passkey' : 'Enter Developer Key (e.g. q.brz)'}
                   value={masterKeyInput}
                   onChange={e => setMasterKeyInput(e.target.value)}
-                  className="flex-1 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:border-[#F5C453] outline-none"
+                  className="flex-1 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:border-blue-400 outline-none"
                 />
                 <button
                   type="submit"
-                  className="px-3 py-1.5 rounded-xl bg-[#F5C453] hover:bg-[#e0b042] text-black text-xs font-black transition-all cursor-pointer"
+                  className="px-3 py-1.5 rounded-xl bg-blue-400 hover:bg-blue-300 text-black text-xs font-black transition-all cursor-pointer"
                 >
                   Unlock
                 </button>

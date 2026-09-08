@@ -60,7 +60,7 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
       boardTheme: 'aot' as BoardThemeId,
       pieceTheme: 'aot' as PieceThemeId,
       badge: 'DARK FANTASY',
-      badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+      badgeColor: 'bg-sky-500/20 text-sky-300 border-sky-500/40',
       description: 'Wall Maria weathered stone battlements (#1f232b dark / #5d6f54 green) with glowing ODM Gas green aura.',
       whiteRoster: 'Erwin (King), Mikasa (Queen), Levi (Bishops), Scout Horse (Knights), Wall Maria (Rooks), Recruits (Pawns)',
       blackRoster: 'Colossal Titan (King), Female Titan (Queen), Beast Titan (Bishops), Cart Titan (Knights), Armored Titan (Rooks), Pure Titans (Pawns)',
@@ -73,8 +73,8 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
       boardTheme: 'batman' as BoardThemeId,
       pieceTheme: 'batman' as PieceThemeId,
       badge: 'GOTHAM NOIR',
-      badgeColor: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40',
-      description: 'Wet Gotham asphalt (#111827 dark / #374151 slate) with high-intensity Bat-Signal yellow move highlights.',
+      badgeColor: 'bg-blue-500/20 text-blue-300 border-blue-500/40',
+      description: 'Wet Gotham asphalt (#111827 dark / #374151 slate) with high-intensity Bat-Signal blue move highlights.',
       whiteRoster: 'Batman (King), Catwoman (Queen), Nightwing/Robin (Bishops), Batmobile (Knights), Wayne Tower (Rooks), GCPD (Pawns)',
       blackRoster: 'Joker (King), Harley Quinn (Queen), Riddler/Two-Face (Bishops), Bane (Knights), Arkham Asylum (Rooks), Goons (Pawns)',
       previewBg: 'from-[#0f172a] via-[#1e293b] to-[#ca8a04]'
@@ -86,7 +86,7 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
       boardTheme: 'classic' as BoardThemeId,
       pieceTheme: 'classic' as PieceThemeId,
       badge: 'CHAMPIONSHIP',
-      badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+      badgeColor: 'bg-blue-500/20 text-blue-300 border-blue-500/40',
       description: 'Championship tournament chess board with pristine Staunton vector piece set.',
       whiteRoster: 'Classic White King, Queen, Bishops, Knights, Rooks, and Pawns',
       blackRoster: 'Classic Black King, Queen, Bishops, Knights, Rooks, and Pawns',
@@ -122,8 +122,8 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
     { id: 'aot', name: 'Wall Maria Weathered Stone', lightBg: '#5d6f54', darkBg: '#1f232b' },
     { id: 'batman', name: 'Wet Gotham Asphalt & Neon Yellow', lightBg: '#374151', darkBg: '#111827' },
     { id: 'classic', name: 'Classic Hardwood / Staunton', lightBg: '#f0d9b5', darkBg: '#b58863' },
-    { id: 'peshmerga', name: 'Peshmerga Sandstone & Olive', lightBg: '#DFD0B0', darkBg: '#435433' },
-    { id: 'emerald', name: 'Emerald Tournament', lightBg: '#eeeed2', darkBg: '#769656' },
+    { id: 'peshmerga', name: 'Peshmerga Sandstone & Olive', lightBg: 'blue-200', darkBg: '#435433' },
+    { id: 'sky', name: 'Emerald Tournament', lightBg: '#eeeed2', darkBg: '#769656' },
     { id: 'ocean', name: 'Ocean Breeze Slate', lightBg: '#dee3e6', darkBg: '#678292' },
     { id: 'midnight', name: 'Deep Midnight Obsidian', lightBg: '#334155', darkBg: '#0f172a' }
   ];
@@ -166,22 +166,22 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in select-none">
       <div
         id="theme-selector-modal"
-        className="w-full max-w-2xl max-h-[92vh] bg-[#121610] border-2 border-[#F5C453]/40 rounded-3xl shadow-2xl flex flex-col overflow-hidden"
+        className="w-full max-w-2xl max-h-[92vh] bg-slate-900 border-2 border-blue-400/40 rounded-3xl shadow-2xl flex flex-col overflow-hidden"
       >
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between bg-black/40 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-600 to-amber-600 flex items-center justify-center shadow-lg border border-[#F5C453]/50">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-lg border border-blue-400/50">
               <Palette className="w-5 h-5 text-white" />
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
                 <span>Theme Engine & Pieces</span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-400 text-black font-black">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-400 text-black font-black">
                   PRO
                 </span>
               </h2>
-              <p className="text-xs text-[#DFD0B0]/70">
+              <p className="text-xs text-slate-300/70">
                 Attack on Titan, Batman Gotham City, Classic, & Crossover Mode
               </p>
             </div>
@@ -199,7 +199,7 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
 
         {/* Feedback Banner */}
         {feedback && (
-          <div className="px-4 py-2 bg-emerald-500/20 border-b border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-2 animate-in slide-in-from-top-1">
+          <div className="px-4 py-2 bg-sky-500/20 border-b border-sky-500/30 text-sky-300 text-xs font-bold flex items-center gap-2 animate-in slide-in-from-top-1">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
             <span>{feedback}</span>
           </div>
@@ -212,8 +212,8 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
             onClick={() => setActiveTab('presets')}
             className={`flex-1 py-2 px-3 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
               activeTab === 'presets'
-                ? 'bg-[#52673A] text-white shadow-md border border-[#F5C453]/50'
-                : 'text-[#DFD0B0]/70 hover:text-white'
+                ? 'bg-blue-600 text-white shadow-md border border-blue-400/50'
+                : 'text-slate-300/70 hover:text-white'
             }`}
           >
             <Crown className="w-3.5 h-3.5" />
@@ -226,7 +226,7 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
             className={`flex-1 py-2 px-3 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
               activeTab === 'crossover'
                 ? 'bg-gradient-to-r from-purple-800 to-indigo-800 text-white shadow-md border border-purple-400/50'
-                : 'text-[#DFD0B0]/70 hover:text-white'
+                : 'text-slate-300/70 hover:text-white'
             }`}
           >
             <Shuffle className="w-3.5 h-3.5 text-purple-300" />
@@ -238,8 +238,8 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
             onClick={() => setActiveTab('boards')}
             className={`flex-1 py-2 px-3 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
               activeTab === 'boards'
-                ? 'bg-[#8C2425] text-white shadow-md border border-[#F5C453]/50'
-                : 'text-[#DFD0B0]/70 hover:text-white'
+                ? 'bg-blue-700 text-white shadow-md border border-blue-400/50'
+                : 'text-slate-300/70 hover:text-white'
             }`}
           >
             <Sliders className="w-3.5 h-3.5" />
@@ -260,7 +260,7 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
                       key={theme.id}
                       className={`p-4 rounded-2xl border transition-all relative overflow-hidden ${
                         isActive
-                          ? 'bg-gradient-to-r ' + theme.previewBg + ' border-[#F5C453] shadow-xl ring-2 ring-[#F5C453]/40'
+                          ? 'bg-gradient-to-r ' + theme.previewBg + ' border-[blue-400] shadow-xl ring-2 ring-[blue-400]/40'
                           : 'bg-white/[0.03] hover:bg-white/[0.06] border-white/10'
                       }`}
                     >
@@ -288,12 +288,12 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
                               {theme.badge}
                             </span>
                             {isActive && (
-                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500 text-black flex items-center gap-1 shadow-sm">
+                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-sky-500 text-black flex items-center gap-1 shadow-sm">
                                 <Check className="w-3 h-3" /> ACTIVE
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-[#DFD0B0]/80">{theme.subtitle}</p>
+                          <p className="text-xs text-[blue-200]/80">{theme.subtitle}</p>
                           <p className="text-[11px] text-white/60">{theme.description}</p>
                         </div>
 
@@ -318,7 +318,7 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
                       {/* Army Breakdown */}
                       <div className="mt-3 pt-2.5 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px]">
                         <div className="p-2 rounded-lg bg-black/30 text-white/80">
-                          <span className="font-bold text-amber-300">White Army: </span>
+                          <span className="font-bold text-blue-300">White Army: </span>
                           <span>{theme.whiteRoster}</span>
                         </div>
                         <div className="p-2 rounded-lg bg-black/30 text-white/80">
@@ -335,8 +335,8 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
                           disabled={isActive}
                           className={`min-h-[44px] px-5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-2 ${
                             isActive
-                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 cursor-default'
-                              : 'bg-[#52673A] hover:bg-[#52673A]/80 text-white shadow-md border border-[#F5C453]/40'
+                              ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30 cursor-default'
+                              : 'bg-blue-600 hover:bg-blue-600/80 text-white shadow-md border border-[blue-400]/40'
                           }`}
                         >
                           {isActive ? (
@@ -346,7 +346,7 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
                             </>
                           ) : (
                             <>
-                              <Sparkles className="w-4 h-4 text-amber-300" />
+                              <Sparkles className="w-4 h-4 text-blue-300" />
                               <span>Apply {theme.name}</span>
                             </>
                           )}
@@ -374,7 +374,7 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
                 {/* White Faction Selector */}
                 <div className="p-4 rounded-2xl bg-black/40 border border-white/15 space-y-3">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-black text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <h4 className="text-xs font-black text-blue-300 uppercase tracking-wider flex items-center gap-1.5">
                       <span>⚪ White Faction</span>
                     </h4>
                     <span className="text-[10px] px-2 py-0.5 rounded bg-white/10 text-white font-mono font-bold">
@@ -400,15 +400,15 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
                           onClick={() => handleCrossoverChange('white', f.id)}
                           className={`w-full min-h-[44px] px-3 py-2 rounded-xl text-left text-xs font-bold transition-all flex items-center justify-between cursor-pointer border ${
                             isSelected
-                              ? 'bg-[#52673A] text-white border-[#F5C453]'
-                              : 'bg-white/5 hover:bg-white/10 text-[#DFD0B0]/80 border-white/5'
+                              ? 'bg-blue-600 text-white border-[blue-400]'
+                              : 'bg-white/5 hover:bg-white/10 text-[blue-200]/80 border-white/5'
                           }`}
                         >
                           <span className="flex items-center gap-2">
                             <span>{f.icon}</span>
                             <span>{f.name}</span>
                           </span>
-                          {isSelected && <Check className="w-4 h-4 text-amber-300" />}
+                          {isSelected && <Check className="w-4 h-4 text-blue-300" />}
                         </button>
                       );
                     })}
@@ -444,15 +444,15 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
                           onClick={() => handleCrossoverChange('black', f.id)}
                           className={`w-full min-h-[44px] px-3 py-2 rounded-xl text-left text-xs font-bold transition-all flex items-center justify-between cursor-pointer border ${
                             isSelected
-                              ? 'bg-[#8C2425] text-white border-[#F5C453]'
-                              : 'bg-white/5 hover:bg-white/10 text-[#DFD0B0]/80 border-white/5'
+                              ? 'bg-blue-700 text-white border-[blue-400]'
+                              : 'bg-white/5 hover:bg-white/10 text-[blue-200]/80 border-white/5'
                           }`}
                         >
                           <span className="flex items-center gap-2">
                             <span>{f.icon}</span>
                             <span>{f.name}</span>
                           </span>
-                          {isSelected && <Check className="w-4 h-4 text-amber-300" />}
+                          {isSelected && <Check className="w-4 h-4 text-blue-300" />}
                         </button>
                       );
                     })}
@@ -465,7 +465,7 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
           {/* TAB 3: BOARD STYLES */}
           {activeTab === 'boards' && (
             <div className="space-y-3">
-              <p className="text-xs text-[#DFD0B0]/70">
+              <p className="text-xs text-slate-300/70">
                 Choose the background surface and textures for the 64-square battlefield:
               </p>
 
@@ -482,7 +482,7 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
                       }}
                       className={`min-h-[50px] p-3 rounded-2xl border text-left transition-all flex items-center justify-between cursor-pointer ${
                         isSelected
-                          ? 'bg-white/10 border-[#F5C453] shadow-lg ring-1 ring-[#F5C453]/40'
+                          ? 'bg-white/10 border-[blue-400] shadow-lg ring-1 ring-[blue-400]/40'
                           : 'bg-white/[0.03] hover:bg-white/[0.07] border-white/10'
                       }`}
                     >
@@ -496,7 +496,7 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
                         <span className="text-xs font-bold text-white">{b.name}</span>
                       </div>
 
-                      {isSelected && <Check className="w-4 h-4 text-amber-400 shrink-0" />}
+                      {isSelected && <Check className="w-4 h-4 text-blue-400 shrink-0" />}
                     </button>
                   );
                 })}

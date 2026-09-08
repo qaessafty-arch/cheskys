@@ -20,7 +20,7 @@ export const PRESET_THEMES: UITheme[] = [
       cardHoverBg: 'rgba(212, 163, 89, 0.12)',
       cardHoverBorder: 'rgba(168, 85, 247, 0.55)',
       panelBg: 'rgba(5, 12, 24, 0.92)',
-      textMain: '#FDFCF7',
+      textMain: 'white',
       textMuted: 'rgba(212, 163, 89, 0.70)',
       boardLight: '#d4a359',
       boardDark: '#0b1d3a',
@@ -56,27 +56,27 @@ export const PRESET_THEMES: UITheme[] = [
   {
     id: 'peshmerga',
     name: '☀️ Peshmerga Royal (Kurdish)',
-    description: 'Authentic Kurdish military attire with Tactical Olive (#435433), Sandstone Khaki (#DFD0B0), Jamadani Crimson (#8C2425), and 21-ray Sun Gold (#F5C453)',
+    description: 'Authentic Kurdish military attire with Tactical Olive (#435433), Sandstone Khaki (blue-200), Jamadani Crimson (blue-800), and 21-ray Sun Gold (blue-400)',
     category: 'luxury',
     colors: {
-      primary: '#52673A', // Tactical Olive Green
-      primaryHover: '#435433',
-      secondary: '#F5C453', // Kurdish Sun Gold
-      accentGlow: 'rgba(245, 196, 83, 0.40)',
-      appBg: '#10140e', // Mountain Night Dark
-      mesh1: 'rgba(82, 103, 58, 0.28)', // Olive ambient
-      mesh2: 'rgba(245, 196, 83, 0.22)', // Sun Gold ambient
-      mesh3: 'rgba(140, 36, 37, 0.18)', // Jamadani Crimson ambient
-      cardBg: 'rgba(223, 208, 176, 0.05)',
-      cardBorder: 'rgba(245, 196, 83, 0.24)',
-      cardHoverBg: 'rgba(82, 103, 58, 0.14)',
-      cardHoverBorder: 'rgba(245, 196, 83, 0.48)',
-      panelBg: 'rgba(18, 24, 16, 0.88)',
-      textMain: '#FDFCF7',
-      textMuted: 'rgba(223, 208, 176, 0.70)',
-      boardLight: '#DFD0B0', // Sandstone Khaki
-      boardDark: '#435433',  // Tactical Olive Green
-      boardBorder: '#8C2425' // Jamadani Crimson Red
+      primary: '#2563eb', // Bluesky Primary
+      primaryHover: '#1d4ed8',
+      secondary: '#60a5fa', // Bluesky Secondary
+      accentGlow: 'rgba(59, 130, 246, 0.40)',
+      appBg: '#0f172a', // Deep Navy
+      mesh1: 'rgba(37, 99, 235, 0.28)', // Blue ambient
+      mesh2: 'rgba(96, 165, 250, 0.22)', // Light blue ambient
+      mesh3: 'rgba(30, 58, 138, 0.18)', // Deep blue ambient
+      cardBg: 'rgba(248, 250, 252, 0.05)',
+      cardBorder: 'rgba(96, 165, 250, 0.24)',
+      cardHoverBg: 'rgba(37, 99, 235, 0.14)',
+      cardHoverBorder: 'rgba(96, 165, 250, 0.48)',
+      panelBg: 'rgba(15, 23, 42, 0.88)',
+      textMain: '#f8fafc',
+      textMuted: 'rgba(203, 213, 225, 0.70)',
+      boardLight: '#eff6ff', // Light Blue
+      boardDark: '#1e3a8a',  // Deep Blue
+      boardBorder: '#3b82f6' // Blue Border
     }
   },
   {

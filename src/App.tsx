@@ -686,7 +686,7 @@ export default function App() {
     settings.blackPieceTheme === 'batman';
 
   return (
-    <div className="min-h-[100dvh] bg-[var(--app-bg,#10140e)] text-[var(--text-main,#FDFCF7)] flex flex-col selection:bg-[#F5C453]/30 selection:text-[#F5C453] relative overflow-x-hidden font-ui transition-colors duration-300">
+    <div className="min-h-[100dvh] bg-[var(--app-bg,slate-950)] text-[var(--text-main,#FDFCF7)] flex flex-col selection:bg-blue-400/30 selection:text-blue-400 relative overflow-x-hidden font-ui transition-colors duration-300">
       {/* Ambient Peshmerga Radial Mesh Gradient */}
       <div className="mesh-gradient" />
 
@@ -729,7 +729,7 @@ export default function App() {
       {/* Sleek Tactical Hint Banner */}
       {hintMessage && (
         <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-2 duration-300">
-          <div className="flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-black/90 border border-[#F5C453] text-[#F5C453] text-xs font-bold shadow-2xl backdrop-blur-xl">
+          <div className="flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-black/90 border border-blue-400 text-blue-400 text-xs font-bold shadow-2xl backdrop-blur-xl">
             <span>{hintMessage}</span>
             <button
               onClick={() => setHintMessage(null)}
@@ -904,8 +904,8 @@ export default function App() {
                   />
 
                   {isAiThinking && !isBoardFlipped && (
-                    <div className="flex items-center gap-2 text-xs text-[#F5C453] font-mono animate-pulse px-2.5 py-1 rounded-full bg-[#52673A]/30 border border-[#F5C453]/40">
-                      <span className="w-2 h-2 rounded-full bg-[#F5C453] animate-ping" />
+                    <div className="flex items-center gap-2 text-xs text-blue-400 font-mono animate-pulse px-2.5 py-1 rounded-full bg-blue-600/30 border border-blue-400/40">
+                      <span className="w-2 h-2 rounded-full bg-blue-400 animate-ping" />
                       <span>{currentBot.name} is calculating...</span>
                     </div>
                   )}
@@ -953,8 +953,8 @@ export default function App() {
                   />
 
                   {isAiThinking && isBoardFlipped && (
-                    <div className="flex items-center gap-2 text-xs text-[#F5C453] font-mono animate-pulse px-2.5 py-1 rounded-full bg-[#52673A]/30 border border-[#F5C453]/40">
-                      <span className="w-2 h-2 rounded-full bg-[#F5C453] animate-ping" />
+                    <div className="flex items-center gap-2 text-xs text-blue-400 font-mono animate-pulse px-2.5 py-1 rounded-full bg-blue-600/30 border border-blue-400/40">
+                      <span className="w-2 h-2 rounded-full bg-blue-400 animate-ping" />
                       <span>{currentBot.name} is calculating...</span>
                     </div>
                   )}
@@ -1024,14 +1024,14 @@ export default function App() {
               </div>
 
               {/* Quick Game Info Card */}
-              <div className="p-3.5 glass-card flex items-center justify-between text-xs text-[#DFD0B0]/70">
+              <div className="p-3.5 glass-card flex items-center justify-between text-xs text-blue-200/70">
                 <div className="flex items-center gap-2.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#F5C453] shadow-[0_0_8px_rgba(245,196,83,0.6)]" />
-                  <span className="font-bold text-[#FDFCF7]">
+                  <span className="w-2.5 h-2.5 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(245,196,83,0.6)]" />
+                  <span className="font-bold text-white">
                     {activeMode === 'ai' ? `Vs ${currentBot.name} (${currentBot.elo} Elo)` : 'Pass & Play Local'}
                   </span>
                 </div>
-                <span className="font-mono font-bold text-[#F5C453] px-2 py-0.5 rounded-md bg-[#52673A]/40 border border-[#F5C453]/30">
+                <span className="font-mono font-bold text-blue-400 px-2 py-0.5 rounded-md bg-blue-600/40 border border-blue-400/30">
                   {timeControl.name}
                 </span>
               </div>

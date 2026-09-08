@@ -70,7 +70,7 @@ export const RespectHonorBadge: React.FC<RespectHonorBadgeProps> = ({
   if (variant === 'header-rank') {
     return (
       <div
-        className={`respect-badge-entry inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gradient-to-r from-amber-500/15 via-[#F5C453]/10 to-transparent border border-[#F5C453]/40 text-[#F5C453] font-bold text-xs sm:text-sm shadow-sm hover:border-[#F5C453]/70 transition-all duration-300 relative overflow-hidden group ${
+        className={`respect-badge-entry inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gradient-to-r from-blue-500/15 via-blue-400/10 to-transparent border border-blue-400/40 text-blue-400 font-bold text-xs sm:text-sm shadow-sm hover:border-blue-400/70 transition-all duration-300 relative overflow-hidden group ${
           isUpdating ? 'respect-bloom-active' : ''
         } ${className}`}
         title={`Honor Title: ${activeHonorTitle}`}
@@ -79,10 +79,10 @@ export const RespectHonorBadge: React.FC<RespectHonorBadgeProps> = ({
         <span className="text-base select-none group-hover:scale-110 transition-transform duration-200">
           {activeBadgeIcon}
         </span>
-        <span className="font-heading tracking-tight font-extrabold text-[#F5C453] drop-shadow-sm truncate">
+        <span className="font-heading tracking-tight font-extrabold text-blue-400 drop-shadow-sm truncate">
           {activeHonorTitle}
         </span>
-        <Sparkles className="w-3.5 h-3.5 text-[#F5C453]/70 group-hover:text-[#F5C453] transition-colors shrink-0" />
+        <Sparkles className="w-3.5 h-3.5 text-blue-400/70 group-hover:text-blue-400 transition-colors shrink-0" />
       </div>
     );
   }
@@ -91,21 +91,21 @@ export const RespectHonorBadge: React.FC<RespectHonorBadgeProps> = ({
   if (variant === 'drawer-row') {
     return (
       <div 
-        className={`respect-badge-entry flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-slate-950 via-slate-900/90 to-amber-950/20 border border-[#F5C453]/30 relative overflow-hidden transition-all duration-300 shadow-md ${
-          isUpdating ? 'respect-bloom-active border-[#F5C453]' : ''
+        className={`respect-badge-entry flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-slate-950 via-slate-900/90 to-blue-950/20 border border-blue-400/30 relative overflow-hidden transition-all duration-300 shadow-md ${
+          isUpdating ? 'respect-bloom-active border-blue-400' : ''
         } ${className}`}
       >
         <div className="absolute inset-0 respect-shimmer-sheen pointer-events-none opacity-30" />
         
         <div className="flex items-center gap-2 relative z-10">
-          <div className="w-8 h-8 rounded-xl bg-[#F5C453]/15 border border-[#F5C453]/30 flex items-center justify-center text-sm shadow-inner">
+          <div className="w-8 h-8 rounded-xl bg-blue-400/15 border border-blue-400/30 flex items-center justify-center text-sm shadow-inner">
             {activeBadgeIcon}
           </div>
           <div>
             <div className="text-xs font-bold text-slate-200 flex items-center gap-1">
               <span>Honor & Respect Score</span>
             </div>
-            <div className="text-[11px] text-[#F5C453] font-medium font-mono">
+            <div className="text-[11px] text-blue-400 font-medium font-mono">
               {activeHonorTitle}
             </div>
           </div>
@@ -118,7 +118,7 @@ export const RespectHonorBadge: React.FC<RespectHonorBadgeProps> = ({
             </span>
           )}
           <span 
-            className={`text-sm sm:text-base font-mono font-black tracking-tight text-[#F5C453] ${
+            className={`text-sm sm:text-base font-mono font-black tracking-tight text-blue-400 ${
               isUpdating ? 'respect-points-bump' : ''
             }`}
           >
@@ -134,9 +134,9 @@ export const RespectHonorBadge: React.FC<RespectHonorBadgeProps> = ({
     return (
       <div
         onClick={onClick}
-        className={`respect-badge-entry inline-flex items-center gap-1.5 py-1.5 px-2.5 sm:px-3 rounded-xl bg-gradient-to-r from-[#52673A]/40 to-[#8C2425]/40 hover:from-[#52673A]/60 hover:to-[#8C2425]/60 border border-[#F5C453]/40 text-[#F5C453] text-xs font-black transition-all hover:scale-[1.02] shadow-sm shadow-[#F5C453]/10 relative overflow-hidden select-none ${
+        className={`respect-badge-entry inline-flex items-center gap-1.5 py-1.5 px-2.5 sm:px-3 rounded-xl bg-gradient-to-r from-blue-600/40 to-blue-800/40 hover:from-blue-600/60 hover:to-blue-800/60 border border-blue-400/40 text-blue-400 text-xs font-black transition-all hover:scale-[1.02] shadow-sm shadow-blue-400/10 relative overflow-hidden select-none ${
           interactive ? 'cursor-pointer' : ''
-        } ${isUpdating ? 'respect-bloom-active ring-1 ring-[#F5C453]' : ''} ${className}`}
+        } ${isUpdating ? 'respect-bloom-active ring-1 ring-blue-400' : ''} ${className}`}
       >
         <div className="absolute inset-0 respect-shimmer-sheen pointer-events-none opacity-30" />
         
@@ -149,12 +149,12 @@ export const RespectHonorBadge: React.FC<RespectHonorBadgeProps> = ({
         <span className="text-sm select-none relative z-10">{activeBadgeIcon}</span>
         <span 
           className={`font-mono relative z-10 transition-all ${
-            isUpdating ? 'respect-points-bump text-white font-extrabold' : 'text-[#F5C453]'
+            isUpdating ? 'respect-points-bump text-white font-extrabold' : 'text-blue-400'
           }`}
         >
           {displayPoints}
         </span>
-        <span className="hidden lg:inline text-[10px] text-[#DFD0B0]/80 uppercase font-semibold relative z-10">
+        <span className="hidden lg:inline text-[10px] text-blue-100/80 uppercase font-semibold relative z-10">
           Respect
         </span>
       </div>
@@ -165,9 +165,9 @@ export const RespectHonorBadge: React.FC<RespectHonorBadgeProps> = ({
   return (
     <div
       onClick={onClick}
-      className={`respect-badge-entry relative inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-slate-900/95 via-slate-900/80 to-[#F5C453]/10 border border-[#F5C453]/35 hover:border-[#F5C453]/60 text-sm font-mono shadow-md backdrop-blur-md transition-all duration-300 overflow-hidden group select-none ${
+      className={`respect-badge-entry relative inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-slate-900/95 via-slate-900/80 to-blue-400/10 border border-blue-400/35 hover:border-blue-400/60 text-sm font-mono shadow-md backdrop-blur-md transition-all duration-300 overflow-hidden group select-none ${
         interactive ? 'cursor-pointer hover:scale-[1.02]' : ''
-      } ${isUpdating ? 'respect-bloom-active ring-2 ring-[#F5C453]/50' : ''} ${className}`}
+      } ${isUpdating ? 'respect-bloom-active ring-2 ring-blue-400/50' : ''} ${className}`}
       title={`${activeHonorTitle} • ${numPoints} Total Respect Points`}
     >
       {/* Background ambient shimmer */}
@@ -185,7 +185,7 @@ export const RespectHonorBadge: React.FC<RespectHonorBadgeProps> = ({
         <span className="text-base select-none group-hover:scale-110 transition-transform duration-200">
           {activeBadgeIcon}
         </span>
-        <span className="text-[#F5C453] font-bold text-xs sm:text-sm tracking-wide">
+        <span className="text-blue-400 font-bold text-xs sm:text-sm tracking-wide">
           Respect:
         </span>
       </div>
@@ -194,16 +194,16 @@ export const RespectHonorBadge: React.FC<RespectHonorBadgeProps> = ({
       <div className="relative z-10 flex items-center gap-1">
         <span
           className={`font-black tracking-tight text-white transition-all text-xs sm:text-sm ${
-            isUpdating ? 'respect-points-bump text-amber-200' : ''
+            isUpdating ? 'respect-points-bump text-blue-200' : ''
           }`}
         >
           {displayPoints}
         </span>
-        <span className="text-[11px] font-semibold text-[#DFD0B0]/75">pts</span>
+        <span className="text-[11px] font-semibold text-blue-100/75">pts</span>
       </div>
 
       {/* Subtle rank trophy hint */}
-      <div className="relative z-10 pl-1 border-l border-white/10 hidden sm:flex items-center text-[10px] font-sans font-bold text-[#F5C453]/90 truncate max-w-[110px]">
+      <div className="relative z-10 pl-1 border-l border-white/10 hidden sm:flex items-center text-[10px] font-sans font-bold text-blue-400/90 truncate max-w-[110px]">
         {activeHonorTitle}
       </div>
     </div>

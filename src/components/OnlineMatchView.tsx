@@ -369,9 +369,9 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
   return (
     <PanelContainer>
       {/* Header Bar */}
-      <div className="glass-panel p-3.5 sm:p-4 rounded-3xl border border-[#F5C453]/30 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xl">
+      <div className="glass-panel p-3.5 sm:p-4 rounded-3xl border border-blue-400/30 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xl">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-2xl bg-gradient-to-tr from-[#8C2425] via-[#52673A] to-[#F5C453] text-[#F5C453] border border-[#F5C453]/40 shadow-md">
+          <div className="p-2.5 rounded-2xl bg-gradient-to-tr from-blue-800 via-blue-600 to-blue-400 text-blue-400 border border-blue-400/40 shadow-md">
             <Swords className="w-6 h-6" />
           </div>
           <div>
@@ -379,11 +379,11 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
               <h2 className="text-base sm:text-lg font-black text-white tracking-tight">
                 Live Online Match
               </h2>
-              <span className="px-2 py-0.5 rounded-md bg-[#8C2425]/40 text-[#F5C453] text-[10px] font-black border border-[#F5C453]/40 uppercase">
+              <span className="px-2 py-0.5 rounded-md bg-blue-800/40 text-blue-400 text-[10px] font-black border border-blue-400/40 uppercase">
                 {session?.timeControl.name || 'Rapid'}
               </span>
             </div>
-            <p className="text-xs text-[#DFD0B0]/70">
+            <p className="text-xs text-blue-100/70">
               Battle for Peshmerga Grandmaster Honor & Respect Points
             </p>
           </div>
@@ -396,7 +396,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
             onClick={() => setIsChatOpen(prev => !prev)}
             className={`min-h-[38px] px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
               isChatOpen
-                ? 'bg-[#52673A] text-white border-[#F5C453] shadow-md'
+                ? 'bg-blue-600 text-white border-blue-400 shadow-md'
                 : 'bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border-white/10'
             }`}
             title="Toggle In-Game Match Chat"
@@ -463,7 +463,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
           </div>
 
           {/* Chess Board */}
-          <div className="relative p-2.5 sm:p-3.5 rounded-3xl bg-[#10140e] border-2 border-[#F5C453]/30 shadow-2xl">
+          <div className="relative p-2.5 sm:p-3.5 rounded-3xl bg-[#10140e] border-2 border-blue-400/30 shadow-2xl">
             <ChessBoard
               game={game}
               isFlipped={!isWhitePlayer}
@@ -480,9 +480,9 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
             />
 
             {/* Turn Indicator Banner */}
-            <div className="mt-2.5 px-4 py-2 rounded-2xl bg-black/80 backdrop-blur-md border border-[#F5C453]/30 flex items-center justify-between text-xs">
+            <div className="mt-2.5 px-4 py-2 rounded-2xl bg-black/80 backdrop-blur-md border border-blue-400/30 flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#F5C453] animate-ping" />
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-ping" />
                 <span className="font-bold text-white">
                   {session?.status !== 'in_progress'
                     ? `Match ${session?.status?.toUpperCase()}`
@@ -491,7 +491,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                     : `${opponent?.displayName || 'Opponent'} is thinking...`}
                 </span>
               </div>
-              <span className="text-[#DFD0B0]/70 font-mono text-[11px]">
+              <span className="text-blue-100/70 font-mono text-[11px]">
                 You play as {isWhitePlayer ? 'White ⚪' : 'Black ⚫'}
               </span>
             </div>
@@ -531,7 +531,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
         <div className="lg:col-span-4 space-y-4">
           {/* Match Outcome Banner */}
           {session?.status && session.status !== 'in_progress' && session.status !== 'waiting' && (
-            <div className="glass-panel p-5 rounded-3xl border border-[#F5C453]/40 shadow-xl space-y-3 animate-in zoom-in-95 text-center">
+            <div className="glass-panel p-5 rounded-3xl border border-blue-400/40 shadow-xl space-y-3 animate-in zoom-in-95 text-center">
               <div className="text-3xl">
                 {session.winner === myColor ? '👑' : session.winner === 'draw' ? '🤝' : '⚔️'}
               </div>
@@ -542,7 +542,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                   ? 'Game Drawn'
                   : 'Match Concluded'}
               </h3>
-              <p className="text-xs text-[#DFD0B0]/80">{session.reason}</p>
+              <p className="text-xs text-blue-100/80">{session.reason}</p>
 
               {session.winner === myColor && (
                 <div className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/40">
@@ -554,17 +554,17 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
 
           {/* In-Game Action Buttons */}
           <div className="glass-panel p-4 rounded-3xl border border-white/10 space-y-3">
-            <h4 className="text-xs font-bold text-[#DFD0B0]/70 uppercase tracking-wider">
+            <h4 className="text-xs font-bold text-blue-100/70 uppercase tracking-wider">
               Match Controls
             </h4>
 
             {session?.drawOfferFrom && session.drawOfferFrom !== profile?.uid && (
-              <div className="p-3 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-200 text-xs flex items-center justify-between gap-2">
+              <div className="p-3 rounded-2xl bg-blue-400/20 border border-blue-400/40 text-blue-200 text-xs flex items-center justify-between gap-2">
                 <span>Opponent offered a draw!</span>
                 <button
                   type="button"
                   onClick={handleOfferDraw}
-                  className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-black font-black text-xs transition-colors cursor-pointer"
+                  className="px-3 py-1.5 rounded-xl bg-blue-400 hover:bg-blue-300 text-white font-black text-xs transition-colors cursor-pointer"
                 >
                   Accept Draw
                 </button>
@@ -578,7 +578,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                 disabled={session?.status !== 'in_progress'}
                 className="py-2.5 px-3 rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-40 text-white font-bold text-xs flex items-center justify-center gap-1.5 border border-white/10 transition-colors cursor-pointer"
               >
-                <Handshake className="w-4 h-4 text-amber-400" />
+                <Handshake className="w-4 h-4 text-blue-400" />
                 <span>Offer Draw</span>
               </button>
 

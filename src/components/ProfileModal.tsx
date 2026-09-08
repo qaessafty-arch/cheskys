@@ -303,10 +303,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-xl animate-in fade-in duration-200 p-3 sm:p-4">
-      <div className="relative glass-panel rounded-3xl p-5 sm:p-7 max-w-2xl w-full shadow-2xl border border-[#F5C453]/30 overflow-hidden max-h-[92vh] overflow-y-auto">
+      <div className="relative glass-panel rounded-3xl p-5 sm:p-7 max-w-2xl w-full shadow-2xl border border-blue-400/30 overflow-hidden max-h-[92vh] overflow-y-auto">
         {/* Ambient Glow */}
-        <div className="absolute top-0 right-0 w-72 h-72 bg-[#F5C453]/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-72 h-72 bg-[#52673A]/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-72 h-72 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-72 h-72 bg-blue-600/20 rounded-full blur-3xl pointer-events-none" />
 
         {/* Close Button */}
         <button
@@ -318,21 +318,21 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
 
         {/* Title */}
         <div className="flex items-center gap-3 mb-4">
-          <div className="p-2.5 rounded-2xl bg-gradient-to-tr from-[#8C2425] via-[#52673A] to-[#F5C453] border border-[#F5C453]/40 text-[#F5C453] shadow-md">
+          <div className="p-2.5 rounded-2xl bg-gradient-to-tr from-blue-800 via-blue-600 to-blue-400 border border-blue-400/40 text-blue-400 shadow-md">
             <Shield className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-lg sm:text-xl font-black text-[#FDFCF7] tracking-tight">
+              <h2 className="text-lg sm:text-xl font-black text-white tracking-tight">
                 Peshmerga Cloud Command & Profile
               </h2>
               {isOwner && (
-                <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-[10px] font-black border border-amber-400/40 uppercase">
+                <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-300 text-[10px] font-black border border-blue-400/40 uppercase">
                   👑 Founder
                 </span>
               )}
             </div>
-            <p className="text-xs text-[#DFD0B0]/70">
+            <p className="text-xs text-blue-100/70">
               Multi-Account Authoring, Badge Engine, and Cloud Honor Synchronization
             </p>
           </div>
@@ -351,7 +351,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                   <span className="px-1.5 py-0.5 rounded bg-sky-400/20 text-sky-300 text-[10px] font-black border border-sky-400/30">
                     CELESTIAL IMMORTAL 🦋
                   </span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-black/40 text-amber-300 font-mono border border-amber-400/30 flex items-center gap-1">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-black/40 text-blue-300 font-mono border border-blue-400/30 flex items-center gap-1">
                     <Lock className="w-2.5 h-2.5" /> DEV ONLY
                   </span>
                 </div>
@@ -383,7 +383,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                 className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-sky-300 border border-sky-400/30 transition-all text-xs flex items-center gap-1"
                 title="Copy Direct Login URL for [sky] Account"
               >
-                {copiedLink ? <CheckCheck className="w-4 h-4 text-emerald-400" /> : <Link2 className="w-4 h-4" />}
+                {copiedLink ? <CheckCheck className="w-4 h-4 text-sky-400" /> : <Link2 className="w-4 h-4" />}
                 <span className="hidden sm:inline">{copiedLink ? 'Copied!' : 'Link'}</span>
               </button>
             </div>
@@ -393,7 +393,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
           {showSkyPassModal && (
             <form onSubmit={handleSkyPasskeyUnlock} className="mt-3 pt-3 border-t border-sky-400/30 flex flex-wrap items-center gap-2 animate-in slide-in-from-top-2">
               <div className="flex items-center gap-1.5 text-xs text-sky-200 font-bold">
-                <KeyRound className="w-3.5 h-3.5 text-amber-300" />
+                <KeyRound className="w-3.5 h-3.5 text-blue-300" />
                 <span>Developer Key:</span>
               </div>
               <input
@@ -435,7 +435,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
               <h3 className="text-base font-bold text-white">
                 Choose Your Authoring & Sign-In Method
               </h3>
-              <p className="text-xs text-[#DFD0B0]/70 max-w-md mx-auto">
+              <p className="text-xs text-blue-100/70 max-w-md mx-auto">
                 Sign in with Google, start an instant guest session, register with email, or unlock with the Developer Passkey.
               </p>
             </div>
@@ -459,7 +459,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                 onClick={() => { setAuthTab('guest'); setAuthError(''); }}
                 className={`py-2 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   authTab === 'guest'
-                    ? 'bg-[#52673A] text-white shadow-md border border-[#F5C453]/40'
+                    ? 'bg-blue-600 text-white shadow-md border border-blue-400/50'
                     : 'text-white/70 hover:text-white hover:bg-white/5'
                 }`}
               >
@@ -485,11 +485,11 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                 onClick={() => { setAuthTab('dev_passkey'); setAuthError(''); }}
                 className={`py-2 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   authTab === 'dev_passkey'
-                    ? 'bg-gradient-to-r from-amber-600 to-[#8C2425] text-white shadow-md border border-amber-400'
-                    : 'text-amber-300/80 hover:text-amber-200 hover:bg-white/5'
+                    ? 'bg-gradient-to-r from-blue-800 to-blue-600 text-white shadow-md border border-blue-400'
+                    : 'text-blue-100/80 hover:text-blue-200 hover:bg-white/5'
                 }`}
               >
-                <KeyRound className="w-3.5 h-3.5 text-amber-300" />
+                <KeyRound className="w-3.5 h-3.5 text-blue-300" />
                 <span>Dev Key</span>
               </button>
             </div>
@@ -518,7 +518,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                   </svg>
                   <span>Sign in with Google Account</span>
                 </button>
-                <p className="text-[11px] text-[#DFD0B0]/60">
+                <p className="text-[11px] text-[blue-200]/60">
                   Syncs with Firebase Cloud, auto-allocates your warrior badge, and joins the global leaderboard.
                 </p>
               </div>
@@ -529,7 +529,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
               <form onSubmit={handleGuestSubmit} className="space-y-3 animate-in fade-in duration-150">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div>
-                    <label className="text-[11px] text-[#DFD0B0]/70 font-bold block mb-1">
+                    <label className="text-[11px] text-blue-100/70 font-bold block mb-1">
                       Guest Nickname
                     </label>
                     <input
@@ -537,19 +537,19 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                       placeholder="e.g. Peshmerga Pioneer"
                       value={guestName}
                       onChange={e => setGuestName(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white text-xs outline-none focus:border-[#F5C453]"
+                      className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white text-xs outline-none focus:border-blue-400"
                     />
                   </div>
 
                   <div>
-                    <label className="text-[11px] text-[#DFD0B0]/70 font-bold block mb-1">
+                    <label className="text-[11px] text-blue-100/70 font-bold block mb-1">
                       Country / Realm
                     </label>
                     <input
                       type="text"
                       value={guestCountry}
                       onChange={e => setGuestCountry(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white text-xs outline-none focus:border-[#F5C453]"
+                      className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white text-xs outline-none focus:border-blue-400"
                     />
                   </div>
                 </div>
@@ -557,12 +557,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                 <button
                   type="submit"
                   disabled={authLoading}
-                  className="w-full py-2.5 rounded-xl bg-[#52673A] hover:bg-[#435433] text-white font-bold text-xs border border-[#F5C453]/40 shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all"
+                  className="w-full py-2.5 rounded-xl bg-[blue-600] hover:bg-[#435433] text-white font-bold text-xs border border-blue-400/40 shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all"
                 >
-                  <UserCheck className="w-4 h-4 text-[#F5C453]" />
+                  <UserCheck className="w-4 h-4 text-blue-400" />
                   <span>Enter Battlefield as Guest</span>
                 </button>
-                <p className="text-[11px] text-[#DFD0B0]/60 text-center">
+                <p className="text-[11px] text-[blue-200]/60 text-center">
                   Instant local gameplay with full metrics tracking. You can link to Google anytime without losing honor points.
                 </p>
               </form>
@@ -589,7 +589,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                 </div>
 
                 <div>
-                  <label className="text-[11px] text-[#DFD0B0]/70 font-bold block mb-1">Email Address</label>
+                  <label className="text-[11px] text-blue-100/70 font-bold block mb-1">Email Address</label>
                   <input
                     type="email"
                     placeholder="you@example.com"
@@ -600,7 +600,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                 </div>
 
                 <div>
-                  <label className="text-[11px] text-[#DFD0B0]/70 font-bold block mb-1">Password</label>
+                  <label className="text-[11px] text-blue-100/70 font-bold block mb-1">Password</label>
                   <input
                     type="password"
                     placeholder="••••••••"
@@ -624,18 +624,18 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
             {/* TAB 4: DEVELOPER MASTER PASSKEY */}
             {authTab === 'dev_passkey' && (
               <form onSubmit={handleDevPasskeySubmit} className="space-y-3 animate-in fade-in duration-150">
-                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30">
-                  <div className="flex items-center gap-2 text-xs font-black text-amber-300">
-                    <Crown className="w-4 h-4 text-amber-400" />
+                <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/30">
+                  <div className="flex items-center gap-2 text-xs font-black text-blue-300">
+                    <Crown className="w-4 h-4 text-blue-400" />
                     <span>Founder Direct Passkey Portal</span>
                   </div>
-                  <p className="text-[11px] text-[#DFD0B0]/70 mt-1">
-                    Instant access to <span className="text-[#F5C453] font-bold">qayssafty@gmail.com</span> Owner #0 credentials from any browser.
+                  <p className="text-[11px] text-blue-100/70 mt-1">
+                    Instant access to <span className="text-blue-400 font-bold">qayssafty@gmail.com</span> Owner #0 credentials from any browser.
                   </p>
                 </div>
 
                 <div>
-                  <label className="text-[11px] text-[#DFD0B0]/70 font-bold block mb-1">
+                  <label className="text-[11px] text-blue-100/70 font-bold block mb-1">
                     Developer Passkey
                   </label>
                   <input
@@ -643,7 +643,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                     placeholder="Enter passkey (e.g. q.brz)"
                     value={devPasskeyInput}
                     onChange={e => setDevPasskeyInput(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-amber-400/40 text-white text-xs outline-none focus:border-amber-300 font-mono"
+                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-blue-400/40 text-white text-xs outline-none focus:border-blue-300 font-mono"
                   />
                 </div>
 
@@ -653,9 +653,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
 
                 <button
                   type="submit"
-                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-[#8C2425] hover:from-amber-500 text-white font-black text-xs border border-amber-400 shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all"
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-[blue-800] hover:from-blue-500 text-white font-black text-xs border border-blue-400 shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all"
                 >
-                  <Crown className="w-4 h-4 text-[#F5C453]" />
+                  <Crown className="w-4 h-4 text-blue-400" />
                   <span>Authenticate as Founder #0</span>
                 </button>
               </form>
@@ -670,7 +670,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
             <div className={`p-4 rounded-2xl border flex flex-wrap items-center justify-between gap-3 ${
               isSkyAccount
                 ? 'bg-gradient-to-r from-sky-950/70 via-blue-900/40 to-sky-900/50 border-sky-400/50 shadow-[0_0_20px_rgba(56,189,248,0.2)]'
-                : 'bg-gradient-to-r from-[#52673A]/30 to-[#8C2425]/20 border-[#F5C453]/40'
+                : 'bg-gradient-to-r from-[blue-600]/30 to-[blue-800]/20 border-[blue-400]/40'
             }`}>
               {/* Hidden File Input for Avatar Upload */}
               <input
@@ -687,8 +687,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                   <img
                     src={profile?.photoURL || (isSkyAccount ? 'https://images.unsplash.com/photo-1557925923-cd4648e211a0?w=200&auto=format&fit=crop&q=80' : user?.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60')}
                     alt={profile?.displayName || 'User'}
-                    className={`w-14 h-14 rounded-2xl object-cover border-2 shadow-md transition-all group-hover:scale-105 group-hover:border-[#F5C453] ${
-                      isSkyAccount ? 'border-sky-400 ring-2 ring-sky-300/40' : 'border-[#F5C453]'
+                    className={`w-14 h-14 rounded-2xl object-cover border-2 shadow-md transition-all group-hover:scale-105 group-hover:border-[blue-400] ${
+                      isSkyAccount ? 'border-sky-400 ring-2 ring-sky-300/40' : 'border-[blue-400]'
                     }`}
                     referrerPolicy="no-referrer"
                   />
@@ -699,7 +699,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                   <button
                     type="button"
                     onClick={() => setIsPhotoSelectorOpen(!isPhotoSelectorOpen)}
-                    className="absolute inset-0 rounded-2xl bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity text-amber-300 cursor-pointer"
+                    className="absolute inset-0 rounded-2xl bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity text-blue-300 cursor-pointer"
                     title="Change or upload profile picture"
                   >
                     <Camera className="w-5 h-5 animate-pulse" />
@@ -716,8 +716,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
 
                     {/* Role & Badge Number Pill */}
                     {isOwner || isDeveloper || badgeNumber === 0 ? (
-                      <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-black border border-amber-400/40 flex items-center gap-1 font-mono shadow-sm">
-                        <Crown className="w-3 h-3 text-amber-400" />
+                      <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[10px] font-black border border-blue-400/40 flex items-center gap-1 font-mono shadow-sm">
+                        <Crown className="w-3 h-3 text-blue-400" />
                         <span>{profile?.customBadge || 'OWNER #0'}</span>
                       </span>
                     ) : isAdmin || (badgeNumber >= 1 && badgeNumber <= 9) ? (
@@ -732,7 +732,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                     )}
 
                     {isGuest && (
-                      <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-400/30">
+                      <span className="px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 text-[10px] font-bold border border-sky-400/30">
                         Guest
                       </span>
                     )}
@@ -743,7 +743,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-[#DFD0B0]/70 font-mono">
+                  <p className="text-xs text-blue-100/70 font-mono">
                     {profile?.country || (isSkyAccount ? 'Kurdistan / Sky Realm' : 'Kurdistan')} • {profile?.email || (isSkyAccount ? 'sky.celestial@chesskys.pro' : isGuest ? 'Local Guest Session' : user?.email)}
                   </p>
                   {profile?.customStatus && (
@@ -761,7 +761,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                   onClick={() => setIsPhotoSelectorOpen(!isPhotoSelectorOpen)}
                   className={`p-2 px-2.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer ${
                     isPhotoSelectorOpen
-                      ? 'bg-[#F5C453] text-black border-[#F5C453]'
+                      ? 'bg-blue-400 text-white border-blue-400'
                       : 'bg-white/[0.08] hover:bg-white/[0.14] text-white/90 border-white/20'
                   }`}
                   title="Change, upload, or choose profile picture"
@@ -774,10 +774,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                 <button
                   type="button"
                   onClick={() => setIsAvatarStudioOpen(true)}
-                  className="p-2 px-2.5 rounded-xl bg-gradient-to-r from-amber-600/30 to-amber-500/20 hover:from-amber-600/50 hover:to-amber-500/40 text-amber-300 hover:text-amber-200 border border-amber-400/40 text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                  className="p-2 px-2.5 rounded-xl bg-gradient-to-r from-blue-900/30 to-blue-700/20 hover:from-blue-900/50 hover:to-blue-700/40 text-blue-300 hover:text-blue-200 border border-blue-400/40 text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
                   title="Generate custom AI Chess Avatar based on Honor Rank"
                 >
-                  <Wand2 className="w-3.5 h-3.5 text-[#F5C453]" />
+                  <Wand2 className="w-3.5 h-3.5 text-blue-400" />
                   <span>AI Studio</span>
                 </button>
 
@@ -786,7 +786,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                     onClick={handleStartEdit}
                     className="p-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-white/80 hover:text-white border border-white/10 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
                   >
-                    <Edit2 className="w-3.5 h-3.5 text-[#F5C453]" />
+                    <Edit2 className="w-3.5 h-3.5 text-blue-400" />
                     <span>Edit</span>
                   </button>
                 ) : null}
@@ -803,8 +803,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
 
             {/* Notification Banner for Saved Profile Picture */}
             {photoSuccessMessage && (
-              <div className="p-3 rounded-2xl bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 text-xs font-bold flex items-center gap-2 animate-in fade-in slide-in-from-top-2 shadow-lg">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <div className="p-3 rounded-2xl bg-sky-500/20 border border-sky-400/50 text-sky-300 text-xs font-bold flex items-center gap-2 animate-in fade-in slide-in-from-top-2 shadow-lg">
+                <CheckCircle2 className="w-4 h-4 text-sky-400 shrink-0" />
                 <span>{photoSuccessMessage}</span>
               </div>
             )}
@@ -813,17 +813,17 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                 PROFILE PICTURE STUDIO & SELECTION DRAWER
                 ======================================================== */}
             {isPhotoSelectorOpen && (
-              <div className="p-4 rounded-2xl bg-black/60 border border-[#F5C453]/40 space-y-4 animate-in fade-in duration-150 shadow-xl">
+              <div className="p-4 rounded-2xl bg-black/60 border border-blue-400/40 space-y-4 animate-in fade-in duration-150 shadow-xl">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-[#52673A]/40 text-[#F5C453] border border-[#F5C453]/30">
+                    <div className="p-1.5 rounded-lg bg-[blue-600]/40 text-blue-400 border border-blue-400/30">
                       <Camera className="w-4 h-4" />
                     </div>
                     <div>
                       <h4 className="text-xs font-black text-white uppercase tracking-wider">
                         Update & Save Profile Picture
                       </h4>
-                      <p className="text-[10px] text-[#DFD0B0]/70">
+                      <p className="text-[10px] text-blue-100/70">
                         Upload custom image, paste a web link, choose a Kurdish emblem, or forge with AI
                       </p>
                     </div>
@@ -842,11 +842,11 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                   {/* Option 1: File Upload */}
                   <div className="p-3 rounded-xl bg-white/[0.04] border border-white/10 space-y-2 flex flex-col justify-between">
                     <div>
-                      <span className="text-[11px] font-bold text-[#F5C453] flex items-center gap-1.5">
+                      <span className="text-[11px] font-bold text-blue-400 flex items-center gap-1.5">
                         <Upload className="w-3.5 h-3.5" />
                         <span>Upload From Device</span>
                       </span>
-                      <p className="text-[10px] text-[#DFD0B0]/70 mt-1">
+                      <p className="text-[10px] text-blue-100/70 mt-1">
                         Select any PNG, JPG or WEBP image. It will be compressed & saved immediately to your cloud account.
                       </p>
                     </div>
@@ -854,7 +854,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                       type="button"
                       disabled={isUploadingPhoto}
                       onClick={() => fileInputRef.current?.click()}
-                      className="w-full py-2 px-3 rounded-xl bg-[#52673A] hover:bg-[#435433] text-white text-xs font-bold border border-[#F5C453]/40 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                      className="w-full py-2 px-3 rounded-xl bg-[blue-600] hover:bg-[#435433] text-white text-xs font-bold border border-blue-400/40 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
                     >
                       {isUploadingPhoto ? (
                         <>
@@ -873,11 +873,11 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                   {/* Option 2: Image URL Input */}
                   <div className="p-3 rounded-xl bg-white/[0.04] border border-white/10 space-y-2 flex flex-col justify-between">
                     <div>
-                      <span className="text-[11px] font-bold text-[#F5C453] flex items-center gap-1.5">
+                      <span className="text-[11px] font-bold text-blue-400 flex items-center gap-1.5">
                         <ImageIcon className="w-3.5 h-3.5" />
                         <span>Image Web Link (URL)</span>
                       </span>
-                      <p className="text-[10px] text-[#DFD0B0]/70 mt-1">
+                      <p className="text-[10px] text-blue-100/70 mt-1">
                         Paste any online image URL (e.g. from Unsplash, Imgur, Discord, etc.)
                       </p>
                     </div>
@@ -887,13 +887,13 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                         placeholder="https://images.example.com/avatar.jpg"
                         value={customPhotoUrlInput}
                         onChange={e => setCustomPhotoUrlInput(e.target.value)}
-                        className="flex-1 px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/15 text-white text-xs focus:border-[#F5C453] outline-none"
+                        className="flex-1 px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/15 text-white text-xs focus:border-blue-400 outline-none"
                       />
                       <button
                         type="button"
                         onClick={handleSaveCustomPhotoUrl}
                         disabled={!customPhotoUrlInput.trim()}
-                        className="px-3 py-1.5 rounded-xl bg-[#F5C453] hover:bg-[#e0b042] text-black text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
+                        className="px-3 py-1.5 rounded-xl bg-blue-400 hover:bg-blue-300 text-white text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
                       >
                         Save
                       </button>
@@ -904,14 +904,14 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                 {/* Option 3: Curated Peshmerga & Kurdish Emblem Presets */}
                 <div className="space-y-2 pt-1 border-t border-white/10">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-[#F5C453] uppercase tracking-wider flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-[#F5C453]" />
+                    <span className="text-[11px] font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-blue-400" />
                       <span>Curated Emblem & Commander Avatars (1-Click Equip & Save)</span>
                     </span>
                     <button
                       type="button"
                       onClick={() => setIsAvatarStudioOpen(true)}
-                      className="text-[11px] text-[#F5C453] hover:underline flex items-center gap-1 cursor-pointer font-bold"
+                      className="text-[11px] text-blue-400 hover:underline flex items-center gap-1 cursor-pointer font-bold"
                     >
                       <Wand2 className="w-3 h-3" />
                       <span>Open AI Studio</span>
@@ -927,8 +927,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                           onClick={() => handleSelectPresetAvatar(preset.url)}
                           className={`relative group rounded-xl overflow-hidden aspect-square border-2 transition-all p-0.5 cursor-pointer ${
                             isCurrent
-                              ? 'border-[#F5C453] ring-2 ring-[#F5C453]/50 scale-105'
-                              : 'border-white/10 hover:border-[#F5C453]/60 hover:scale-105'
+                              ? 'border-blue-400 ring-2 ring-blue-400/50 scale-105'
+                              : 'border-white/10 hover:border-blue-400/60 hover:scale-105'
                           }`}
                           title={preset.name}
                         >
@@ -942,7 +942,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                             {preset.badge}
                           </span>
                           {isCurrent && (
-                            <div className="absolute inset-0 bg-[#52673A]/60 flex items-center justify-center rounded-lg">
+                            <div className="absolute inset-0 bg-blue-600/60 flex items-center justify-center rounded-lg">
                               <Check className="w-4 h-4 text-white drop-shadow font-black" />
                             </div>
                           )}
@@ -958,25 +958,25 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                 OWNER & DEVELOPER BADGES & STATUSES WORKSHOP
                 ======================================================== */}
             {(isOwner || isDeveloper || devModeUnlocked) && (
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-950/40 via-black/50 to-slate-900/60 border-2 border-[#F5C453]/60 space-y-3 shadow-xl">
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-950/40 via-black/50 to-slate-900/60 border-2 border-blue-400/60 space-y-3 shadow-xl">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2">
-                    <Crown className="w-4 h-4 text-[#F5C453]" />
-                    <h3 className="text-xs sm:text-sm font-black text-amber-300 uppercase tracking-wide">
+                    <Crown className="w-4 h-4 text-blue-400" />
+                    <h3 className="text-xs sm:text-sm font-black text-blue-300 uppercase tracking-wide">
                       👑 Founder Badges & Prestige Statuses Workshop
                     </h3>
                   </div>
                   <button
                     type="button"
                     onClick={() => setShowOwnerCustomizer(!showOwnerCustomizer)}
-                    className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-bold border border-amber-400/40 transition-all cursor-pointer"
+                    className="px-2.5 py-1 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 text-xs font-bold border border-blue-400/40 transition-all cursor-pointer"
                   >
                     {showOwnerCustomizer ? 'Collapse Workshop' : 'Open Badges & Statuses'}
                   </button>
                 </div>
 
                 {ownerBadgeSuccess && (
-                  <div className="p-2 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold animate-in fade-in">
+                  <div className="p-2 rounded-xl bg-sky-500/20 border border-sky-500/40 text-sky-300 text-xs font-bold animate-in fade-in">
                     {ownerBadgeSuccess}
                   </div>
                 )}
@@ -985,7 +985,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                   <div className="space-y-3 pt-2 border-t border-white/10 animate-in fade-in duration-150">
                     {/* Preset Badges Matrix */}
                     <div>
-                      <label className="text-[11px] text-[#DFD0B0]/80 font-bold block mb-1.5">
+                      <label className="text-[11px] text-[blue-200]/80 font-bold block mb-1.5">
                         Equip Royal Battlefield Badges (1-Click Apply):
                       </label>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
@@ -998,12 +998,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                               onClick={() => handleApplyOwnerPresetBadge(badge)}
                               className={`p-2 rounded-xl text-left border transition-all cursor-pointer ${
                                 isEquipped
-                                  ? 'bg-amber-500/30 border-[#F5C453] text-[#F5C453] ring-1 ring-[#F5C453]'
+                                  ? 'bg-blue-500/30 border-[blue-400] text-blue-400 ring-1 ring-[blue-400]'
                                   : 'bg-white/5 hover:bg-white/10 border-white/10 text-white/80'
                               }`}
                             >
                               <div className="text-xs font-black truncate">{badge.label}</div>
-                              <div className="text-[10px] text-[#DFD0B0]/60 truncate">{badge.desc}</div>
+                              <div className="text-[10px] text-[blue-200]/60 truncate">{badge.desc}</div>
                             </button>
                           );
                         })}
@@ -1012,7 +1012,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
 
                     {/* Preset Status Quotes */}
                     <div>
-                      <label className="text-[11px] text-[#DFD0B0]/80 font-bold block mb-1.5">
+                      <label className="text-[11px] text-[blue-200]/80 font-bold block mb-1.5">
                         Equip Master Status Battle Cries:
                       </label>
                       <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
@@ -1025,12 +1025,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                               onClick={() => handleApplyOwnerPresetStatus(status)}
                               className={`w-full p-2 rounded-xl text-left text-xs font-medium border transition-all cursor-pointer flex items-center justify-between ${
                                 isEquipped
-                                  ? 'bg-[#52673A]/40 border-[#F5C453] text-white'
-                                  : 'bg-white/5 hover:bg-white/10 border-white/10 text-[#DFD0B0]/80'
+                                  ? 'bg-blue-600/40 border-blue-400 text-white'
+                                  : 'bg-white/5 hover:bg-white/10 border-white/10 text-[blue-200]/80'
                               }`}
                             >
                               <span className="truncate italic">"{status}"</span>
-                              {isEquipped && <Check className="w-3.5 h-3.5 text-[#F5C453] shrink-0 ml-2" />}
+                              {isEquipped && <Check className="w-3.5 h-3.5 text-blue-400 shrink-0 ml-2" />}
                             </button>
                           );
                         })}
@@ -1043,15 +1043,15 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
 
             {/* Editable Profile Inputs */}
             {isEditing && (
-              <div className="p-4 rounded-2xl bg-black/50 border border-[#F5C453]/40 space-y-3 animate-in fade-in duration-150">
+              <div className="p-4 rounded-2xl bg-black/50 border border-blue-400/40 space-y-3 animate-in fade-in duration-150">
                 <div className="flex items-center justify-between">
-                  <div className="text-xs font-bold text-[#F5C453] uppercase tracking-wider">
+                  <div className="text-xs font-bold text-blue-400 uppercase tracking-wider">
                     Edit Battlefield Identity
                   </div>
                   <button
                     type="button"
                     onClick={() => setIsPhotoSelectorOpen(true)}
-                    className="text-[11px] text-[#F5C453] hover:underline flex items-center gap-1 font-bold cursor-pointer"
+                    className="text-[11px] text-blue-400 hover:underline flex items-center gap-1 font-bold cursor-pointer"
                   >
                     <Camera className="w-3.5 h-3.5" />
                     <span>Change Profile Photo</span>
@@ -1063,24 +1063,24 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                   <img
                     src={profilePhotoInput || profile?.photoURL || (isSkyAccount ? 'https://images.unsplash.com/photo-1557925923-cd4648e211a0?w=200&auto=format&fit=crop&q=80' : user?.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60')}
                     alt="Preview"
-                    className="w-12 h-12 rounded-xl object-cover border border-[#F5C453]/50 shrink-0"
+                    className="w-12 h-12 rounded-xl object-cover border border-blue-400/50 shrink-0"
                     referrerPolicy="no-referrer"
                   />
                   <div className="flex-1 min-w-0">
-                    <label className="text-[11px] text-[#DFD0B0]/70 block mb-1">Avatar Image Source</label>
+                    <label className="text-[11px] text-blue-100/70 block mb-1">Avatar Image Source</label>
                     <div className="flex gap-2">
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
                         className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-bold border border-white/20 flex items-center gap-1.5 cursor-pointer"
                       >
-                        <Upload className="w-3 h-3 text-[#F5C453]" />
+                        <Upload className="w-3 h-3 text-blue-400" />
                         <span>Upload File</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => setIsPhotoSelectorOpen(true)}
-                        className="px-2.5 py-1 rounded-lg bg-[#52673A]/60 hover:bg-[#52673A] text-[#F5C453] text-[11px] font-bold border border-[#F5C453]/30 flex items-center gap-1.5 cursor-pointer"
+                        className="px-2.5 py-1 rounded-lg bg-blue-600/60 hover:bg-[blue-600] text-blue-400 text-[11px] font-bold border border-blue-400/30 flex items-center gap-1.5 cursor-pointer"
                       >
                         <Sparkles className="w-3 h-3" />
                         <span>Choose Preset / AI</span>
@@ -1091,55 +1091,55 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div>
-                    <label className="text-[11px] text-[#DFD0B0]/70 block mb-1">Warrior Nickname</label>
+                    <label className="text-[11px] text-blue-100/70 block mb-1">Warrior Nickname</label>
                     <input
                       type="text"
                       value={displayName}
                       onChange={e => setDisplayName(e.target.value)}
-                      className="w-full px-3 py-1.5 rounded-xl bg-white/5 border border-white/15 text-white text-xs focus:border-[#F5C453] outline-none"
+                      className="w-full px-3 py-1.5 rounded-xl bg-white/5 border border-white/15 text-white text-xs focus:border-blue-400 outline-none"
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] text-[#DFD0B0]/70 block mb-1">Country / Realm</label>
+                    <label className="text-[11px] text-blue-100/70 block mb-1">Country / Realm</label>
                     <input
                       type="text"
                       value={country}
                       onChange={e => setCountry(e.target.value)}
-                      className="w-full px-3 py-1.5 rounded-xl bg-white/5 border border-white/15 text-white text-xs focus:border-[#F5C453] outline-none"
+                      className="w-full px-3 py-1.5 rounded-xl bg-white/5 border border-white/15 text-white text-xs focus:border-blue-400 outline-none"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-[11px] text-[#DFD0B0]/70 block mb-1">Custom Status / Battle Cry</label>
+                  <label className="text-[11px] text-blue-100/70 block mb-1">Custom Status / Battle Cry</label>
                   <input
                     type="text"
                     value={statusMessage}
                     onChange={e => setStatusMessage(e.target.value)}
                     placeholder="e.g. Defending the mountain passes with honor"
-                    className="w-full px-3 py-1.5 rounded-xl bg-white/5 border border-white/15 text-white text-xs focus:border-[#F5C453] outline-none"
+                    className="w-full px-3 py-1.5 rounded-xl bg-white/5 border border-white/15 text-white text-xs focus:border-blue-400 outline-none"
                   />
                 </div>
 
                 {(isOwner || isDeveloper || devModeUnlocked) && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div>
-                      <label className="text-[11px] text-[#DFD0B0]/70 block mb-1">Custom Badge Tag</label>
+                      <label className="text-[11px] text-blue-100/70 block mb-1">Custom Badge Tag</label>
                       <input
                         type="text"
                         value={customBadgeInput}
                         onChange={e => setCustomBadgeInput(e.target.value)}
                         placeholder="e.g. 👑 FOUNDER #0"
-                        className="w-full px-3 py-1.5 rounded-xl bg-white/5 border border-white/15 text-white text-xs focus:border-[#F5C453] outline-none"
+                        className="w-full px-3 py-1.5 rounded-xl bg-white/5 border border-white/15 text-white text-xs focus:border-blue-400 outline-none"
                       />
                     </div>
                     <div>
-                      <label className="text-[11px] text-[#DFD0B0]/70 block mb-1">Badge Number (0=Owner)</label>
+                      <label className="text-[11px] text-blue-100/70 block mb-1">Badge Number (0=Owner)</label>
                       <input
                         type="number"
                         value={badgeNumberInput}
                         onChange={e => setBadgeNumberInput(Number(e.target.value))}
-                        className="w-full px-3 py-1.5 rounded-xl bg-white/5 border border-white/15 text-white text-xs focus:border-[#F5C453] outline-none"
+                        className="w-full px-3 py-1.5 rounded-xl bg-white/5 border border-white/15 text-white text-xs focus:border-blue-400 outline-none"
                       />
                     </div>
                   </div>
@@ -1154,9 +1154,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                   </button>
                   <button
                     onClick={handleSaveEdit}
-                    className="px-4 py-1.5 rounded-xl bg-[#52673A] hover:bg-[#435433] text-white text-xs font-bold border border-[#F5C453]/40 shadow-sm flex items-center gap-1.5 transition-all"
+                    className="px-4 py-1.5 rounded-xl bg-[blue-600] hover:bg-[#435433] text-white text-xs font-bold border border-blue-400/40 shadow-sm flex items-center gap-1.5 transition-all"
                   >
-                    <Check className="w-3.5 h-3.5 text-[#F5C453]" />
+                    <Check className="w-3.5 h-3.5 text-blue-400" />
                     <span>Save Changes</span>
                   </button>
                 </div>
@@ -1166,20 +1166,20 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
             {/* Respect & Battle Metrics Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/10 text-center">
-                <span className="text-[10px] uppercase text-[#DFD0B0]/60 font-semibold block">Respect</span>
-                <span className="text-lg font-black text-[#F5C453]">✊ {currentRespect}</span>
+                <span className="text-[10px] uppercase text-[blue-200]/60 font-semibold block">Respect</span>
+                <span className="text-lg font-black text-blue-400">✊ {currentRespect}</span>
               </div>
               <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/10 text-center">
-                <span className="text-[10px] uppercase text-[#DFD0B0]/60 font-semibold block">Rating</span>
+                <span className="text-[10px] uppercase text-[blue-200]/60 font-semibold block">Rating</span>
                 <span className="text-lg font-black text-white">⚔️ {currentElo}</span>
               </div>
               <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/10 text-center">
-                <span className="text-[10px] uppercase text-[#DFD0B0]/60 font-semibold block">Executions</span>
+                <span className="text-[10px] uppercase text-[blue-200]/60 font-semibold block">Executions</span>
                 <span className="text-lg font-black text-red-400">⚔️ {profile?.executions ?? 0}</span>
               </div>
               <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/10 text-center">
-                <span className="text-[10px] uppercase text-[#DFD0B0]/60 font-semibold block">Mercies</span>
-                <span className="text-lg font-black text-emerald-400">🕊️ {profile?.merciesGranted ?? 0}</span>
+                <span className="text-[10px] uppercase text-[blue-200]/60 font-semibold block">Mercies</span>
+                <span className="text-lg font-black text-sky-400">🕊️ {profile?.merciesGranted ?? 0}</span>
               </div>
             </div>
 
@@ -1187,14 +1187,14 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
             <div className={`p-3.5 rounded-2xl border flex flex-wrap items-center justify-between gap-3 ${
               isSkyAccount 
                 ? 'bg-sky-950/40 border-sky-400/40' 
-                : 'bg-[#52673A]/20 border-[#F5C453]/30'
+                : 'bg-blue-600/20 border-[blue-400]/30'
             }`}>
               <div className="flex items-center gap-3">
-                <span className="text-3xl p-2 rounded-xl bg-black/40 border border-[#F5C453]/30">
+                <span className="text-3xl p-2 rounded-xl bg-black/40 border border-blue-400/30">
                   {isSkyAccount ? '🦋' : currentRank.badge}
                 </span>
                 <div>
-                  <span className="text-[10px] text-[#F5C453] uppercase font-bold tracking-wider">Current Honor Rank</span>
+                  <span className="text-[10px] text-blue-400 uppercase font-bold tracking-wider">Current Honor Rank</span>
                   <h4 className="text-base font-black text-white">{isSkyAccount ? 'CELESTIAL TACTICIAN 🦋' : currentRank.title}</h4>
                 </div>
               </div>
@@ -1202,12 +1202,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                 <button
                   type="button"
                   onClick={() => setIsAvatarStudioOpen(true)}
-                  className="px-3 py-1.5 rounded-xl bg-[#F5C453]/20 hover:bg-[#F5C453]/30 text-[#F5C453] text-xs font-bold border border-[#F5C453]/40 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                  className="px-3 py-1.5 rounded-xl bg-[blue-400]/20 hover:bg-[blue-400]/30 text-blue-400 text-xs font-bold border border-blue-400/40 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
                 >
                   <Wand2 className="w-3.5 h-3.5" />
                   <span>Generate Avatar</span>
                 </button>
-                <span className="text-[11px] text-emerald-400 font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30">
+                <span className="text-[11px] text-sky-400 font-bold px-2 py-0.5 rounded-full bg-sky-500/20 border border-sky-500/30">
                   Cloud Synced ☁️
                 </span>
               </div>
@@ -1225,10 +1225,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                     <MessageSquare className="w-4 h-4" />
                   </div>
                   <div>
-                    <div className="text-xs font-bold text-white group-hover:text-[#F5C453] transition-colors">
+                    <div className="text-xs font-bold text-white group-hover:text-blue-400 transition-colors">
                       Send Feedback
                     </div>
-                    <div className="text-[10px] text-[#DFD0B0]/60">
+                    <div className="text-[10px] text-[blue-200]/60">
                       Submit suggestions to creator
                     </div>
                   </div>
@@ -1240,22 +1240,22 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                 onClick={() => setIsDevSettingsOpen(true)}
                 className={`p-3 rounded-2xl border text-left transition-all flex items-center justify-between group cursor-pointer ${
                   isDeveloper || isOwner || devModeUnlocked
-                    ? 'bg-gradient-to-r from-amber-950/40 to-slate-900/60 border-[#F5C453] shadow-md shadow-[#F5C453]/10'
+                    ? 'bg-gradient-to-r from-blue-900/40 to-slate-900/60 border-blue-400 shadow-md shadow-blue-400/10'
                     : 'bg-white/[0.03] hover:bg-white/[0.07] border-white/10'
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-400/40">
+                  <div className="p-2 rounded-xl bg-blue-400/20 text-blue-300 border border-blue-400/40">
                     <Crown className="w-4 h-4" />
                   </div>
                   <div>
-                    <div className="text-xs font-black text-white group-hover:text-amber-300 transition-colors flex items-center gap-1.5">
+                    <div className="text-xs font-black text-white group-hover:text-blue-300 transition-colors flex items-center gap-1.5">
                       <span>Developer Setting</span>
-                      <span className="text-[9px] px-1 rounded bg-amber-500/20 text-amber-300 font-mono border border-amber-400/40">
+                      <span className="text-[9px] px-1 rounded bg-blue-500/20 text-blue-300 font-mono border border-blue-400/40">
                         [Dev Set]
                       </span>
                     </div>
-                    <div className="text-[10px] text-[#DFD0B0]/60">
+                    <div className="text-[10px] text-[blue-200]/60">
                       Manage roles, badges & permissions
                     </div>
                   </div>
@@ -1269,7 +1269,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
         <div className="mt-4">
           <button
             onClick={onClose}
-            className="w-full py-2.5 rounded-2xl bg-[#52673A] hover:bg-[#435433] text-white font-bold text-xs transition-all shadow-md border border-[#F5C453]/40 cursor-pointer"
+            className="w-full py-2.5 rounded-2xl bg-[blue-600] hover:bg-[#435433] text-white font-bold text-xs transition-all shadow-md border border-blue-400/40 cursor-pointer"
           >
             Close
           </button>

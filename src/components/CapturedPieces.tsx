@@ -105,7 +105,7 @@ export const CapturedPieces: React.FC<CapturedPiecesProps> = ({
             animate={{ opacity: 1, scale: 1, x: 0 }}
             exit={{ opacity: 0, scale: 0.6, x: 4 }}
             transition={{ type: 'spring', stiffness: 500, damping: 28 }}
-            className="text-[11px] font-mono font-black px-2 py-0.5 rounded-full bg-[#52673A]/40 text-[#F5C453] border border-[#F5C453]/40 backdrop-blur-md shadow-sm shadow-[#F5C453]/10"
+            className="text-[11px] font-mono font-black px-2 py-0.5 rounded-full bg-blue-600/40 text-blue-600 border border-blue-600/40 backdrop-blur-md shadow-sm shadow-blue-600/10"
           >
             +{materialAdvantage}
           </motion.span>

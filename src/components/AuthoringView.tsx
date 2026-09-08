@@ -277,10 +277,10 @@ export const AuthoringView: React.FC<AuthoringViewProps> = ({
   return (
     <PanelContainer>
       {/* Top Header Card */}
-      <div className="glass-panel p-4 sm:p-5 rounded-3xl border border-[#F5C453]/30 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="glass-panel p-4 sm:p-5 rounded-3xl border border-[#0056b3]/30 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#8C2425] via-[#52673A] to-[#F5C453] p-0.5 shadow-lg shadow-[#F5C453]/25 flex-shrink-0">
-            <div className="w-full h-full bg-[#161c12] rounded-[14px] flex items-center justify-center text-[#F5C453]">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#1e3a8a] via-[#2563eb] to-[#0056b3] p-0.5 shadow-lg shadow-[#0056b3]/25 flex-shrink-0">
+            <div className="w-full h-full bg-[slate-950] rounded-[14px] flex items-center justify-center text-[#0056b3]">
               <PenTool className="w-6 h-6" />
             </div>
           </div>
@@ -289,24 +289,24 @@ export const AuthoringView: React.FC<AuthoringViewProps> = ({
               <h2 className="text-xl sm:text-2xl font-black font-heading text-white tracking-tight">
                 Chesskys Creator Studio
               </h2>
-              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#8C2425] text-white border border-[#F5C453]/40 uppercase tracking-wider">
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#1e3a8a] text-white border border-[#0056b3]/40 uppercase tracking-wider">
                 Authoring Hub
               </span>
             </div>
-            <p className="text-xs text-[#DFD0B0]/75">
+            <p className="text-xs text-[#334155]/75">
               Design, test, and publish tactical chess puzzles and historical Kurdish battle scenarios.
             </p>
           </div>
         </div>
 
         {/* Studio Sub-Tabs */}
-        <div className="flex items-center gap-1.5 bg-[#161c12] p-1.5 rounded-2xl border border-white/10">
+        <div className="flex items-center gap-1.5 bg-[slate-950] p-1.5 rounded-2xl border border-white/10">
           <button
             onClick={() => { setTab('create'); setTestSolving(false); }}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
               tab === 'create'
-                ? 'bg-[#52673A] text-white shadow-md border border-[#F5C453]/50'
-                : 'text-[#DFD0B0]/70 hover:text-white'
+                ? 'bg-[#2563eb] text-white shadow-md border border-[#0056b3]/50'
+                : 'text-[#334155]/70 hover:text-white'
             }`}
           >
             <PenTool className="w-3.5 h-3.5" />
@@ -317,8 +317,8 @@ export const AuthoringView: React.FC<AuthoringViewProps> = ({
             onClick={() => setTab('library')}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
               tab === 'library'
-                ? 'bg-[#52673A] text-white shadow-md border border-[#F5C453]/50'
-                : 'text-[#DFD0B0]/70 hover:text-white'
+                ? 'bg-[#2563eb] text-white shadow-md border border-[#0056b3]/50'
+                : 'text-[#334155]/70 hover:text-white'
             }`}
           >
             <BookOpen className="w-3.5 h-3.5" />
@@ -334,7 +334,7 @@ export const AuthoringView: React.FC<AuthoringViewProps> = ({
             ? 'bg-emerald-950/80 border-emerald-500/50 text-emerald-200'
             : bannerMessage.type === 'error'
             ? 'bg-rose-950/80 border-rose-500/50 text-rose-200'
-            : 'bg-amber-950/80 border-amber-500/50 text-amber-200'
+            : 'blue-950/80 blue-500/50 blue-200'
         }`}>
           <span>{bannerMessage.text}</span>
           <button onClick={() => setBannerMessage(null)} className="text-white/60 hover:text-white font-mono">✕</button>
@@ -346,16 +346,16 @@ export const AuthoringView: React.FC<AuthoringViewProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* LEFT: Chessboard & Solution Moves Visualizer */}
           <div className="lg:col-span-7 flex flex-col items-center">
-            <div className="p-3.5 rounded-3xl bg-[#10140e] border-2 border-[#F5C453]/30 shadow-2xl w-full max-w-[540px]">
+            <div className="p-3.5 rounded-3xl bg-[slate-950] border-2 border-[#0056b3]/30 shadow-2xl w-full max-w-[540px]">
               {/* Board Header Status */}
               <div className="mb-3 px-3 py-2 rounded-2xl bg-black/60 border border-white/10 flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2">
-                  <span className={`w-2.5 h-2.5 rounded-full ${testSolving ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'}`} />
+                  <span className={`w-2.5 h-2.5 rounded-full ${testSolving ? 'blue-400 animate-ping' : 'bg-emerald-400'}`} />
                   <span className="font-bold text-white">
                     {testSolving ? `Test Solve Mode (Step ${solveStep}/${solutionMoves.length})` : 'Position & Solution Recorder'}
                   </span>
                 </div>
-                <span className="text-[#DFD0B0]/70 font-mono text-[11px]">
+                <span className="text-[#334155]/70 font-mono text-[11px]">
                   Turn: {boardGame.turn() === 'w' ? 'White ⚪' : 'Black ⚫'}
                 </span>
               </div>
@@ -379,7 +379,7 @@ export const AuthoringView: React.FC<AuthoringViewProps> = ({
                     <button
                       onClick={startTestSolving}
                       disabled={solutionMoves.length === 0}
-                      className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:brightness-110 disabled:opacity-40 text-black font-black text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
+                      className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 hover:brightness-110 disabled:opacity-40 text-black font-black text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
                     >
                       <Play className="w-3.5 h-3.5 fill-black" />
                       <span>Test Solve</span>
@@ -396,7 +396,7 @@ export const AuthoringView: React.FC<AuthoringViewProps> = ({
 
                   <button
                     onClick={resetBoardToInitial}
-                    className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[#DFD0B0] text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
+                    className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-[#334155] text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
                     title="Reset to starting FEN"
                   >
                     <RefreshCw className="w-3 h-3" />
@@ -432,11 +432,11 @@ export const AuthoringView: React.FC<AuthoringViewProps> = ({
             {/* Recorded Move Sequence Flow */}
             <div className="w-full max-w-[540px] mt-4 p-4 rounded-3xl bg-black/60 border border-white/10">
               <div className="flex items-center justify-between mb-2.5">
-                <span className="text-xs font-black uppercase tracking-wider text-[#DFD0B0]/70 flex items-center gap-1.5">
-                  <Layers className="w-3.5 h-3.5 text-[#F5C453]" />
+                <span className="text-xs font-black uppercase tracking-wider text-[#334155]/70 flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-[#0056b3]" />
                   Recorded Solution Sequence ({solutionMoves.length} moves)
                 </span>
-                <span className="text-[10px] text-amber-300 font-mono">
+                <span className="text-[10px] blue-300 font-mono">
                   {solutionMoves.length === 0 ? 'Play moves on the board to record' : 'Moves validated in order'}
                 </span>
               </div>
@@ -455,7 +455,7 @@ export const AuthoringView: React.FC<AuthoringViewProps> = ({
                           ? 'bg-amber-500 text-black border-amber-300 font-black animate-pulse'
                           : testSolving && solveStep > idx
                           ? 'bg-emerald-600/30 text-emerald-300 border-emerald-500/40'
-                          : 'bg-[#52673A]/40 text-white border-[#F5C453]/40'
+                          : 'bg-[#2563eb]/40 text-white border-[#0056b3]/40'
                       }`}
                     >
                       <span className="text-[10px] opacity-60">#{idx + 1}</span>
@@ -469,40 +469,40 @@ export const AuthoringView: React.FC<AuthoringViewProps> = ({
 
           {/* RIGHT: Scenario Metadata & Publishing Configuration */}
           <div className="lg:col-span-5 space-y-4">
-            <div className="glass-panel p-5 rounded-3xl border border-[#F5C453]/30 shadow-xl space-y-4">
+            <div className="glass-panel p-5 rounded-3xl border border-[#0056b3]/30 shadow-xl space-y-4">
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
                 <h3 className="text-base font-black text-white flex items-center gap-2">
-                  <Award className="w-4 h-4 text-[#F5C453]" />
+                  <Award className="w-4 h-4 text-[#0056b3]" />
                   <span>Scenario Specification</span>
                 </h3>
-                <span className="text-xs font-mono text-[#F5C453] bg-[#F5C453]/10 px-2 py-0.5 rounded-md">
+                <span className="text-xs font-mono text-[#0056b3] bg-[#0056b3]/10 px-2 py-0.5 rounded-md">
                   {playerColor === 'w' ? 'White to Move' : 'Black to Move'}
                 </span>
               </div>
 
               {/* Title & Lore */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[#DFD0B0]">Puzzle Title</label>
+                <label className="text-xs font-bold text-[#334155]">Puzzle Title</label>
                 <input
                   type="text"
                   value={title}
                   onChange={e => setTitle(e.target.value)}
                   placeholder="e.g., Mount Qandil Fortress Breakout"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/20 text-white text-xs font-bold focus:border-[#F5C453] focus:outline-none"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/20 text-white text-xs font-bold focus:border-[#0056b3] focus:outline-none"
                 />
               </div>
 
               {/* Tactical Theme */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-[#DFD0B0]">Tactical Theme</label>
+                  <label className="text-xs font-bold text-[#334155]">Tactical Theme</label>
                   <select
                     value={theme}
                     onChange={e => setTheme(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl bg-black/60 border border-white/20 text-white text-xs font-bold focus:border-[#F5C453] focus:outline-none cursor-pointer"
+                    className="w-full px-3 py-2.5 rounded-xl bg-black/60 border border-white/20 text-white text-xs font-bold focus:border-[#0056b3] focus:outline-none cursor-pointer"
                   >
                     {THEME_OPTIONS.map(opt => (
-                      <option key={opt} value={opt} className="bg-[#161c12] text-white">
+                      <option key={opt} value={opt} className="bg-[slate-950] text-white">
                         {opt}
                       </option>
                     ))}
@@ -510,16 +510,16 @@ export const AuthoringView: React.FC<AuthoringViewProps> = ({
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-[#DFD0B0]">Difficulty</label>
+                  <label className="text-xs font-bold text-[#334155]">Difficulty</label>
                   <select
                     value={difficulty}
                     onChange={e => setDifficulty(e.target.value as any)}
-                    className="w-full px-3 py-2.5 rounded-xl bg-black/60 border border-white/20 text-white text-xs font-bold focus:border-[#F5C453] focus:outline-none cursor-pointer"
+                    className="w-full px-3 py-2.5 rounded-xl bg-black/60 border border-white/20 text-white text-xs font-bold focus:border-[#0056b3] focus:outline-none cursor-pointer"
                   >
-                    <option value="Easy" className="bg-[#161c12]">Easy (1000 - 1300)</option>
-                    <option value="Medium" className="bg-[#161c12]">Medium (1300 - 1700)</option>
-                    <option value="Hard" className="bg-[#161c12]">Hard (1700 - 2100)</option>
-                    <option value="Master" className="bg-[#161c12]">Master (2100+)</option>
+                    <option value="Easy" className="bg-[slate-950]">Easy (1000 - 1300)</option>
+                    <option value="Medium" className="bg-[slate-950]">Medium (1300 - 1700)</option>
+                    <option value="Hard" className="bg-[slate-950]">Hard (1700 - 2100)</option>
+                    <option value="Master" className="bg-[slate-950]">Master (2100+)</option>
                   </select>
                 </div>
               </div>
@@ -527,8 +527,8 @@ export const AuthoringView: React.FC<AuthoringViewProps> = ({
               {/* Rating Slider */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-[#DFD0B0]">Target Tactical Rating</span>
-                  <span className="font-black text-[#F5C453] font-mono">{rating} Elo</span>
+                  <span className="font-bold text-[#334155]">Target Tactical Rating</span>
+                  <span className="font-black text-[#0056b3] font-mono">{rating} Elo</span>
                 </div>
                 <input
                   type="range"
@@ -537,17 +537,17 @@ export const AuthoringView: React.FC<AuthoringViewProps> = ({
                   step={25}
                   value={rating}
                   onChange={e => setRating(Number(e.target.value))}
-                  className="w-full accent-[#F5C453] cursor-pointer"
+                  className="w-full accent-[#0056b3] cursor-pointer"
                 />
               </div>
 
               {/* FEN String Input */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[#DFD0B0] flex items-center justify-between">
+                <label className="text-xs font-bold text-[#334155] flex items-center justify-between">
                   <span>Starting Position (FEN)</span>
                   <button
                     onClick={() => applyFen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')}
-                    className="text-[10px] text-amber-300 hover:underline cursor-pointer"
+                    className="text-[10px] blue-300 hover:underline cursor-pointer"
                   >
                     Set Starting Board
                   </button>
@@ -557,7 +557,7 @@ export const AuthoringView: React.FC<AuthoringViewProps> = ({
                     type="text"
                     value={fenInput}
                     onChange={e => applyFen(e.target.value)}
-                    className="flex-1 px-3 py-2 rounded-xl bg-black/60 border border-white/20 text-white font-mono text-[11px] focus:border-[#F5C453] focus:outline-none"
+                    className="flex-1 px-3 py-2 rounded-xl bg-black/60 border border-white/20 text-white font-mono text-[11px] focus:border-[#0056b3] focus:outline-none"
                   />
                   <button
                     onClick={() => onOpenAnalysisWithFen && onOpenAnalysisWithFen(fenInput)}
@@ -571,19 +571,19 @@ export const AuthoringView: React.FC<AuthoringViewProps> = ({
 
               {/* Description / Tactical Clue */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[#DFD0B0]">Description & Tactical Lore</label>
+                <label className="text-xs font-bold text-[#334155]">Description & Tactical Lore</label>
                 <textarea
                   rows={2}
                   value={description}
                   onChange={e => setDescription(e.target.value)}
                   placeholder="Explain the tactical goal or historic lore of this position..."
-                  className="w-full px-3 py-2 rounded-xl bg-black/60 border border-white/20 text-white text-xs focus:border-[#F5C453] focus:outline-none"
+                  className="w-full px-3 py-2 rounded-xl bg-black/60 border border-white/20 text-white text-xs focus:border-[#0056b3] focus:outline-none"
                 />
               </div>
 
               {/* Tactical Hints */}
               <div className="space-y-2">
-                <label className="text-xs font-bold text-[#DFD0B0]">Author's Hints</label>
+                <label className="text-xs font-bold text-[#334155]">Author's Hints</label>
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
@@ -591,11 +591,11 @@ export const AuthoringView: React.FC<AuthoringViewProps> = ({
                     onChange={e => setNewHintText(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleAddHint()}
                     placeholder="Add a helpful solving hint..."
-                    className="flex-1 px-3 py-2 rounded-xl bg-black/60 border border-white/20 text-white text-xs focus:border-[#F5C453] focus:outline-none"
+                    className="flex-1 px-3 py-2 rounded-xl bg-black/60 border border-white/20 text-white text-xs focus:border-[#0056b3] focus:outline-none"
                   />
                   <button
                     onClick={handleAddHint}
-                    className="px-3 py-2 rounded-xl bg-[#52673A] text-white text-xs font-bold hover:brightness-110 cursor-pointer"
+                    className="px-3 py-2 rounded-xl bg-[#2563eb] text-white text-xs font-bold hover:brightness-110 cursor-pointer"
                   >
                     Add
                   </button>
@@ -603,7 +603,7 @@ export const AuthoringView: React.FC<AuthoringViewProps> = ({
 
                 <div className="space-y-1">
                   {hints.map((h, i) => (
-                    <div key={i} className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs text-[#DFD0B0]">
+                    <div key={i} className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs text-[#334155]">
                       <span className="truncate pr-2">💡 {h}</span>
                       <button onClick={() => handleRemoveHint(i)} className="text-rose-400 hover:text-rose-300 font-mono text-xs">✕</button>
                     </div>
@@ -614,7 +614,7 @@ export const AuthoringView: React.FC<AuthoringViewProps> = ({
               {/* Save / Publish Button */}
               <button
                 onClick={handleSavePuzzle}
-                className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-[#52673A] via-[#8C2425] to-[#F5C453] hover:brightness-110 text-white font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#F5C453]/20 border border-[#F5C453]/50 transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+                className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-[#2563eb] via-[#1e3a8a] to-[#0056b3] hover:brightness-110 text-white font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#0056b3]/20 border border-[#0056b3]/50 transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
               >
                 <Save className="w-4 h-4" />
                 <span>Save & Publish Tactical Scenario</span>
@@ -629,7 +629,7 @@ export const AuthoringView: React.FC<AuthoringViewProps> = ({
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-base font-black text-white flex items-center gap-2">
-              <Sun className="w-5 h-5 text-[#F5C453]" />
+              <Sun className="w-5 h-5 text-[#0056b3]" />
               <span>Authored Tactical Challenges ({puzzles.length})</span>
             </h3>
             <button
@@ -641,9 +641,9 @@ export const AuthoringView: React.FC<AuthoringViewProps> = ({
                 setSolutionMoves([]);
                 setTab('create');
               }}
-              className="px-3.5 py-1.5 rounded-xl bg-[#52673A] hover:bg-[#52673A]/90 text-white text-xs font-bold flex items-center gap-1.5 border border-[#F5C453]/40 cursor-pointer shadow-md"
+              className="px-3.5 py-1.5 rounded-xl bg-[#2563eb] hover:bg-[#2563eb]/90 text-white text-xs font-bold flex items-center gap-1.5 border border-[#0056b3]/40 cursor-pointer shadow-md"
             >
-              <Plus className="w-4 h-4 text-[#F5C453]" />
+              <Plus className="w-4 h-4 text-[#0056b3]" />
               <span>Create New</span>
             </button>
           </div>
@@ -652,12 +652,12 @@ export const AuthoringView: React.FC<AuthoringViewProps> = ({
             {puzzles.map(p => (
               <div
                 key={p.id}
-                className="glass-panel p-4 rounded-3xl border border-[#F5C453]/25 hover:border-[#F5C453]/60 transition-all shadow-lg flex flex-col justify-between space-y-3"
+                className="glass-panel p-4 rounded-3xl border border-[#0056b3]/25 hover:border-[#0056b3]/60 transition-all shadow-lg flex flex-col justify-between space-y-3"
               >
                 <div>
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div>
-                      <span className="text-[10px] font-black uppercase tracking-wider text-[#F5C453] bg-[#F5C453]/15 px-2 py-0.5 rounded-md border border-[#F5C453]/30">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-[#0056b3] bg-[#0056b3]/15 px-2 py-0.5 rounded-md border border-[#0056b3]/30">
                         {p.theme}
                       </span>
                       <h4 className="text-base font-black text-white mt-1.5 leading-snug">
@@ -665,16 +665,16 @@ export const AuthoringView: React.FC<AuthoringViewProps> = ({
                       </h4>
                     </div>
                     <div className="text-right">
-                      <span className="text-xs font-black text-amber-400 font-mono">{p.rating} Elo</span>
+                      <span className="text-xs font-black blue-400 font-mono">{p.rating} Elo</span>
                       <div className="text-[10px] text-white/50">{p.difficulty}</div>
                     </div>
                   </div>
 
-                  <p className="text-xs text-[#DFD0B0]/75 line-clamp-2">
+                  <p className="text-xs text-[#334155]/75 line-clamp-2">
                     {p.description}
                   </p>
 
-                  <div className="mt-3 flex items-center gap-3 text-[11px] text-[#DFD0B0]/60">
+                  <div className="mt-3 flex items-center gap-3 text-[11px] text-[#334155]/60">
                     <span>By {p.authorName}</span>
                     <span>•</span>
                     <span>{p.solutionMoves.length} moves</span>

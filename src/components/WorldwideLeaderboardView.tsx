@@ -151,19 +151,20 @@ export const WorldwideLeaderboardView: React.FC = () => {
   return (
     <PanelContainer className="min-h-[100dvh] pb-24 md:pb-12 text-slate-100 font-ui overflow-y-auto">
       {/* Header */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4 glass-panel p-5 rounded-3xl border border-[#F5C453]/30 shadow-2xl relative overflow-hidden">
-        <div className="absolute -top-24 -right-24 w-64 h-64 bg-[#F5C453]/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 glass-panel p-5 rounded-3xl border border-blue-400/30 shadow-2xl relative overflow-hidden">
+        <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
         <div className="flex items-center gap-4 z-10">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#8C2425] via-[#52673A] to-[#F5C453] p-0.5 shadow-lg flex-shrink-0">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-700 via-blue-600 to-blue-400 p-0.5 shadow-lg flex-shrink-0">
             <div className="w-full h-full bg-black/60 backdrop-blur-md rounded-2xl flex items-center justify-center">
-              <Trophy className="w-7 h-7 text-[#F5C453]" />
+              <Trophy className="w-7 h-7 text-blue-400" />
             </div>
           </div>
           <div>
             <h1 className="text-2xl font-black text-white tracking-tight">Worldwide Leaderboard</h1>
-            <p className="text-sm text-[#DFD0B0]/70">Compete for glory. Climb the ranks.</p>
+            <p className="text-sm text-blue-100/70">Compete for glory. Climb the ranks.</p>
           </div>
         </div>
+
         
         {/* Search Bar */}
         <div className="relative w-full md:w-64 z-10">
@@ -173,7 +174,7 @@ export const WorldwideLeaderboardView: React.FC = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search player..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-black/50 border border-white/10 text-sm text-white focus:outline-none focus:border-[#F5C453]/50 transition-colors placeholder:text-white/30"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-black/50 border border-white/10 text-sm text-white focus:outline-none focus:border-blue-400/50 transition-colors placeholder:text-white/30"
           />
         </div>
       </div>
@@ -194,7 +195,7 @@ export const WorldwideLeaderboardView: React.FC = () => {
               onClick={() => setActiveMode(m.id as any)}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
                 activeMode === m.id
-                  ? 'bg-gradient-to-r from-[#8C2425] to-[#52673A] text-white shadow-md border border-[#F5C453]/30'
+                  ? 'bg-gradient-to-r from-blue-700 to-blue-600 text-white shadow-md border border-blue-400/30'
                   : 'text-white/60 hover:text-white hover:bg-white/5 border border-transparent'
               }`}
             >
@@ -216,7 +217,7 @@ export const WorldwideLeaderboardView: React.FC = () => {
                 key={s.id}
                 onClick={() => setScope(s.id as any)}
                 className={`p-2 rounded-lg transition-all ${
-                  scope === s.id ? 'bg-white/10 text-[#F5C453]' : 'text-white/40 hover:text-white/80'
+                  scope === s.id ? 'bg-white/10 text-blue-400' : 'text-white/40 hover:text-white/80'
                 }`}
               >
                 {s.icon}
@@ -247,7 +248,7 @@ export const WorldwideLeaderboardView: React.FC = () => {
           
           {/* Top 3 Podium Hero */}
           {page === 1 && !search && podiumPlayers.length > 0 && (
-            <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-[#F5C453]/20 flex items-end justify-center gap-4 sm:gap-8 h-[240px]">
+            <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-blue-400/20 flex items-end justify-center gap-4 sm:gap-8 h-[240px]">
               {podiumPlayers.map((p, i) => {
                 const isFirst = p.rank === 1;
                 const isSecond = p.rank === 2;
@@ -313,7 +314,7 @@ export const WorldwideLeaderboardView: React.FC = () => {
                     players.map((p) => (
                       <tr 
                         key={p.uid} 
-                        className={`transition-colors hover:bg-white/[0.02] ${p.isCurrentUser ? 'bg-[#52673A]/20' : ''}`}
+                        className={`transition-colors hover:bg-white/[0.02] ${p.isCurrentUser ? 'bg-blue-600/20' : ''}`}
                       >
                         <td className="p-4 text-center">
                           <div className="flex justify-center">{getRankMedal(p.rank)}</div>
@@ -333,7 +334,7 @@ export const WorldwideLeaderboardView: React.FC = () => {
                             <div className="flex flex-col">
                               <div className="flex items-center gap-1.5">
                                 {renderTitleBadge(p.title)}
-                                <span className={`text-sm font-bold ${p.isCurrentUser ? 'text-[#F5C453]' : 'text-white'}`}>
+                                <span className={`text-sm font-bold ${p.isCurrentUser ? 'text-blue-400' : 'text-white'}`}>
                                   {p.displayName}
                                 </span>
                               </div>
@@ -342,7 +343,7 @@ export const WorldwideLeaderboardView: React.FC = () => {
                           </div>
                         </td>
                         <td className="p-4 text-right">
-                          <span className={`text-sm font-black font-mono ${p.isCurrentUser ? 'text-[#F5C453]' : 'text-white/90'}`}>
+                          <span className={`text-sm font-black font-mono ${p.isCurrentUser ? 'text-blue-400' : 'text-white/90'}`}>
                             {p.elo}
                           </span>
                         </td>
@@ -381,26 +382,26 @@ export const WorldwideLeaderboardView: React.FC = () => {
 
             {/* Sticky "Your Rank" Row */}
             {myRankData && !isLoading && (
-              <div className="border-t border-[#F5C453]/40 bg-gradient-to-r from-[#161c12] to-[#1a2315] p-0">
+              <div className="border-t border-blue-400/40 bg-gradient-to-r from-slate-900 to-slate-800 p-0">
                 <table className="w-full text-left border-collapse min-w-[700px]">
                   <tbody>
                     <tr>
                       <td className="p-4 text-center w-16">
-                        <div className="flex justify-center text-[#F5C453] font-bold text-xs whitespace-nowrap">
+                        <div className="flex justify-center text-blue-400 font-bold text-xs whitespace-nowrap">
                           {myRankData.rank ? `#${myRankData.rank}` : 'Unranked — Play a rated game to appear'}
                         </div>
                       </td>
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           <div className="relative">
-                            <div className="w-8 h-8 rounded-full bg-[#52673A]/40 flex items-center justify-center text-xs font-bold border border-[#F5C453]/40">
+                            <div className="w-8 h-8 rounded-full bg-blue-600/40 flex items-center justify-center text-xs font-bold border border-blue-400/40">
                               You
                             </div>
                           </div>
                           <div className="flex flex-col">
                             <div className="flex items-center gap-1.5">
                               {renderTitleBadge(myRankData.title)}
-                              <span className="text-sm font-bold text-[#F5C453]">
+                              <span className="text-sm font-bold text-blue-400">
                                 {myRankData.displayName}
                               </span>
                             </div>
@@ -408,7 +409,7 @@ export const WorldwideLeaderboardView: React.FC = () => {
                         </div>
                       </td>
                       <td className="p-4 text-right">
-                        <span className="text-sm font-black font-mono text-[#F5C453]">
+                        <span className="text-sm font-black font-mono text-blue-400">
                           {myRankData.elo}
                         </span>
                       </td>
@@ -418,7 +419,7 @@ export const WorldwideLeaderboardView: React.FC = () => {
                         </span>
                       </td>
                       <td className="p-4 text-right">
-                        <span className="text-xs font-bold text-[#F5C453]">{myRankData.winRate}%</span>
+                        <span className="text-xs font-bold text-blue-400">{myRankData.winRate}%</span>
                       </td>
                       <td className="p-4 text-right">
                         <span className="text-xs font-bold text-white/60">-</span>
@@ -496,7 +497,7 @@ export const WorldwideLeaderboardView: React.FC = () => {
                         return (
                           <Cell 
                             key={`cell-${index}`} 
-                            fill={isUserBracket ? '#F5C453' : 'rgba(82, 103, 58, 0.6)'} 
+                            fill={isUserBracket ? '#3b82f6' : 'rgba(37, 99, 235, 0.6)'} 
                           />
                         );
                       })}

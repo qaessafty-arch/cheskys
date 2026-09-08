@@ -100,9 +100,9 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
     if (!title) return null;
     let bg = 'bg-slate-700/50 text-slate-300 border-slate-600/50';
     if (title === 'GM') bg = 'bg-red-500/20 text-red-300 border-red-500/40 shadow-[0_0_10px_rgba(239,68,68,0.3)]';
-    else if (title === 'IM') bg = 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.3)]';
+    else if (title === 'IM') bg = 'bg-blue-400/20 text-blue-300 border-blue-400/40 shadow-[0_0_10px_rgba(59,130,246,0.3)]';
     else if (title === 'FM') bg = 'bg-blue-500/20 text-blue-300 border-blue-500/40 shadow-[0_0_10px_rgba(59,130,246,0.3)]';
-    else if (title === 'NM') bg = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.3)]';
+    else if (title === 'NM') bg = 'bg-sky-500/20 text-sky-300 border-sky-500/40 shadow-[0_0_10px_rgba(16,185,129,0.3)]';
     
     return (
       <span className={`text-[10px] font-black px-2 py-0.5 rounded-sm border ${bg} mr-2`}>
@@ -150,8 +150,8 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
         peak: Math.max(baseElo, baseElo + 55),
         games: profile?.gamesPlayed || 0,
         winRate: 72,
-        icon: <Clock className="w-5 h-5 text-emerald-400" />,
-        badgeBg: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
+        icon: <Clock className="w-5 h-5 text-sky-400" />,
+        badgeBg: 'bg-sky-500/10 text-sky-300 border-sky-500/20'
       },
       blitz: {
         title: 'Blitz',
@@ -170,8 +170,8 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
         peak: Math.max(Math.max(1400, Math.round(baseElo * 0.88)), Math.max(1500, Math.round(baseElo * 0.92))),
         games: profile?.gamesPlayed ? 142 : 0,
         winRate: 64,
-        icon: <Zap className="w-5 h-5 text-amber-400" />,
-        badgeBg: 'bg-amber-500/10 text-amber-300 border-amber-500/20'
+        icon: <Zap className="w-5 h-5 text-blue-400" />,
+        badgeBg: 'bg-blue-500/10 text-blue-300 border-blue-500/20'
       },
       daily: {
         title: 'Daily',
@@ -438,7 +438,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
       desc: 'Finished 1st place in the Erbil Citadel Open Arena',
       icon: '🏆',
       rarity: 'Legendary',
-      color: 'from-amber-500/20 to-yellow-500/10 border-amber-400/40 text-amber-300'
+      color: 'from-blue-500/20 to-yellow-500/10 border-blue-400/40 text-blue-300'
     },
     {
       id: 'puzzles_100',
@@ -462,7 +462,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
       desc: 'Won 20 consecutive Bullet & Blitz matches under 3 minutes',
       icon: '⚡',
       rarity: 'Rare',
-      color: 'from-amber-400/20 to-orange-500/10 border-amber-300/40 text-amber-200'
+      color: 'from-blue-400/20 to-orange-500/10 border-blue-300/40 text-blue-200'
     },
     {
       id: 'peshmerga_sun',
@@ -470,7 +470,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
       desc: 'Awarded to defenders demonstrating supreme honor & respect',
       icon: '☀️',
       rarity: 'National Legend',
-      color: 'from-emerald-500/20 to-amber-500/10 border-[#F5C453]/50 text-[#F5C453]'
+      color: 'from-sky-500/20 to-blue-500/10 border-[blue-400]/50 text-[blue-400]'
     },
     {
       id: 'streak_10',
@@ -494,7 +494,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
       desc: 'Played a 35+ move victory with engine accuracy above 95%',
       icon: '🎯',
       rarity: 'Legendary',
-      color: 'from-emerald-500/20 to-teal-500/10 border-emerald-400/40 text-emerald-300'
+      color: 'from-sky-500/20 to-teal-500/10 border-sky-400/40 text-sky-300'
     }
   ];
 
@@ -541,15 +541,15 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
             <img
               src={avatarUrl}
               alt={displayName}
-              className="w-9 h-9 rounded-xl object-cover border-2 border-[#F5C453] shadow-sm"
+              className="w-9 h-9 rounded-xl object-cover border-2 border-blue-400 shadow-sm"
               referrerPolicy="no-referrer"
             />
             <span 
               className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-slate-900 ${
                 onlineStatus === 'online'
-                  ? 'bg-emerald-400'
+                  ? 'bg-sky-400'
                   : onlineStatus === 'in_game'
-                  ? 'bg-amber-400 animate-pulse'
+                  ? 'bg-blue-400 animate-pulse'
                   : 'bg-slate-500'
               }`}
             />
@@ -574,16 +574,16 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
         <div className="flex items-center gap-2 shrink-0">
           <div 
             onClick={() => setActiveTab('analytics')}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 cursor-pointer shadow-sm"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-sky-500/15 border border-sky-500/30 text-sky-300 cursor-pointer shadow-sm"
           >
-            <Clock className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+            <Clock className="w-3.5 h-3.5 text-sky-400 shrink-0" />
             <span className="text-xs font-black font-mono tracking-tight">{baseElo}</span>
           </div>
 
           <button
             type="button"
             onClick={() => setIsMobileDrawerOpen(true)}
-            className="min-w-[44px] min-h-[44px] p-2 rounded-xl bg-slate-800 hover:bg-slate-750 active:bg-slate-700 text-[#F5C453] border border-slate-700/80 flex items-center justify-center transition-all cursor-pointer"
+            className="min-w-[44px] min-h-[44px] p-2 rounded-xl bg-slate-800 hover:bg-slate-750 active:bg-slate-700 text-[blue-400] border border-slate-700/80 flex items-center justify-center transition-all cursor-pointer"
             title="Open Profile Actions & Details"
             aria-label="Open Profile Details"
           >
@@ -595,7 +595,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
       {/* DESKTOP FULL HERO CARD (>= 768px) */}
       <div className="hidden md:block relative rounded-3xl bg-slate-900/90 backdrop-blur-xl border border-slate-800 p-6 sm:p-7 shadow-xl overflow-hidden">
         {/* Kurdish Accent Bar */}
-        <div className="absolute top-0 left-0 h-1.5 w-full bg-gradient-to-r from-[#8C2425] via-[#52673A] to-[#F5C453]" />
+        <div className="absolute top-0 left-0 h-1.5 w-full bg-gradient-to-r from-[blue-800] via-[blue-600] to-[blue-400]" />
 
         <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-6 relative z-10">
           {/* Avatar & User Details */}
@@ -605,13 +605,13 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
               <img
                 src={avatarUrl}
                 alt={displayName}
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-2 border-[#F5C453] shadow-lg shadow-black/40"
+                className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-2 border-[blue-400] shadow-lg shadow-black/40"
                 referrerPolicy="no-referrer"
               />
               <button
                 type="button"
                 onClick={() => setIsAvatarModalOpen(true)}
-                className="absolute inset-0 rounded-2xl bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity text-[#F5C453] cursor-pointer"
+                className="absolute inset-0 rounded-2xl bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity text-[blue-400] cursor-pointer"
                 title="Change Avatar"
               >
                 <Camera className="w-5 h-5" />
@@ -622,18 +622,18 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
               <div 
                 className={`absolute -bottom-2 right-1/2 translate-x-1/2 sm:translate-x-0 sm:right-0 px-2 py-0.5 rounded-full text-[11px] font-bold border flex items-center gap-1.5 shadow-md ${
                   onlineStatus === 'online'
-                    ? 'bg-emerald-950 text-emerald-300 border-emerald-500/40'
+                    ? 'bg-sky-950 text-sky-300 border-sky-500/40'
                     : onlineStatus === 'in_game'
-                    ? 'bg-amber-950 text-amber-300 border-amber-500/40 animate-pulse'
+                    ? 'bg-blue-950 text-blue-300 border-blue-500/40 animate-pulse'
                     : 'bg-slate-900 text-slate-400 border-slate-700'
                 }`}
               >
                 <span 
                   className={`w-2 h-2 rounded-full ${
                     onlineStatus === 'online'
-                      ? 'bg-emerald-400'
+                      ? 'bg-sky-400'
                       : onlineStatus === 'in_game'
-                      ? 'bg-amber-400'
+                      ? 'bg-blue-400'
                       : 'bg-slate-500'
                   }`} 
                 />
@@ -652,7 +652,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                   {countryFlag}
                 </span>
                 {isOwner && (
-                  <span className="text-[10px] font-black px-2.5 py-0.5 rounded bg-[#8C2425] text-white border border-[#F5C453]/40 tracking-wider">
+                  <span className="text-[10px] font-black px-2.5 py-0.5 rounded bg-[blue-800] text-white border border-[blue-400]/40 tracking-wider">
                     👑 FOUNDER
                   </span>
                 )}
@@ -687,7 +687,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
             <button
               type="button"
               onClick={onChallenge}
-              className="min-h-[44px] py-2.5 px-5 rounded-xl bg-gradient-to-r from-emerald-600 to-[#52673A] hover:from-emerald-500 hover:to-[#5f7843] text-white text-sm font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-md border border-emerald-400/30 transition-all cursor-pointer active:scale-95"
+              className="min-h-[44px] py-2.5 px-5 rounded-xl bg-gradient-to-r from-sky-600 to-[blue-600] hover:from-sky-500 hover:to-[#5f7843] text-white text-sm font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-md border border-sky-400/30 transition-all cursor-pointer active:scale-95"
             >
               <Swords className="w-4 h-4" />
               <span>Challenge</span>
@@ -698,25 +698,25 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
               onClick={handleAddFriendClick}
               className={`min-h-[44px] py-2.5 px-4 rounded-xl text-sm font-bold flex items-center justify-center gap-2 border transition-all cursor-pointer active:scale-95 ${
                 friendStatus === 'friends'
-                  ? 'bg-emerald-950/70 text-emerald-300 border-emerald-500/40'
+                  ? 'bg-sky-950/70 text-sky-300 border-sky-500/40'
                   : friendStatus === 'sent'
-                  ? 'bg-amber-950/70 text-amber-300 border-amber-500/40'
+                  ? 'bg-blue-950/70 text-blue-300 border-blue-500/40'
                   : 'bg-slate-800 hover:bg-slate-750 text-white border-slate-700'
               }`}
             >
               {friendStatus === 'friends' ? (
                 <>
-                  <Check className="w-4 h-4 text-emerald-400" />
+                  <Check className="w-4 h-4 text-sky-400" />
                   <span>Friends</span>
                 </>
               ) : friendStatus === 'sent' ? (
                 <>
-                  <Activity className="w-4 h-4 text-amber-400 animate-spin" />
+                  <Activity className="w-4 h-4 text-blue-400 animate-spin" />
                   <span>Sent</span>
                 </>
               ) : (
                 <>
-                  <UserPlus className="w-4 h-4 text-[#F5C453]" />
+                  <UserPlus className="w-4 h-4 text-[blue-400]" />
                   <span>Add Friend</span>
                 </>
               )}
@@ -728,7 +728,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
               className="min-h-[44px] min-w-[44px] p-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700 transition-all cursor-pointer flex items-center justify-center active:scale-95"
               title="Share profile link"
             >
-              {copiedLink ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4" />}
+              {copiedLink ? <CheckCircle2 className="w-4 h-4 text-sky-400" /> : <Share2 className="w-4 h-4" />}
             </button>
 
             {onEditProfileModal && (
@@ -763,7 +763,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                 onClick={() => setActiveTab(tab.id as TabType)}
                 className={`min-h-[44px] py-2.5 px-4 rounded-xl text-sm font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap border shrink-0 active:scale-95 ${
                   isActive
-                    ? 'bg-slate-800 text-white border-slate-700 shadow-md ring-1 ring-[#F5C453]/20'
+                    ? 'bg-slate-800 text-white border-slate-700 shadow-md ring-1 ring-[blue-400]/20'
                     : 'bg-slate-900/60 text-slate-400 hover:text-slate-200 border-slate-800 hover:bg-slate-800/60'
                 }`}
               >
@@ -771,7 +771,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                 <span>{tab.label}</span>
                 {tab.count !== undefined && (
                   <span className={`text-xs px-2 py-0.5 rounded-md font-mono font-bold ${
-                    isActive ? 'bg-slate-950 text-[#F5C453]' : 'bg-slate-800 text-slate-400'
+                    isActive ? 'bg-slate-950 text-[blue-400]' : 'bg-slate-800 text-slate-400'
                   }`}>
                     {tab.count}
                   </span>
@@ -842,7 +842,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                 <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-sm space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <TrendingUp className="w-5 h-5 text-emerald-400" />
+                      <TrendingUp className="w-5 h-5 text-sky-400" />
                       <h3 className="text-sm font-black uppercase tracking-wider text-slate-200">
                         Rating Progress (Rapid)
                       </h3>
@@ -850,7 +850,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                     <button
                       type="button"
                       onClick={() => setActiveTab('analytics')}
-                      className="min-h-[44px] text-xs font-bold text-[#F5C453] hover:underline flex items-center gap-1 cursor-pointer py-1 px-2"
+                      className="min-h-[44px] text-xs font-bold text-[blue-400] hover:underline flex items-center gap-1 cursor-pointer py-1 px-2"
                     >
                       <span>Full Analytics</span>
                       <ChevronRight className="w-4 h-4" />
@@ -873,14 +873,14 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
 
                   <div className="flex items-center justify-between text-xs sm:text-sm text-slate-400 font-mono pt-2 border-t border-slate-800">
                     <span>Current: <strong className="text-white">{baseElo} Elo</strong></span>
-                    <span>Trend: <strong className="text-emerald-400">+48 past 30 days</strong></span>
+                    <span>Trend: <strong className="text-sky-400">+48 past 30 days</strong></span>
                   </div>
                 </div>
 
                 {/* Color Performance Card */}
                 <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-sm space-y-3">
                   <div className="flex items-center gap-2">
-                    <PieChart className="w-5 h-5 text-emerald-400" />
+                    <PieChart className="w-5 h-5 text-sky-400" />
                     <h3 className="text-sm font-black uppercase tracking-wider text-slate-200">
                       Piece Performance & Win Rates
                     </h3>
@@ -892,10 +892,10 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                         <span className="text-white flex items-center gap-2">
                           <span className="text-base">♔</span> <span>As White</span>
                         </span>
-                        <span className="text-emerald-400 font-mono">64% Wins</span>
+                        <span className="text-sky-400 font-mono">64% Wins</span>
                       </div>
                       <div className="h-2.5 rounded-full bg-slate-800 overflow-hidden flex">
-                        <div style={{ width: '64%' }} className="bg-emerald-500 h-full" />
+                        <div style={{ width: '64%' }} className="bg-sky-500 h-full" />
                         <div style={{ width: '18%' }} className="bg-slate-500 h-full" />
                         <div style={{ width: '18%' }} className="bg-rose-500 h-full" />
                       </div>
@@ -906,10 +906,10 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                         <span className="text-slate-300 flex items-center gap-2">
                           <span className="text-base">♚</span> <span>As Black</span>
                         </span>
-                        <span className="text-emerald-400 font-mono">56% Wins</span>
+                        <span className="text-sky-400 font-mono">56% Wins</span>
                       </div>
                       <div className="h-2.5 rounded-full bg-slate-800 overflow-hidden flex">
-                        <div style={{ width: '56%' }} className="bg-emerald-500 h-full" />
+                        <div style={{ width: '56%' }} className="bg-sky-500 h-full" />
                         <div style={{ width: '22%' }} className="bg-slate-500 h-full" />
                         <div style={{ width: '22%' }} className="bg-rose-500 h-full" />
                       </div>
@@ -924,7 +924,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                 <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-sm space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <History className="w-5 h-5 text-[#F5C453]" />
+                      <History className="w-5 h-5 text-[blue-400]" />
                       <h3 className="text-sm font-black uppercase tracking-wider text-slate-200">
                         Recent Matches
                       </h3>
@@ -932,7 +932,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                     <button
                       type="button"
                       onClick={() => setActiveTab('matches')}
-                      className="min-h-[44px] text-xs font-bold text-[#F5C453] hover:underline flex items-center gap-1 cursor-pointer py-1 px-2"
+                      className="min-h-[44px] text-xs font-bold text-[blue-400] hover:underline flex items-center gap-1 cursor-pointer py-1 px-2"
                     >
                       <span>View All ({allMatches.length})</span>
                       <ChevronRight className="w-4 h-4" />
@@ -947,7 +947,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
                           <span className={`px-2.5 py-1 rounded-lg text-xs font-black uppercase font-mono ${
-                            m.result === 'win' ? 'bg-emerald-500/20 text-emerald-300' : m.result === 'loss' ? 'bg-rose-500/20 text-rose-300' : 'bg-slate-700 text-slate-300'
+                            m.result === 'win' ? 'bg-sky-500/20 text-sky-300' : m.result === 'loss' ? 'bg-rose-500/20 text-rose-300' : 'bg-slate-700 text-slate-300'
                           }`}>
                             {m.result}
                           </span>
@@ -957,7 +957,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                           </div>
                         </div>
                         <div className="text-right shrink-0">
-                          <div className={`font-mono font-bold text-sm ${m.ratingChange >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          <div className={`font-mono font-bold text-sm ${m.ratingChange >= 0 ? 'text-sky-400' : 'text-rose-400'}`}>
                             {m.ratingChange >= 0 ? `+${m.ratingChange}` : m.ratingChange}
                           </div>
                           <div className="text-xs text-slate-400 font-mono">{m.accuracy}% acc</div>
@@ -971,12 +971,12 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                 <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-sm space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Award className="w-5 h-5 text-amber-400" />
+                      <Award className="w-5 h-5 text-blue-400" />
                       <h3 className="text-sm font-black uppercase tracking-wider text-slate-200">
                         Top Honors
                       </h3>
                     </div>
-                    <span className="text-xs font-mono text-emerald-400 font-bold">8 / 8 Badges</span>
+                    <span className="text-xs font-mono text-sky-400 font-bold">8 / 8 Badges</span>
                   </div>
 
                   <div className="grid grid-cols-4 gap-2">
@@ -1015,7 +1015,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                     className={`min-h-[44px] px-4 py-2 text-xs sm:text-sm font-bold rounded-lg uppercase tracking-wider transition-all cursor-pointer active:scale-95 flex items-center justify-center ${
                       matchFilter === filter
                         ? filter === 'win'
-                          ? 'bg-emerald-600 text-white shadow-sm'
+                          ? 'bg-sky-600 text-white shadow-sm'
                           : filter === 'loss'
                           ? 'bg-rose-600 text-white shadow-sm'
                           : 'bg-slate-700 text-white shadow-sm'
@@ -1034,7 +1034,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                   placeholder="Search opponent or opening..."
                   value={searchOpponent}
                   onChange={e => setSearchOpponent(e.target.value)}
-                  className="w-full min-h-[44px] pl-9 pr-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white placeholder:text-slate-500 focus:border-[#F5C453] outline-none"
+                  className="w-full min-h-[44px] pl-9 pr-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white placeholder:text-slate-500 focus:border-[blue-400] outline-none"
                 />
                 <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
@@ -1061,7 +1061,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                         <div
                           className={`w-14 py-2 rounded-xl text-center font-black text-xs uppercase tracking-wider font-mono shrink-0 ${
                             isWin
-                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                              ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
                               : isLoss
                               ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
                               : 'bg-slate-700/30 text-slate-300 border border-slate-600/30'
@@ -1106,7 +1106,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                             <div
                               className={`text-sm font-mono font-black ${
                                 match.ratingChange > 0
-                                  ? 'text-emerald-400'
+                                  ? 'text-sky-400'
                                   : match.ratingChange < 0
                                   ? 'text-rose-400'
                                   : 'text-slate-400'
@@ -1130,7 +1130,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                         <button
                           type="button"
                           onClick={() => onAnalyzeGame && onAnalyzeGame(match.pgn, match.fen)}
-                          className="min-h-[44px] py-2 px-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-[#F5C453] hover:text-white text-xs sm:text-sm font-bold border border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer shrink-0 active:scale-95"
+                          className="min-h-[44px] py-2 px-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-[blue-400] hover:text-white text-xs sm:text-sm font-bold border border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer shrink-0 active:scale-95"
                           title="Analyze move by move in Engine"
                         >
                           <Compass className="w-4 h-4" />
@@ -1154,7 +1154,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
             <div className="p-4 sm:p-6 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-sm space-y-4">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-emerald-400" />
+                  <TrendingUp className="w-5 h-5 text-sky-400" />
                   <div>
                     <h3 className="text-sm font-black uppercase tracking-wider text-slate-200">
                       Interactive Rating Trajectory
@@ -1174,7 +1174,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                       onClick={() => setTimeRange(tab)}
                       className={`min-h-[44px] min-w-[44px] px-3.5 py-2 text-xs sm:text-sm font-bold rounded-lg transition-all cursor-pointer active:scale-95 flex items-center justify-center ${
                         timeRange === tab
-                          ? 'bg-emerald-500 text-slate-950 font-black shadow-sm'
+                          ? 'bg-sky-500 text-slate-950 font-black shadow-sm'
                           : 'text-slate-400 hover:text-white'
                       }`}
                     >
@@ -1203,7 +1203,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                     </linearGradient>
                     <linearGradient id="ratingLineGradientTab" x1="0" y1="0" x2="1" y2="0">
                       <stop offset="0%" stopColor="#34D399" />
-                      <stop offset="50%" stopColor="#F5C453" />
+                      <stop offset="50%" stopColor="blue-400" />
                       <stop offset="100%" stopColor="#10B981" />
                     </linearGradient>
                   </defs>
@@ -1263,7 +1263,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
 
                 {hoveredPoint && (
                   <div
-                    className="absolute pointer-events-none z-20 -translate-x-1/2 -translate-y-full px-3 py-2 rounded-xl bg-slate-950 border border-emerald-500/50 shadow-xl text-xs space-y-1"
+                    className="absolute pointer-events-none z-20 -translate-x-1/2 -translate-y-full px-3 py-2 rounded-xl bg-slate-950 border border-sky-500/50 shadow-xl text-xs space-y-1"
                     style={{
                       left: `${(hoveredPoint.x / chartWidth) * 100}%`,
                       top: `${(hoveredPoint.y / chartHeight) * 100}%`
@@ -1272,7 +1272,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                     <div className="text-[10px] text-slate-400 font-mono">{hoveredPoint.data.fullDate}</div>
                     <div className="flex items-center gap-2">
                       <span className="text-white font-mono font-black">{hoveredPoint.data.rating} Elo</span>
-                      <span className="text-emerald-400 font-bold">{hoveredPoint.data.change}</span>
+                      <span className="text-sky-400 font-bold">{hoveredPoint.data.change}</span>
                     </div>
                   </div>
                 )}
@@ -1302,10 +1302,10 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                     <div key={idx} className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-2">
                       <div className="flex items-center justify-between text-sm">
                         <span className="font-bold text-white">{op.name}</span>
-                        <span className="text-emerald-400 font-mono font-bold">{op.winRate}% win</span>
+                        <span className="text-sky-400 font-mono font-bold">{op.winRate}% win</span>
                       </div>
                       <div className="h-2 rounded-full bg-slate-800 overflow-hidden">
-                        <div style={{ width: `${op.winRate}%` }} className="bg-emerald-500 h-full" />
+                        <div style={{ width: `${op.winRate}%` }} className="bg-sky-500 h-full" />
                       </div>
                     </div>
                   ))}
@@ -1315,7 +1315,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
               {/* Tactical Accuracy & Precision */}
               <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3">
                 <div className="flex items-center gap-2">
-                  <Target className="w-5 h-5 text-[#F5C453]" />
+                  <Target className="w-5 h-5 text-[blue-400]" />
                   <h3 className="text-sm font-black uppercase tracking-wider text-slate-200">
                     Game Precision & Blunder Rate
                   </h3>
@@ -1323,7 +1323,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
 
                 <div className="grid grid-cols-2 gap-3 pt-1">
                   <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 text-center">
-                    <div className="text-2xl font-black font-mono text-emerald-400">88.4%</div>
+                    <div className="text-2xl font-black font-mono text-sky-400">88.4%</div>
                     <div className="text-xs text-slate-400 uppercase font-bold mt-1">Average Accuracy</div>
                   </div>
                   <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 text-center">
@@ -1354,7 +1354,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
               <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-sm space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Users className="w-5 h-5 text-[#F5C453]" />
+                    <Users className="w-5 h-5 text-[blue-400]" />
                     <h3 className="text-sm font-black uppercase tracking-wider text-slate-200">
                       Friends List ({friendsList.length})
                     </h3>
@@ -1362,7 +1362,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                   <button
                     type="button"
                     onClick={handleAddFriendClick}
-                    className="min-h-[44px] text-xs font-bold text-[#F5C453] hover:underline cursor-pointer flex items-center px-2"
+                    className="min-h-[44px] text-xs font-bold text-[blue-400] hover:underline cursor-pointer flex items-center px-2"
                   >
                     + Add New
                   </button>
@@ -1392,7 +1392,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
 
                       <div className="flex items-center gap-2.5 shrink-0">
                         <span className={`w-2.5 h-2.5 rounded-full ${
-                          friend.status === 'online' ? 'bg-emerald-400' : friend.status === 'in_game' ? 'bg-amber-400 animate-pulse' : 'bg-slate-600'
+                          friend.status === 'online' ? 'bg-sky-400' : friend.status === 'in_game' ? 'bg-blue-400 animate-pulse' : 'bg-slate-600'
                         }`} />
                         <button
                           type="button"
@@ -1417,7 +1417,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                     type="button"
                     onClick={() => setOnlineStatus('online')}
                     className={`min-h-[44px] py-2 px-2 rounded-xl text-xs sm:text-sm font-bold border transition-all cursor-pointer active:scale-95 flex items-center justify-center ${
-                      onlineStatus === 'online' ? 'bg-emerald-950 text-emerald-300 border-emerald-500/40' : 'bg-slate-950 text-slate-400 border-slate-800'
+                      onlineStatus === 'online' ? 'bg-sky-950 text-sky-300 border-sky-500/40' : 'bg-slate-950 text-slate-400 border-slate-800'
                     }`}
                   >
                     🟢 Online
@@ -1426,7 +1426,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                     type="button"
                     onClick={() => setOnlineStatus('in_game')}
                     className={`min-h-[44px] py-2 px-2 rounded-xl text-xs sm:text-sm font-bold border transition-all cursor-pointer active:scale-95 flex items-center justify-center ${
-                      onlineStatus === 'in_game' ? 'bg-amber-950 text-amber-300 border-amber-500/40' : 'bg-slate-950 text-slate-400 border-slate-800'
+                      onlineStatus === 'in_game' ? 'bg-blue-950 text-blue-300 border-blue-500/40' : 'bg-slate-950 text-slate-400 border-slate-800'
                     }`}
                   >
                     ⚔️ In-Game
@@ -1449,12 +1449,12 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
               <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-sm space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Award className="w-5 h-5 text-amber-400" />
+                    <Award className="w-5 h-5 text-blue-400" />
                     <h3 className="text-sm font-black uppercase tracking-wider text-slate-200">
                       Achievement Badges (8/8)
                     </h3>
                   </div>
-                  <span className="text-xs text-[#F5C453] font-bold">100% Unlocked</span>
+                  <span className="text-xs text-[blue-400] font-bold">100% Unlocked</span>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
@@ -1498,14 +1498,14 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
               onClick={() => setActiveTab(item.id as TabType)}
               className={`min-h-[48px] min-w-[64px] flex flex-col items-center justify-center gap-1 rounded-xl transition-all cursor-pointer active:scale-95 ${
                 isActive
-                  ? 'text-[#F5C453] font-bold'
+                  ? 'text-[blue-400] font-bold'
                   : 'text-slate-400 hover:text-slate-200 font-medium'
               }`}
             >
               <div className="relative">
                 {item.icon}
                 {item.count !== undefined && (
-                  <span className="absolute -top-1 -right-2.5 px-1.5 py-0.2 rounded-full bg-[#F5C453] text-slate-950 text-[9px] font-black font-mono">
+                  <span className="absolute -top-1 -right-2.5 px-1.5 py-0.2 rounded-full bg-[blue-400] text-slate-950 text-[9px] font-black font-mono">
                     {item.count}
                   </span>
                 )}
@@ -1545,7 +1545,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                 <img
                   src={avatarUrl}
                   alt={displayName}
-                  className="w-16 h-16 rounded-2xl object-cover border-2 border-[#F5C453] shadow-md"
+                  className="w-16 h-16 rounded-2xl object-cover border-2 border-[blue-400] shadow-md"
                   referrerPolicy="no-referrer"
                 />
                 <button
@@ -1554,7 +1554,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                     setIsAvatarModalOpen(true);
                     setIsMobileDrawerOpen(false);
                   }}
-                  className="absolute -bottom-1 -right-1 p-1.5 rounded-lg bg-slate-800 border border-slate-700 text-[#F5C453]"
+                  className="absolute -bottom-1 -right-1 p-1.5 rounded-lg bg-slate-800 border border-slate-700 text-[blue-400]"
                   title="Edit Avatar"
                 >
                   <Camera className="w-3.5 h-3.5" />
@@ -1567,7 +1567,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                   <span className="text-base">{countryFlag}</span>
                 </div>
                 <div className="text-xs text-slate-400 font-mono">@{username} • {countryName}</div>
-                <div className="text-xs text-[#F5C453] font-bold flex items-center gap-1">
+                <div className="text-xs text-[blue-400] font-bold flex items-center gap-1">
                   <Crown className="w-3.5 h-3.5" />
                   <span>{profile?.honorRank || 'Peshmerga Grandmaster'}</span>
                 </div>
@@ -1597,7 +1597,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                   type="button"
                   onClick={() => setOnlineStatus('online')}
                   className={`min-h-[44px] py-2 px-2 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center ${
-                    onlineStatus === 'online' ? 'bg-emerald-950 text-emerald-300 border-emerald-500/40' : 'bg-slate-950 text-slate-400 border-slate-800'
+                    onlineStatus === 'online' ? 'bg-sky-950 text-sky-300 border-sky-500/40' : 'bg-slate-950 text-slate-400 border-slate-800'
                   }`}
                 >
                   🟢 Online
@@ -1606,7 +1606,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                   type="button"
                   onClick={() => setOnlineStatus('in_game')}
                   className={`min-h-[44px] py-2 px-2 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center ${
-                    onlineStatus === 'in_game' ? 'bg-amber-950 text-amber-300 border-amber-500/40' : 'bg-slate-950 text-slate-400 border-slate-800'
+                    onlineStatus === 'in_game' ? 'bg-blue-950 text-blue-300 border-blue-500/40' : 'bg-slate-950 text-slate-400 border-slate-800'
                   }`}
                 >
                   ⚔️ In-Game
@@ -1631,7 +1631,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                   setIsMobileDrawerOpen(false);
                   onChallenge && onChallenge();
                 }}
-                className="min-h-[44px] py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-[#52673A] text-white text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-md border border-emerald-400/30 active:scale-95"
+                className="min-h-[44px] py-2.5 px-3 rounded-xl bg-gradient-to-r from-sky-600 to-[blue-600] text-white text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-md border border-sky-400/30 active:scale-95"
               >
                 <Swords className="w-4 h-4" />
                 <span>Challenge</span>
@@ -1642,11 +1642,11 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                 onClick={handleAddFriendClick}
                 className={`min-h-[44px] py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 border active:scale-95 ${
                   friendStatus === 'friends'
-                    ? 'bg-emerald-950/70 text-emerald-300 border-emerald-500/40'
+                    ? 'bg-sky-950/70 text-sky-300 border-sky-500/40'
                     : 'bg-slate-800 text-white border-slate-700'
                 }`}
               >
-                <UserPlus className="w-4 h-4 text-[#F5C453]" />
+                <UserPlus className="w-4 h-4 text-[blue-400]" />
                 <span>{friendStatus === 'friends' ? 'Friends' : 'Add Friend'}</span>
               </button>
 
@@ -1655,7 +1655,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
                 onClick={handleShareProfile}
                 className="min-h-[44px] py-2.5 px-3 rounded-xl bg-slate-800 text-slate-200 border border-slate-700 text-xs font-bold flex items-center justify-center gap-2 active:scale-95"
               >
-                {copiedLink ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4" />}
+                {copiedLink ? <CheckCircle2 className="w-4 h-4 text-sky-400" /> : <Share2 className="w-4 h-4" />}
                 <span>{copiedLink ? 'Link Copied!' : 'Share Profile'}</span>
               </button>
 

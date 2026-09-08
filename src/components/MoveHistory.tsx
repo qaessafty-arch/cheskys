@@ -13,7 +13,7 @@ interface MoveHistoryProps {
 
 const BADGE_MAP: Record<MoveClassification, { icon: string; text: string; bg: string; border: string }> = {
   brilliant: { icon: '💎', text: 'Brilliant', bg: 'bg-cyan-500/20 text-cyan-200', border: 'border-cyan-400/40' },
-  best: { icon: '★', text: 'Best', bg: 'bg-emerald-500/20 text-emerald-200', border: 'border-emerald-400/40' },
+  best: { icon: '★', text: 'Best', bg: 'bg-sky-500/20 text-sky-200', border: 'border-sky-400/40' },
   good: { icon: '✓', text: 'Good', bg: 'bg-blue-500/20 text-blue-200', border: 'border-blue-400/40' },
   book: { icon: '📖', text: 'Book', bg: 'bg-purple-500/20 text-purple-200', border: 'border-purple-400/40' },
   inaccuracy: { icon: '?!', text: 'Inaccuracy', bg: 'bg-yellow-500/20 text-yellow-200', border: 'border-yellow-400/40' },
@@ -92,14 +92,14 @@ export const MoveHistory: React.FC<MoveHistoryProps> = ({
             className="px-2 py-1 text-xs text-white/60 hover:text-white hover:bg-white/10 rounded-lg border border-transparent hover:border-white/10 transition-all font-mono text-[10px]"
             title="Copy FEN string"
           >
-            {copiedFen ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : 'FEN'}
+            {copiedFen ? <Check className="w-3.5 h-3.5 text-sky-400" /> : 'FEN'}
           </button>
           <button
             onClick={handleCopyPgn}
             className="p-1.5 text-xs text-white/60 hover:text-white hover:bg-white/10 rounded-lg border border-transparent hover:border-white/10 transition-all"
             title="Copy PGN notation"
           >
-            {copiedPgn ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+            {copiedPgn ? <Check className="w-3.5 h-3.5 text-sky-400" /> : <Copy className="w-3.5 h-3.5" />}
           </button>
         </div>
       </div>

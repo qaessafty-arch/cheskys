@@ -73,12 +73,12 @@ const THEME_STYLES: Record<
     glow: 'shadow-[0_0_25px_rgba(181,136,99,0.3)]'
   },
   peshmerga: {
-    light: 'bg-[#DFD0B0]',
-    dark: 'bg-[#435433]',
-    lightText: 'text-[#435433]',
-    darkText: 'text-[#DFD0B0]',
-    border: 'border-[#8C2425]',
-    glow: 'shadow-[0_0_35px_rgba(245,196,83,0.35)]'
+    light: 'bg-[#dee2e6]',
+    dark: 'bg-[#7ba5c1]',
+    lightText: 'text-[#7ba5c1]',
+    darkText: 'text-[#dee2e6]',
+    border: 'border-[#0056b3]',
+    glow: 'shadow-[0_0_35px_rgba(0,91,187,0.3)]'
   },
   ukh: {
     light: 'bg-[#E8EEF5]',
@@ -186,7 +186,7 @@ const BatmanBoardWatermark: React.FC = () => {
 const UkhBoardWatermark: React.FC = () => (
   <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-[8] select-none overflow-hidden p-6">
     <div className="w-[82%] h-[82%] opacity-35 transition-opacity duration-300 drop-shadow-[0_0_25px_rgba(22,91,170,0.35)]">
-      <UkhLogo showText={true} textColor="#DFD0B0" />
+      <UkhLogo showText={true} textColor="#334155" />
     </div>
   </div>
 );

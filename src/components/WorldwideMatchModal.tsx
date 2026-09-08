@@ -182,36 +182,36 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-200 p-4">
-      <div className="relative glass-panel rounded-3xl p-5 sm:p-7 max-w-xl w-full border border-[#F5C453]/40 shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-blue-950/80 backdrop-blur-md animate-in fade-in duration-200 p-4">
+      <div className="relative glass-panel rounded-3xl p-5 sm:p-7 max-w-xl w-full border border-blue-400/40 shadow-2xl overflow-hidden">
         {/* Close Button */}
         <button
           onClick={() => {
             if (isSearching) handleCancelSearch();
             onClose();
           }}
-          className="absolute top-4 right-4 text-[#DFD0B0]/60 hover:text-white p-2 rounded-xl hover:bg-white/10 transition-colors z-20 cursor-pointer"
+          className="absolute top-4 right-4 text-blue-100/60 hover:text-white p-2 rounded-xl hover:bg-white/10 transition-colors z-20 cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* Header Title */}
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#52673A] via-[#8C2425] to-[#F5C453] p-0.5 shadow-lg shadow-[#F5C453]/20 flex items-center justify-center">
-            <div className="w-full h-full bg-[#161c12] rounded-[14px] flex items-center justify-center text-emerald-400">
-              <Globe className="w-5 h-5 text-[#F5C453] animate-pulse" />
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 via-blue-700 to-blue-400 p-0.5 shadow-lg shadow-blue-400/20 flex items-center justify-center">
+            <div className="w-full h-full bg-slate-900 rounded-[14px] flex items-center justify-center text-emerald-400">
+              <Globe className="w-5 h-5 text-blue-400 animate-pulse" />
             </div>
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-xl sm:text-2xl font-heading font-black text-[#FDFCF7] tracking-tight">
+              <h2 className="text-xl sm:text-2xl font-heading font-black text-white tracking-tight">
                 Worldwide Matchmaking
               </h2>
               <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 animate-pulse">
                 ● Live Grid
               </span>
             </div>
-            <p className="text-xs text-[#DFD0B0]/70">
+            <p className="text-xs text-blue-100/70">
               Play live opponents worldwide — or take on a rated engine challenger while you wait
             </p>
           </div>
@@ -219,18 +219,19 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
 
         {/* SEARCHING RADAR SCREEN */}
         {isSearching ? (
-          <div className="my-6 p-6 rounded-3xl bg-[#161c12]/90 border border-[#F5C453]/40 flex flex-col items-center justify-center text-center relative overflow-hidden shadow-inner">
+          <div className="my-6 p-6 rounded-3xl bg-slate-900/90 border border-blue-400/40 flex flex-col items-center justify-center text-center relative overflow-hidden shadow-inner">
             {/* Animated Radar Pulse Rings */}
             <div className="relative w-32 h-32 my-3 flex items-center justify-center">
-              <div className="absolute inset-0 rounded-full border border-[#F5C453]/20 animate-ping opacity-75" />
+              <div className="absolute inset-0 rounded-full border border-blue-400/20 animate-ping opacity-75" />
               <div className="absolute inset-3 rounded-full border-2 border-emerald-500/30 animate-pulse" />
-              <div className="absolute inset-7 rounded-full bg-gradient-to-tr from-[#52673A]/40 to-[#8C2425]/40 border border-[#F5C453]/40 flex items-center justify-center">
-                <Globe className="w-9 h-9 text-[#F5C453] animate-spin [animation-duration:8s]" />
+              <div className="absolute inset-7 rounded-full bg-gradient-to-tr from-blue-600/40 to-blue-700/40 border border-blue-400/40 flex items-center justify-center">
+                <Globe className="w-9 h-9 text-blue-400 animate-spin [animation-duration:8s]" />
               </div>
               <div className="absolute -top-1 right-2">
                 <Radio className="w-4 h-4 text-emerald-400 animate-bounce" />
               </div>
             </div>
+
 
             {/* Matched Opponent Preview or Searching status */}
             {matchedOpponent ? (
@@ -267,11 +268,11 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
               </div>
             ) : (
               <div className="flex flex-col items-center gap-2 my-2">
-                <div className="text-base font-bold text-[#FDFCF7] tracking-wide max-w-sm">
+                <div className="text-base font-bold text-white tracking-wide max-w-sm">
                   {searchStatus}
                 </div>
-                <div className="flex items-center gap-3 text-xs text-[#DFD0B0]/80 font-mono bg-black/40 px-3.5 py-1.5 rounded-full border border-white/10">
-                  <span className="flex items-center gap-1 text-[#F5C453]">
+                <div className="flex items-center gap-3 text-xs text-blue-100/80 font-mono bg-blue-950/40 px-3.5 py-1.5 rounded-full border border-white/10">
+                  <span className="flex items-center gap-1 text-blue-400">
                     <Clock className="w-3.5 h-3.5" />
                     {formatSearchTime(searchSeconds)}
                   </span>
@@ -287,7 +288,7 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
 
                 {/* Real-time human search info */}
                 {matchmakingMode === 'human_first' && searchSeconds < 20 && (
-                  <p className="text-[11px] text-[#DFD0B0]/60 max-w-xs mt-1">
+                  <p className="text-[11px] text-blue-100/60 max-w-xs mt-1">
                     Searching for live players… if nobody joins within {Math.max(0, 20 - searchSeconds)}s you will be paired with a rated engine challenger.
                   </p>
                 )}
@@ -306,7 +307,7 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
               {matchmakingMode !== 'instant_bot' && !matchedOpponent && (
                 <button
                   onClick={handleForcePlayBot}
-                  className="px-5 py-2 rounded-xl bg-[#52673A]/60 hover:bg-[#52673A] border border-[#F5C453]/40 text-[#F5C453] text-xs font-bold transition-all hover:scale-105 cursor-pointer shadow-md flex items-center gap-1.5"
+                  className="px-5 py-2 rounded-xl bg-blue-600/60 hover:bg-blue-600 border border-blue-400/40 text-blue-400 text-xs font-bold transition-all hover:scale-105 cursor-pointer shadow-md flex items-center gap-1.5"
                   title="Skip the queue and play a rated engine challenger now"
                 >
                   <Bot className="w-3.5 h-3.5" />
@@ -320,7 +321,7 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
           <div className="space-y-4 my-3">
             {/* Matchmaking Mode Switcher */}
             <div>
-              <label className="text-xs font-bold text-[#DFD0B0]/80 uppercase tracking-wider block font-ui mb-1.5">
+              <label className="text-xs font-bold text-blue-100/80 uppercase tracking-wider block font-ui mb-1.5">
                 1. Opponent Match Preference
               </label>
               <div className="grid grid-cols-3 gap-2">
@@ -328,15 +329,15 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
                   onClick={() => setMatchmakingMode('human_first')}
                   className={`p-2.5 rounded-2xl border transition-all text-center cursor-pointer ${
                     matchmakingMode === 'human_first'
-                      ? 'bg-[#52673A]/60 border-[#F5C453] text-white shadow-md shadow-[#F5C453]/20 ring-1 ring-[#F5C453]/60'
-                      : 'bg-[#1a2315]/50 border-white/10 text-[#DFD0B0]/70 hover:bg-[#1a2315]'
+                      ? 'bg-blue-600/60 border-blue-400 text-white shadow-md shadow-blue-400/20 ring-1 ring-blue-400/60'
+                      : 'bg-slate-900/50 border-white/10 text-blue-100/70 hover:bg-slate-900'
                   }`}
                 >
                   <div className="flex items-center justify-center gap-1.5 text-xs font-black mb-0.5">
                     <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
                     <span>Humans first</span>
                   </div>
-                  <div className="text-[10px] text-[#DFD0B0]/60 leading-tight">
+                  <div className="text-[10px] text-blue-100/60 leading-tight">
                     Human queue (bot fallback after 20s)
                   </div>
                 </button>
@@ -345,15 +346,15 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
                   onClick={() => setMatchmakingMode('human_strict')}
                   className={`p-2.5 rounded-2xl border transition-all text-center cursor-pointer ${
                     matchmakingMode === 'human_strict'
-                      ? 'bg-[#52673A]/60 border-[#F5C453] text-white shadow-md shadow-[#F5C453]/20 ring-1 ring-[#F5C453]/60'
-                      : 'bg-[#1a2315]/50 border-white/10 text-[#DFD0B0]/70 hover:bg-[#1a2315]'
+                      ? 'bg-blue-600/60 border-blue-400 text-white shadow-md shadow-blue-400/20 ring-1 ring-blue-400/60'
+                      : 'bg-slate-900/50 border-white/10 text-blue-100/70 hover:bg-slate-900'
                   }`}
                 >
                   <div className="flex items-center justify-center gap-1.5 text-xs font-black mb-0.5">
                     <Users className="w-3.5 h-3.5 text-sky-400" />
                     <span>Humans Only</span>
                   </div>
-                  <div className="text-[10px] text-[#DFD0B0]/60 leading-tight">
+                  <div className="text-[10px] text-blue-100/60 leading-tight">
                     Humans only — never pair with an engine
                   </div>
                 </button>
@@ -362,15 +363,15 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
                   onClick={() => setMatchmakingMode('instant_bot')}
                   className={`p-2.5 rounded-2xl border transition-all text-center cursor-pointer ${
                     matchmakingMode === 'instant_bot'
-                      ? 'bg-[#52673A]/60 border-[#F5C453] text-white shadow-md shadow-[#F5C453]/20 ring-1 ring-[#F5C453]/60'
-                      : 'bg-[#1a2315]/50 border-white/10 text-[#DFD0B0]/70 hover:bg-[#1a2315]'
+                      ? 'bg-blue-600/60 border-blue-400 text-white shadow-md shadow-blue-400/20 ring-1 ring-blue-400/60'
+                      : 'bg-slate-900/50 border-white/10 text-blue-100/70 hover:bg-slate-900'
                   }`}
                 >
                   <div className="flex items-center justify-center gap-1.5 text-xs font-black mb-0.5">
                     <Bot className="w-3.5 h-3.5 text-amber-400" />
                     <span>Grandmaster AI</span>
                   </div>
-                  <div className="text-[10px] text-[#DFD0B0]/60 leading-tight">
+                  <div className="text-[10px] text-blue-100/60 leading-tight">
                     Instant battle with worldwide bot
                   </div>
                 </button>
@@ -379,7 +380,7 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
 
             {/* Time Control Format */}
             <div>
-              <label className="text-xs font-bold text-[#DFD0B0]/80 uppercase tracking-wider block font-ui mb-1.5">
+              <label className="text-xs font-bold text-blue-100/80 uppercase tracking-wider block font-ui mb-1.5">
                 2. Choose Time Control Format
               </label>
 
@@ -392,8 +393,8 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
                       onClick={() => setSelectedTimeControl(preset.timeControl)}
                       className={`flex items-center justify-between p-2.5 rounded-2xl border transition-all text-left backdrop-blur-md cursor-pointer ${
                         isSelected
-                          ? 'bg-gradient-to-r from-[#52673A]/60 to-[#8C2425]/60 border-[#F5C453] text-white shadow-lg shadow-[#F5C453]/20 ring-1 ring-[#F5C453]/50'
-                          : 'bg-[#1a2315]/60 border-[#F5C453]/20 text-[#DFD0B0]/80 hover:bg-[#1a2315] hover:border-[#F5C453]/50'
+                          ? 'bg-gradient-to-r from-blue-600/60 to-blue-700/60 border-blue-400 text-white shadow-lg shadow-blue-400/20 ring-1 ring-blue-400/50'
+                          : 'bg-slate-900/60 border-blue-400/20 text-blue-100/80 hover:bg-slate-900 hover:border-blue-400/50'
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
@@ -401,15 +402,15 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
                           {preset.icon}
                         </div>
                         <div>
-                          <div className="text-xs font-black text-[#FDFCF7]">
+                          <div className="text-xs font-black text-white">
                             {preset.title}
                           </div>
-                          <div className="text-[10px] text-[#DFD0B0]/60">
+                          <div className="text-[10px] text-blue-100/60">
                             {preset.desc}
                           </div>
                         </div>
                       </div>
-                      <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-full bg-black/50 text-[#F5C453] border border-[#F5C453]/30 whitespace-nowrap">
+                      <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-full bg-black/50 text-blue-400 border border-blue-400/30 whitespace-nowrap">
                         {preset.badge}
                       </span>
                     </button>
@@ -422,9 +423,9 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
             <div className="pt-2">
               <button
                 onClick={() => handleStartSearch()}
-                className="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-[#52673A] via-[#8C2425] to-[#F5C453] hover:brightness-110 text-white font-black font-ui text-sm transition-all hover:scale-[1.01] active:scale-[0.99] shadow-xl shadow-[#F5C453]/20 border border-[#F5C453]/50 flex items-center justify-center gap-2.5 cursor-pointer"
+                className="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-blue-600 via-blue-700 to-blue-400 hover:brightness-110 text-white font-black font-ui text-sm transition-all hover:scale-[1.01] active:scale-[0.99] shadow-xl shadow-blue-400/20 border border-blue-400/50 flex items-center justify-center gap-2.5 cursor-pointer"
               >
-                <Globe className="w-5 h-5 text-[#F5C453] animate-pulse" />
+                <Globe className="w-5 h-5 text-blue-400 animate-pulse" />
                 <span>
                   {matchmakingMode === 'instant_bot'
                     ? `Play engine challenger (${selectedTimeControl.name})`
@@ -434,12 +435,12 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
             </div>
 
             {/* Footer Stats & Info */}
-            <div className="flex items-center justify-between text-[11px] text-[#DFD0B0]/60 px-1 pt-1">
+            <div className="flex items-center justify-between text-[11px] text-blue-100/60 px-1 pt-1">
               <span className="flex items-center gap-1.5">
                 <Users className="w-3.5 h-3.5 text-emerald-400" />
                 <span>Worldwide matchmaking live queue active</span>
               </span>
-              <span className="flex items-center gap-1 text-[#F5C453]">
+              <span className="flex items-center gap-1 text-blue-400">
                 <Trophy className="w-3.5 h-3.5" />
                 <span>+30 Respect on Victory</span>
               </span>

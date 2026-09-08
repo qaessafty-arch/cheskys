@@ -176,10 +176,10 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-xl animate-in fade-in duration-200 p-3 sm:p-5">
-      <div className="relative glass-panel rounded-3xl p-5 sm:p-7 max-w-4xl w-full shadow-2xl border border-[#F5C453]/40 overflow-hidden max-h-[92vh] flex flex-col">
+      <div className="relative glass-panel rounded-3xl p-5 sm:p-7 max-w-4xl w-full shadow-2xl border border-[#0056b3]/40 overflow-hidden max-h-[92vh] flex flex-col">
         {/* Ambient Glow */}
         <div className="absolute top-0 right-0 w-80 h-80 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-[#52673A]/25 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-80 h-80 bg-[#2563eb]/25 rounded-full blur-3xl pointer-events-none" />
 
         {/* Close Button */}
         <button
@@ -192,20 +192,20 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
         {/* Header Bar */}
         <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-white/10 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-gradient-to-tr from-amber-600 via-[#8C2425] to-[#52673A] border-2 border-[#F5C453] text-[#F5C453] shadow-lg shadow-[#F5C453]/20">
+            <div className="p-2.5 rounded-2xl bg-gradient-to-tr from-amber-600 via-[#1e3a8a] to-[#2563eb] border-2 border-[#0056b3] text-[#0056b3] shadow-lg shadow-[#0056b3]/20">
               <Crown className="w-6 h-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                  Developer Command Center <span className="text-[#F5C453] font-mono">[Dev Set]</span>
+                  Developer Command Center <span className="text-[#0056b3] font-mono">[Dev Set]</span>
                 </h2>
                 <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-[10px] font-black border border-amber-400/40 uppercase">
                   👑 Founder #0 Access
                 </span>
               </div>
-              <p className="text-xs text-[#DFD0B0]/70">
-                Owner Account: <span className="text-[#F5C453] font-mono font-bold">qayssafty@gmail.com</span> • Roles & Badge Number Engine (#0 Dev, #1-#9 VIP/Admin, #10+ Users)
+              <p className="text-xs text-[#334155]/70">
+                Owner Account: <span className="text-[#0056b3] font-mono font-bold">qayssafty@gmail.com</span> • Roles & Badge Number Engine (#0 Dev, #1-#9 VIP/Admin, #10+ Users)
               </p>
             </div>
           </div>
@@ -213,7 +213,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
           <div className="flex items-center gap-2">
             <button
               onClick={loadAllData}
-              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-[#DFD0B0] text-xs font-bold border border-white/10 flex items-center gap-1.5 transition-all"
+              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-[#334155] text-xs font-bold border border-white/10 flex items-center gap-1.5 transition-all"
               title="Refresh Data"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loadingUsers ? 'animate-spin' : ''}`} />
@@ -236,11 +236,11 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
             onClick={() => setActiveTab('roles_badges')}
             className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'roles_badges'
-                ? 'bg-gradient-to-r from-[#52673A] to-[#8C2425] text-[#F5C453] border border-[#F5C453]/60 shadow-md'
+                ? 'bg-gradient-to-r from-[#2563eb] to-[#1e3a8a] text-[#0056b3] border border-[#0056b3]/60 shadow-md'
                 : 'bg-white/5 text-white/70 hover:text-white hover:bg-white/10'
             }`}
           >
-            <Shield className="w-3.5 h-3.5 text-[#F5C453]" />
+            <Shield className="w-3.5 h-3.5 text-[#0056b3]" />
             <span>🛡️ Admins & Badges (#0, #1-#9, #10+)</span>
           </button>
 
@@ -248,7 +248,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
             onClick={() => setActiveTab('feedback')}
             className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer relative ${
               activeTab === 'feedback'
-                ? 'bg-gradient-to-r from-[#52673A] to-[#8C2425] text-[#F5C453] border border-[#F5C453]/60 shadow-md'
+                ? 'bg-gradient-to-r from-[#2563eb] to-[#1e3a8a] text-[#0056b3] border border-[#0056b3]/60 shadow-md'
                 : 'bg-white/5 text-white/70 hover:text-white hover:bg-white/10'
             }`}
           >
@@ -265,7 +265,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
             onClick={() => setActiveTab('stats_editor')}
             className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'stats_editor'
-                ? 'bg-gradient-to-r from-[#52673A] to-[#8C2425] text-[#F5C453] border border-[#F5C453]/60 shadow-md'
+                ? 'bg-gradient-to-r from-[#2563eb] to-[#1e3a8a] text-[#0056b3] border border-[#0056b3]/60 shadow-md'
                 : 'bg-white/5 text-white/70 hover:text-white hover:bg-white/10'
             }`}
           >
@@ -277,7 +277,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
             onClick={() => setActiveTab('system_switcher')}
             className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'system_switcher'
-                ? 'bg-gradient-to-r from-[#52673A] to-[#8C2425] text-[#F5C453] border border-[#F5C453]/60 shadow-md'
+                ? 'bg-gradient-to-r from-[#2563eb] to-[#1e3a8a] text-[#0056b3] border border-[#0056b3]/60 shadow-md'
                 : 'bg-white/5 text-white/70 hover:text-white hover:bg-white/10'
             }`}
           >
@@ -289,7 +289,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
             onClick={() => setActiveTab('database_explorer')}
             className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'database_explorer'
-                ? 'bg-gradient-to-r from-[#52673A] to-[#8C2425] text-[#F5C453] border border-[#F5C453]/60 shadow-md'
+                ? 'bg-gradient-to-r from-[#2563eb] to-[#1e3a8a] text-[#0056b3] border border-[#0056b3]/60 shadow-md'
                 : 'bg-emerald-950/40 text-emerald-300 hover:text-white hover:bg-emerald-900/50 border border-emerald-500/30'
             }`}
           >
@@ -306,10 +306,10 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
           {activeTab === 'roles_badges' && (
             <div className="space-y-4 animate-in fade-in duration-150">
               {/* Badge Hierarchy Explainer Card */}
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-950/40 via-black/40 to-slate-900/50 border border-[#F5C453]/40 space-y-2">
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-950/40 via-black/40 to-slate-900/50 border border-[#0056b3]/40 space-y-2">
                 <div className="flex items-center gap-2">
-                  <Award className="w-4 h-4 text-[#F5C453]" />
-                  <h3 className="text-xs font-black uppercase tracking-wider text-[#F5C453]">
+                  <Award className="w-4 h-4 text-[#0056b3]" />
+                  <h3 className="text-xs font-black uppercase tracking-wider text-[#0056b3]">
                     Official Badge Number & Role Protocol
                   </h3>
                 </div>
@@ -319,8 +319,8 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                       <span>👑 Badge #0</span>
                       <span className="text-[10px] px-1.5 rounded bg-amber-400/20 text-amber-300">LOCKED</span>
                     </div>
-                    <p className="text-[11px] text-[#DFD0B0]/70 mt-0.5">
-                      Reserved exclusively for Founder & Developer (<span className="text-[#F5C453] font-mono font-bold">qayssafty@gmail.com</span>). Complete master control.
+                    <p className="text-[11px] text-[#334155]/70 mt-0.5">
+                      Reserved exclusively for Founder & Developer (<span className="text-[#0056b3] font-mono font-bold">qayssafty@gmail.com</span>). Complete master control.
                     </p>
                   </div>
 
@@ -329,7 +329,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                       <span>🛡️ Badges #1 to #9</span>
                       <span className="text-[10px] px-1.5 rounded bg-purple-400/20 text-purple-300">DEV ASSIGNED</span>
                     </div>
-                    <p className="text-[11px] text-[#DFD0B0]/70 mt-0.5">
+                    <p className="text-[11px] text-[#334155]/70 mt-0.5">
                       Elite Admin & VIP slots that the developer can grant to trusted admins, grandmasters, or champions.
                     </p>
                   </div>
@@ -339,7 +339,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                       <span>☀️ Badges #10 to ∞</span>
                       <span className="text-[10px] px-1.5 rounded bg-sky-400/20 text-sky-300">AUTO-INCREMENT</span>
                     </div>
-                    <p className="text-[11px] text-[#DFD0B0]/70 mt-0.5">
+                    <p className="text-[11px] text-[#334155]/70 mt-0.5">
                       All new accounts automatically receive sequential warrior badges (#10, #11, #12...) upon joining.
                     </p>
                   </div>
@@ -348,12 +348,12 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
 
               {/* Edit Modal / Form if a user is selected */}
               {selectedUser && (
-                <div className="p-4 rounded-2xl bg-black/60 border-2 border-[#F5C453] space-y-3 shadow-xl animate-in zoom-in-95">
+                <div className="p-4 rounded-2xl bg-black/60 border-2 border-[#0056b3] space-y-3 shadow-xl animate-in zoom-in-95">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Edit3 className="w-4 h-4 text-[#F5C453]" />
+                      <Edit3 className="w-4 h-4 text-[#0056b3]" />
                       <h4 className="text-sm font-black text-white">
-                        Configure Permissions for: <span className="text-[#F5C453]">{selectedUser.displayName}</span>
+                        Configure Permissions for: <span className="text-[#0056b3]">{selectedUser.displayName}</span>
                       </h4>
                     </div>
                     <button
@@ -366,13 +366,13 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
-                      <label className="text-[11px] text-[#DFD0B0]/80 font-bold block mb-1">
+                      <label className="text-[11px] text-[#334155]/80 font-bold block mb-1">
                         Role Assignment
                       </label>
                       <select
                         value={editRole}
                         onChange={(e) => setEditRole(e.target.value as UserRole)}
-                        className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-xs font-bold outline-none focus:border-[#F5C453]"
+                        className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-xs font-bold outline-none focus:border-[#0056b3]"
                       >
                         <option value="owner" className="bg-[#161c12]">👑 Owner (Founder / Supreme)</option>
                         <option value="admin" className="bg-[#161c12]">🛡️ Admin (System Moderator)</option>
@@ -383,7 +383,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                     </div>
 
                     <div>
-                      <label className="text-[11px] text-[#DFD0B0]/80 font-bold block mb-1">
+                      <label className="text-[11px] text-[#334155]/80 font-bold block mb-1">
                         Badge Number (0=Owner, 1-9=VIP, 10+=User)
                       </label>
                       <input
@@ -392,12 +392,12 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                         max="999999"
                         value={editBadgeNumber}
                         onChange={(e) => setEditBadgeNumber(Number(e.target.value))}
-                        className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-xs font-bold outline-none focus:border-[#F5C453]"
+                        className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-xs font-bold outline-none focus:border-[#0056b3]"
                       />
                     </div>
 
                     <div>
-                      <label className="text-[11px] text-[#DFD0B0]/80 font-bold block mb-1">
+                      <label className="text-[11px] text-[#334155]/80 font-bold block mb-1">
                         Custom Badge Tag (Optional)
                       </label>
                       <input
@@ -405,14 +405,14 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                         placeholder="e.g. 🛡️ CHIEF ADMIN or ⚡ GM"
                         value={editCustomBadge}
                         onChange={(e) => setEditCustomBadge(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-xs outline-none focus:border-[#F5C453]"
+                        className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-xs outline-none focus:border-[#0056b3]"
                       />
                     </div>
                   </div>
 
                   {/* Preset Buttons for Badges #1 to #9 */}
                   <div className="pt-1">
-                    <label className="text-[10px] text-[#DFD0B0]/60 font-bold uppercase block mb-1">
+                    <label className="text-[10px] text-[#334155]/60 font-bold uppercase block mb-1">
                       Quick Grant Reserved VIP/Admin Badges (#1 to #9):
                     </label>
                     <div className="flex flex-wrap gap-1.5">
@@ -446,7 +446,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                     </button>
                     <button
                       onClick={handleSaveUserModifications}
-                      className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-[#52673A] hover:from-emerald-500 text-white text-xs font-bold border border-emerald-400 shadow-md flex items-center gap-1.5"
+                      className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-[#2563eb] hover:from-emerald-500 text-white text-xs font-bold border border-emerald-400 shadow-md flex items-center gap-1.5"
                     >
                       <Check className="w-3.5 h-3.5" />
                       <span>Commit Permissions & Badge</span>
@@ -457,7 +457,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
 
               {/* Users Search Bar */}
               <div className="flex items-center gap-2 p-2 rounded-2xl bg-white/[0.03] border border-white/10">
-                <Search className="w-4 h-4 text-[#DFD0B0]/60 ml-2" />
+                <Search className="w-4 h-4 text-[#334155]/60 ml-2" />
                 <input
                   type="text"
                   placeholder="Search players by name, email, or UID..."
@@ -471,7 +471,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
               <div className="border border-white/10 rounded-2xl overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs text-white">
-                    <thead className="bg-white/5 uppercase text-[10px] text-[#DFD0B0]/70 font-bold border-b border-white/10">
+                    <thead className="bg-white/5 uppercase text-[10px] text-[#334155]/70 font-bold border-b border-white/10">
                       <tr>
                         <th className="p-3">Player / Identity</th>
                         <th className="p-3">Role</th>
@@ -483,7 +483,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                     <tbody className="divide-y divide-white/5">
                       {filteredUsers.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="p-6 text-center text-[#DFD0B0]/60">
+                          <td colSpan={5} className="p-6 text-center text-[#334155]/60">
                             No registered player records found.
                           </td>
                         </tr>
@@ -515,7 +515,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                                         </span>
                                       )}
                                     </div>
-                                    <div className="text-[10px] text-[#DFD0B0]/60 font-mono">
+                                    <div className="text-[10px] text-[#334155]/60 font-mono">
                                       {u.email || u.uid}
                                     </div>
                                   </div>
@@ -545,7 +545,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
 
                               <td className="p-3">
                                 <span className="font-bold text-white">⚔️ {u.elo ?? 1200}</span>
-                                <span className="text-[#DFD0B0]/60 ml-2">✊ {u.respectPoints ?? 100}</span>
+                                <span className="text-[#334155]/60 ml-2">✊ {u.respectPoints ?? 100}</span>
                               </td>
 
                               <td className="p-3 text-right">
@@ -562,7 +562,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                                     onClick={() => handleSelectUserForEdit(u)}
                                     className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-bold transition-all flex items-center gap-1"
                                   >
-                                    <Edit3 className="w-3 h-3 text-[#F5C453]" />
+                                    <Edit3 className="w-3 h-3 text-[#0056b3]" />
                                     <span>Edit</span>
                                   </button>
                                 </div>
@@ -584,7 +584,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
           {activeTab === 'feedback' && (
             <div className="space-y-4 animate-in fade-in duration-150">
               <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-2xl bg-white/[0.03] border border-white/10">
-                <div className="text-xs text-[#DFD0B0]/80">
+                <div className="text-xs text-[#334155]/80">
                   Total Submissions: <span className="font-bold text-white">{feedbacksList.length}</span> • Pending Review: <span className="font-bold text-amber-400">{feedbacksList.filter(f => f.status === 'pending').length}</span>
                 </div>
 
@@ -595,7 +595,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                       onClick={() => setFeedbackFilter(st)}
                       className={`px-2.5 py-1 rounded-lg text-xs font-bold capitalize transition-all ${
                         feedbackFilter === st
-                          ? 'bg-[#52673A] text-white border border-[#F5C453]/50'
+                          ? 'bg-[#2563eb] text-white border border-[#0056b3]/50'
                           : 'bg-white/5 text-white/70 hover:bg-white/10'
                       }`}
                     >
@@ -607,8 +607,8 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
 
               {filteredFeedbacks.length === 0 ? (
                 <div className="p-8 text-center rounded-2xl bg-white/[0.02] border border-white/10 space-y-2">
-                  <MessageSquare className="w-8 h-8 mx-auto text-[#DFD0B0]/40" />
-                  <p className="text-xs text-[#DFD0B0]/60">No feedback submissions found in this category.</p>
+                  <MessageSquare className="w-8 h-8 mx-auto text-[#334155]/40" />
+                  <p className="text-xs text-[#334155]/60">No feedback submissions found in this category.</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -632,8 +632,8 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                               {fb.category}
                             </span>
                           </div>
-                          <div className="text-[11px] text-[#DFD0B0]/70 mt-0.5">
-                            From: <span className="font-bold text-white">{fb.userName}</span> {fb.userEmail ? `(${fb.userEmail})` : ''} • Badge: <span className="text-[#F5C453]">{fb.userBadge || 'Member'}</span>
+                          <div className="text-[11px] text-[#334155]/70 mt-0.5">
+                            From: <span className="font-bold text-white">{fb.userName}</span> {fb.userEmail ? `(${fb.userEmail})` : ''} • Badge: <span className="text-[#0056b3]">{fb.userBadge || 'Member'}</span>
                           </div>
                         </div>
 
@@ -642,7 +642,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                             <Star
                               key={i}
                               className={`w-3.5 h-3.5 ${
-                                i < fb.rating ? 'fill-[#F5C453] text-[#F5C453]' : 'text-white/20'
+                                i < fb.rating ? 'fill-[#0056b3] text-[#0056b3]' : 'text-white/20'
                               }`}
                             />
                           ))}
@@ -669,7 +669,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                             placeholder="Add developer response note..."
                             value={replyNote[fb.id] || ''}
                             onChange={(e) => setReplyNote({ ...replyNote, [fb.id]: e.target.value })}
-                            className="w-full px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-white text-[11px] outline-none focus:border-[#F5C453]"
+                            className="w-full px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-white text-[11px] outline-none focus:border-[#0056b3]"
                           />
                         </div>
 
@@ -708,16 +708,16 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
           {activeTab === 'stats_editor' && (
             <div className="space-y-4 animate-in fade-in duration-150">
               <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3">
-                <h3 className="text-xs font-black uppercase tracking-wider text-[#F5C453]">
+                <h3 className="text-xs font-black uppercase tracking-wider text-[#0056b3]">
                   Direct Rating & Honor Modifier
                 </h3>
-                <p className="text-xs text-[#DFD0B0]/70">
+                <p className="text-xs text-[#334155]/70">
                   Instantly override any account's ELO rating, Respect Points, executions, or custom honor title across the entire system.
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                   <div>
-                    <label className="text-[11px] text-[#DFD0B0]/80 font-bold block mb-1">
+                    <label className="text-[11px] text-[#334155]/80 font-bold block mb-1">
                       Select Target Player
                     </label>
                     <select
@@ -728,7 +728,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                         const found = usersList.find(u => u.uid === uid);
                         if (found) handleSelectUserForEdit(found);
                       }}
-                      className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-xs font-bold outline-none focus:border-[#F5C453]"
+                      className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-xs font-bold outline-none focus:border-[#0056b3]"
                     >
                       <option value="">-- Choose User --</option>
                       {usersList.map(u => (
@@ -740,7 +740,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                   </div>
 
                   <div>
-                    <label className="text-[11px] text-[#DFD0B0]/80 font-bold block mb-1">
+                    <label className="text-[11px] text-[#334155]/80 font-bold block mb-1">
                       Quick Preset Overrides
                     </label>
                     <div className="flex flex-wrap gap-1.5">
@@ -770,26 +770,26 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                   <div>
-                    <label className="text-[11px] text-[#DFD0B0]/80 font-bold block mb-1">
+                    <label className="text-[11px] text-[#334155]/80 font-bold block mb-1">
                       ELO Rating (e.g. 100 - 3500)
                     </label>
                     <input
                       type="number"
                       value={editElo}
                       onChange={(e) => setEditElo(Number(e.target.value))}
-                      className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-xs font-bold outline-none focus:border-[#F5C453]"
+                      className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-xs font-bold outline-none focus:border-[#0056b3]"
                     />
                   </div>
 
                   <div>
-                    <label className="text-[11px] text-[#DFD0B0]/80 font-bold block mb-1">
+                    <label className="text-[11px] text-[#334155]/80 font-bold block mb-1">
                       Respect Points (✊ Honor)
                     </label>
                     <input
                       type="number"
                       value={editRespect}
                       onChange={(e) => setEditRespect(Number(e.target.value))}
-                      className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-xs font-bold outline-none focus:border-[#F5C453]"
+                      className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-xs font-bold outline-none focus:border-[#0056b3]"
                     />
                   </div>
                 </div>
@@ -798,7 +798,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                   <button
                     onClick={handleSaveUserModifications}
                     disabled={!targetUid}
-                    className="px-5 py-2 rounded-xl bg-gradient-to-r from-[#52673A] to-[#8C2425] text-white text-xs font-black border border-[#F5C453]/60 shadow-lg disabled:opacity-40"
+                    className="px-5 py-2 rounded-xl bg-gradient-to-r from-[#2563eb] to-[#1e3a8a] text-white text-xs font-black border border-[#0056b3]/60 shadow-lg disabled:opacity-40"
                   >
                     Apply Rating & Honor Override
                   </button>
@@ -813,10 +813,10 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
           {activeTab === 'system_switcher' && (
             <div className="space-y-4 animate-in fade-in duration-150">
               <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3">
-                <h3 className="text-xs font-black uppercase tracking-wider text-[#F5C453]">
+                <h3 className="text-xs font-black uppercase tracking-wider text-[#0056b3]">
                   One-Click Account & Persona Switcher
                 </h3>
-                <p className="text-xs text-[#DFD0B0]/70">
+                <p className="text-xs text-[#334155]/70">
                   Switch identities seamlessly to test how leaderboard, badges, and permissions render for different user tiers.
                 </p>
 
@@ -827,11 +827,11 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                       <img
                         src={DEVELOPER_PROFILE_DEFAULT.photoURL!}
                         alt="Owner"
-                        className="w-11 h-11 rounded-xl object-cover border-2 border-[#F5C453]"
+                        className="w-11 h-11 rounded-xl object-cover border-2 border-[#0056b3]"
                       />
                       <div>
                         <h4 className="text-sm font-black text-amber-300">q.brz (Founder)</h4>
-                        <p className="text-[11px] text-[#DFD0B0]/70">👑 OWNER #0 • qayssafty@gmail.com</p>
+                        <p className="text-[11px] text-[#334155]/70">👑 OWNER #0 • qayssafty@gmail.com</p>
                       </div>
                     </div>
                     <button
