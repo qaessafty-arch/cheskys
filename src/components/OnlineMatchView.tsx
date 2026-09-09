@@ -562,7 +562,16 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
 
   const handleRematch = async () => {
     if (!session || !myUid) return;
+
+    const opp = isWhitePlayer ? session.blackPlayer : session.whitePlayer;
+    const isBot = opp?.uid?.startsWith('ww_');
+
     await offerRematchOnlineMatch(matchId, myUid);
+
+    if (isBot) {
+      // Bots accept rematches instantly
+      await acceptRematchOnlineMatch(matchId, session);
+    }
   };
 
   const handleAcceptRematch = async () => {
