@@ -147,11 +147,16 @@ export default function App() {
       const customEvent = e as CustomEvent;
       const { status, inviteId, roomCode } = customEvent.detail || {};
       const cleanCode = normalizeRoomCode(roomCode);
-      if (status === 'accepted') {
-        setActiveMode('private_room');
-        await acceptInvite(inviteId, cleanCode);
-      } else {
-        await declineInvite(inviteId);
+      try {
+        if (status === 'accepted') {
+          setActiveMode('private_room');
+          await acceptInvite(inviteId, cleanCode);
+        } else {
+          await declineInvite(inviteId);
+        }
+      } catch (err: any) {
+        console.error('[App] room_invite_response failure:', err);
+        setActiveMode('ai');
       }
     };
 
@@ -161,19 +166,22 @@ export default function App() {
       const targetInvite = invite || fallbackInvite;
       const cleanCode = normalizeRoomCode(roomCode || matchId || targetInvite?.roomCode);
 
-      if (inviteId) {
-        setActiveMode('private_room');
-        await acceptInvite(inviteId, cleanCode);
-      } else if (cleanCode && cleanCode.length <= 10) {
-        setActiveMode('private_room');
-        try {
+      try {
+        if (inviteId) {
+          setActiveMode('private_room');
+          await acceptInvite(inviteId, cleanCode);
+        } else if (cleanCode && cleanCode.length <= 10) {
+          setActiveMode('private_room');
           await joinRoomWithContext(targetInvite || cleanCode);
-        } catch (err) {
-          console.warn('[App] accept-challenge joinRoomWithContext notice:', err);
+        } else if (matchId) {
+          setActiveOnlineMatchId(matchId);
+          setActiveMode('online_match');
         }
-      } else if (matchId) {
-        setActiveOnlineMatchId(matchId);
-        setActiveMode('online_match');
+      } catch (err: any) {
+        console.error('[App] accept-challenge join failure:', err);
+        setActiveMode('ai'); // Revert to home on failure
+        // Note: RoomContext.tsx handles the toast for joinError,
+        // but we can add a fallback here if needed.
       }
     };
 

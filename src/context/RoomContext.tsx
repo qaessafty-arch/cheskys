@@ -157,28 +157,34 @@ export const RoomProvider = ({ children }) => {
         return room;
       }
 
-      // Atomic Join Transaction
-      const claimedRoom = await runTransaction(db, async (transaction) => {
-        const roomRef = doc(db, 'rooms', cleanCode);
-        const snap = await transaction.get(roomRef);
+      try {
+        const claimedRoom = await runTransaction(db, async (transaction) => {
+          const roomRef = doc(db, 'rooms', cleanCode);
+          const snap = await transaction.get(roomRef);
 
-        if (!snap.exists() && synthesize) {
-          const newRoom = { ...room, roomId: cleanCode, roomCode: cleanCode, opponentId: activeProfile.uid, status: 'ready', createdAt: serverTimestamp() };
-          transaction.set(roomRef, newRoom);
-          return newRoom;
-        }
+          if (!snap.exists() && synthesize) {
+            const newRoom = { ...room, roomId: cleanCode, roomCode: cleanCode, opponentId: activeProfile.uid, status: 'ready', createdAt: serverTimestamp() };
+            transaction.set(roomRef, newRoom);
+            return newRoom;
+          }
 
-        const data = snap.data();
-        if (data.opponentId && data.opponentId !== activeProfile.uid) throw new Error('Room is full.');
-        
-        const updated = { ...data, opponentId: activeProfile.uid, opponentName: activeProfile.displayName, status: 'ready' };
-        transaction.update(roomRef, updated);
-        return updated;
-      });
+          const data = snap.data();
+          if (data.opponentId && data.opponentId !== activeProfile.uid) throw new Error('Room is full.');
 
-      setCurrentRoom(claimedRoom);
-      if (claimedRoom.status === 'ready') startCountdownFlow(claimedRoom);
-      return claimedRoom;
+          const updated = { ...data, opponentId: activeProfile.uid, opponentName: activeProfile.displayName, status: 'ready' };
+          transaction.update(roomRef, updated);
+          return updated;
+        });
+
+        setCurrentRoom(claimedRoom);
+        if (claimedRoom.status === 'ready') startCountdownFlow(claimedRoom);
+        return claimedRoom;
+      } catch (err: any) {
+        const msg = err.message || 'Failed to join room';
+        setJoinError(msg);
+        toast.error(msg);
+        throw err;
+      }
     },
     [profile, user]
   );

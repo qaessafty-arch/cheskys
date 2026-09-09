@@ -41,7 +41,12 @@ export const InviteCard: React.FC<InviteCardProps> = ({
 
     window.dispatchEvent(
       new CustomEvent('accept-challenge', {
-        detail: { invite: invitePayload, roomCode: normalizedCode, matchId: gameId || normalizedCode },
+        detail: {
+          inviteId, // Added to root for App.tsx consistency
+          invite: invitePayload,
+          roomCode: normalizedCode,
+          matchId: gameId || normalizedCode
+        },
       })
     );
 
