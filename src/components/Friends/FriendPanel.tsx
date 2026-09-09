@@ -182,7 +182,7 @@ export const FriendPanel: React.FC<FriendPanelProps> = ({
   const handleInviteToRoom = async (friend: FriendUser) => {
     if (!currentRoom || !friend) return;
     await inviteFriendNotify(friend.uid, friend.displayName, currentRoom.roomCode || '');
-    await inviteFriend(friend.uid, friend.displayName, friend.photoURL);
+    await inviteFriend(currentRoom.roomCode || '', friend.uid);
   };
 
   const handleCopyHandle = () => {

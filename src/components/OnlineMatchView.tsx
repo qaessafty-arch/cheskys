@@ -75,6 +75,10 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
   const { profile, user, updateRespectMetrics } = useAuth();
   const [session, setSession] = useState<OnlineMatchSession | null>(null);
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'missing'>('loading');
+  const loadStateRef = useRef(loadState);
+  useEffect(() => {
+    loadStateRef.current = loadState;
+  }, [loadState]);
   const [game, setGame] = useState<Chess>(() => new Chess());
   const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null);
 
@@ -130,10 +134,12 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
     let timeoutId: NodeJS.Timeout;
 
     const unsub = listenToOnlineMatchSession(matchId, newSession => {
-      if (!newSession) {
-        setLoadState('missing');
+      console.log(`[OnlineMatchView] Session update for ${matchId}:`, newSession);
+      if (!newSession || !newSession.fen || newSession.fen.trim().length === 0) {
+        console.warn(`[OnlineMatchView] Session missing or invalid for ${matchId}`);
         return;
       }
+
 
       // Atomic update to avoid "Loading" flicker
       setSession(newSession);
@@ -147,7 +153,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
 
     // Timeout to prevent permanent "Loading" state if Firestore is lagging
     timeoutId = setTimeout(() => {
-      if (loadState === 'loading') {
+      if (loadStateRef.current === 'loading') {
         console.warn('[OnlineMatchView] Loading timeout reached. Checking session existence...');
         // Try one last manual fetch
         import('../services/matchService').then(m => m.verifyOnlineMatchExists(matchId)).then(exists => {
@@ -718,6 +724,12 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
               <div className="w-10 h-10 rounded-full border-4 border-[#F59E0B] border-t-transparent animate-spin" />
               <h2 className="text-lg font-black text-white">Loading Game State...</h2>
               <p className="text-xs text-[#94A3B8]">Synchronizing board and player credentials</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="mt-2 px-4 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold transition-colors cursor-pointer border border-white/10"
+              >
+                Retry Connection
+              </button>
             </>
           )}
           <button

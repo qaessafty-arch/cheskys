@@ -3,6 +3,32 @@ import { CustomBackgroundConfig } from '../types/chess';
 
 export const PRESET_THEMES: UITheme[] = [
   {
+    id: 'bluesky',
+    name: '☀️ BlueSky',
+    description: 'Clear azure horizons with bright clouds and solar brilliance',
+    category: 'nature',
+    colors: {
+      primary: '#00BFFF',
+      primaryHover: '#009BCC',
+      secondary: '#FFFFFF',
+      accentGlow: 'rgba(0, 191, 255, 0.40)',
+      appBg: '#87CEEB',
+      mesh1: 'rgba(255, 255, 255, 0.50)',
+      mesh2: 'rgba(135, 206, 235, 0.40)',
+      mesh3: 'rgba(0, 191, 255, 0.30)',
+      cardBg: 'rgba(255, 255, 255, 0.40)',
+      cardBorder: 'rgba(255, 255, 255, 0.60)',
+      cardHoverBg: 'rgba(255, 255, 255, 0.60)',
+      cardHoverBorder: 'rgba(0, 191, 255, 0.80)',
+      panelBg: 'rgba(255, 255, 255, 0.70)',
+      textMain: '#003366',
+      textMuted: 'rgba(0, 51, 102, 0.70)',
+      boardLight: '#FFFFFF',
+      boardDark: '#00BFFF',
+      boardBorder: '#007ACC'
+    }
+  },
+  {
     id: 'high-contrast-dark',
     name: '⚡ High Contrast Dark (WCAG AAA)',
     description: 'Ultra-accessible high-contrast palette: deep void obsidian (#080C14), crisp slate panels (#161B22), pure white text (#FFFFFF), and sky cyan accents (#38BDF8)',

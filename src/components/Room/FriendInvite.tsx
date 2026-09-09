@@ -47,13 +47,7 @@ export const FriendInvite: React.FC<FriendInviteProps> = ({ onClose, onInvited }
       const friend = friends.find((f) => f.uid === uid);
       if (!friend) continue;
       try {
-        await inviteFriend(friend.uid, friend.displayName, friend.photoURL);
-        // FIX: Pass Rich Metadata for the 6-Tier Resolver
-        await inviteFriendNotify(friend.uid, friend.displayName, cleanRoomCode, {
-          settings: currentRoom.settings,
-          creatorId: currentRoom.creatorId,
-          creatorName: currentRoom.creatorName,
-        });
+        await inviteFriend(cleanRoomCode || '', friend.uid);
       } catch (e) { console.error(e); }
     }
     setInviting(null);

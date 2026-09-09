@@ -132,12 +132,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'notifications',
-      label: 'Notifications',
+      label: 'Celestial Messages',
       badge: unreadCount > 0 ? `${unreadCount}` : undefined,
       badgeClass: 'bg-[#EF4444] text-white text-[10px] px-1.5 py-0.5 rounded-full font-black shadow-lg',
       icon: <Bell className="w-5 h-5 text-[#F59E0B]" />,
       action: () => {
-        // Notifications are in the header, but we could add a notification page later
+        window.dispatchEvent(new CustomEvent('open-notifications'));
         onClose();
       }
     },
@@ -204,20 +204,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
       }
     },
     {
-      id: 'private-room',
-      label: 'Astral Sanctum',
-      icon: <Users className="w-5 h-5 text-[#F59E0B]" />,
-      action: () => {
-        onSelectMode('multiplayer');
-        onOpenFriends();
-        onClose();
-      }
-    },
-    {
       id: 'friends',
       label: t('sidebar.friends'),
       badge: formattedOnlineText(),
-      badgeClass: onlineFriendsCount > 0 
+      badgeClass: onlineFriendsCount > 0
         ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1'
         : 'bg-[#1F293D] text-slate-300 text-[10px] px-2 py-0.5 rounded-full border border-white/5',
       badgeDot: onlineFriendsCount > 0,

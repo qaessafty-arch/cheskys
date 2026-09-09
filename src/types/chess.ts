@@ -388,7 +388,7 @@ export interface OpeningInfo {
   variation?: string;
 }
 
-export type NotificationType = 'challenge' | 'friend_request' | 'achievement' | 'system' | 'room_join' | 'room_invite' | 'chat_message';
+export type NotificationType = 'challenge' | 'friend_request' | 'achievement' | 'system' | 'room_join' | 'room_invite' | 'chat_message' | 'room_nudge';
 
 export interface Notification {
   id: string;

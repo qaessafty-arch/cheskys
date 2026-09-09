@@ -25,7 +25,7 @@ import { joinOnlineMatch, recordLocalUserCreatedRoom } from '../services/onlineM
 import { OnlineMatchPlayer, TimeControl } from '../types/chess';
 import { resolveRoom, normalizeRoomCode, getHydratedProfile } from '../utils/roomResolver';
 
-export type RoomStatus = 'waiting' | 'ready' | 'in_progress' | 'completed' | 'aborted';
+export type RoomStatus = 'waiting' | 'ready' | 'in_progress' | 'completed' | 'aborted' | 'ended' | 'expired';
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
 export interface RoomSettings {
@@ -34,6 +34,7 @@ export interface RoomSettings {
   initialSeconds: number;
   incrementSeconds: number;
   color: 'white' | 'black' | 'random';
+  rated: boolean;
 }
 
 export interface PrivateRoom {
@@ -48,6 +49,7 @@ export interface PrivateRoom {
   opponentName?: string;
   opponentPhotoURL?: string;
   opponentElo?: number;
+  opponentColor?: 'white' | 'black' | 'random';
   status: RoomStatus;
   settings: RoomSettings;
   gameId?: string;
@@ -60,8 +62,12 @@ export interface RoomChatMessage {
   id: string;
   senderId: string;
   senderName: string;
-  text: string;
+  userName: string;
+  userId: string;
+  userPhotoURL?: string;
+  message: string;
   timestamp: any;
+  isSystem: boolean;
 }
 
 export interface RoomInvite {
@@ -74,11 +80,13 @@ export interface RoomInvite {
 }
 
 export interface UserInvite {
+  id: string;
   userId: string;
   roomCode: string;
   roomId: string;
   invitedBy: string;
   invitedByName: string;
+  invitedByPhoto?: string;
   settings?: RoomSettings;
   createdAt: any;
 }
