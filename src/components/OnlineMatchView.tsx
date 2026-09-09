@@ -187,25 +187,22 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
     const onMatchJoined = (data: any) => {
       if (data.success) {
         setLoadState(prev => prev === 'loading' ? 'ready' : prev);
-        setSession(prev => {
-          if (prev) return prev;
-          return {
-            id: data.matchId,
-            hostId: data.whitePlayer?.uid || '',
-            whitePlayer: { uid: data.whitePlayer?.uid || '', displayName: data.whitePlayer?.name || 'Player 1', elo: data.whitePlayer?.rating || 1200 },
-            blackPlayer: { uid: data.blackPlayer?.uid || '', displayName: data.blackPlayer?.name || 'Player 2', elo: data.blackPlayer?.rating || 1200 },
-            fen: data.fen,
-            pgn: '',
-            turn: data.turn,
-            status: data.status,
-            winner: null,
-            timeControl: { name: 'Rapid', initialSeconds: data.whiteSecondsRemaining, incrementSeconds: 0 },
-            whiteSecondsRemaining: data.whiteSecondsRemaining,
-            blackSecondsRemaining: data.blackSecondsRemaining,
-            moves: [],
-            moveCount: data.movesCount || 0
-          } as any;
-        });
+        setSession({
+          id: data.matchId,
+          hostId: data.whitePlayer?.uid || '',
+          whitePlayer: { uid: data.whitePlayer?.uid || '', displayName: data.whitePlayer?.name || 'Player 1', elo: data.whitePlayer?.rating || 1200 },
+          blackPlayer: { uid: data.blackPlayer?.uid || '', displayName: data.blackPlayer?.name || 'Player 2', elo: data.blackPlayer?.rating || 1200 },
+          fen: data.fen,
+          pgn: '',
+          turn: data.turn,
+          status: data.status,
+          winner: null,
+          timeControl: { name: 'Rapid', initialSeconds: data.whiteSecondsRemaining, incrementSeconds: 0 },
+          whiteSecondsRemaining: data.whiteSecondsRemaining,
+          blackSecondsRemaining: data.blackSecondsRemaining,
+          moves: [],
+          moveCount: data.movesCount || 0
+        } as any);
       }
     };
     const onMoveMade = (data: any) => {
