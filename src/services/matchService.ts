@@ -131,7 +131,38 @@ export const createOnlineMatch = async (
 };
 
 /**
+ * Local Cache Retrieval:
+ * Attempts to retrieve a cached online match session from localStorage.
+ * Returns the session if found and valid, otherwise null.
+ */
+export const getOnlineMatchSessionLocal = (
+  gameId: string | null | undefined
+): OnlineMatchSession | null => {
+  if (!gameId || typeof gameId !== 'string' || gameId.trim() === '') {
+    return null;
+  }
+  const cleanId = gameId.trim();
+  try {
+    const localMatch = localStorage.getItem(`chess_match_${cleanId}`) || localStorage.getItem(`online_match_${cleanId}`);
+    if (localMatch) {
+      const parsed = JSON.parse(localMatch) as OnlineMatchSession;
+      if (
+        parsed?.id &&
+        parsed?.fen &&
+        (parsed.status === 'active' || parsed.status === 'in_progress' || parsed.status === 'waiting' || parsed.status === 'ready')
+      ) {
+        return parsed;
+      }
+    }
+  } catch (err) {
+    console.warn('[MatchService] Failed to retrieve local match session:', err);
+  }
+  return null;
+};
+
+/**
  * Handshake Verification Helper:
+
  * Strictly verifies that a given gameId exists in Firestore under the 'online_matches' collection
  * or verified in-session storage and possesses valid game state before navigation.
  */

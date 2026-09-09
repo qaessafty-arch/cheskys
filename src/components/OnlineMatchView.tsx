@@ -20,6 +20,7 @@ import {
   listenToInGameTypingStatus,
   InGameMessage
 } from '../services/chatService';
+import { getOnlineMatchSessionLocal } from '../services/matchService';
 import { advanceTournamentMatch } from '../services/tournamentService';
 import { getBotMoveForElo, getCapturedMaterial, evaluateBoard } from '../utils/chessEngine';
 import { useAuth } from '../context/AuthContext';
@@ -140,6 +141,13 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
 
   useEffect(() => {
     if (!matchId) return;
+
+    // Immediate Local Fallback: Load from cache to prevent "Zombie Loading" state
+    const cachedSession = getOnlineMatchSessionLocal(matchId);
+    if (cachedSession) {
+      setSession(cachedSession);
+      setLoadState('ready');
+    }
 
     let timeoutId: NodeJS.Timeout;
 
