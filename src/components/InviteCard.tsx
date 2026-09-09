@@ -1,6 +1,4 @@
-import React from 'react';
-import { motion } from 'motion/react';
-import { Swords, Clock, Check, X, Shield, Sparkles } from 'lucide-react';
+es } from 'lucide-react';
 import { normalizeRoomCode } from '../utils/roomResolver';
 
 export interface InviteCardProps {
@@ -33,23 +31,35 @@ export const InviteCard: React.FC<InviteCardProps> = ({
   const handleAccept = (e: React.MouseEvent) => {
     e.stopPropagation();
 
-    // 1. Dispatch global custom event for top-level App architecture
-    const targetMatchId = gameId || normalizedCode;
+    // FIX: Wrap all metadata into a single 'invite' object.
+    // This allows the RoomContext and Resolver to use synthesis if the DB is lagging.
+    const invitePayload = {
+      inviteId,
+      roomCode: normalizedCode,
+      invitedBy: challengerName, // We map challenger to inviter for the resolver
+      invitedByName: challengerName,
+      settings: {
+        timeControlName: timeControl,
+        rated: rated,
+        // Add default values for synthesis if missing
+        initialSeconds: timeControl.includes('10') ? 600 : 300,
+        incrementSeconds: 0,
+        color: 'random',
+      }
+    };
+
+    // 1. Dispatch global custom event with structured object
     window.dispatchEvent(
       new CustomEvent('accept-challenge', {
         detail: {
-          matchId: targetMatchId,
+          invite: invitePayload,
           roomCode: normalizedCode,
-          inviteId,
-          challengerName,
-          challengerElo,
-          timeControl,
-          rated,
+          matchId: gameId || normalizedCode,
         },
       })
     );
 
-    // 2. Also dispatch legacy room_invite_response for backward compatibility
+    // 2. Backward compatibility
     window.dispatchEvent(
       new CustomEvent('room_invite_response', {
         detail: {
@@ -60,23 +70,16 @@ export const InviteCard: React.FC<InviteCardProps> = ({
       })
     );
 
-    // 3. Invoke direct callback if provided
     onAccept?.(inviteId, normalizedCode);
   };
 
   const handleDecline = (e: React.MouseEvent) => {
     e.stopPropagation();
-
     window.dispatchEvent(
       new CustomEvent('room_invite_response', {
-        detail: {
-          status: 'declined',
-          inviteId,
-          roomCode: normalizedCode,
-        },
+        detail: { status: 'declined', inviteId, roomCode: normalizedCode },
       })
     );
-
     onDecline?.(inviteId);
   };
 
@@ -90,10 +93,7 @@ export const InviteCard: React.FC<InviteCardProps> = ({
       <div className="flex items-center gap-3">
         <div className="relative">
           <img
-            src={
-              challengerAvatar ||
-              'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'
-            }
+            src={challengerAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'}
             alt={challengerName}
             className="w-12 h-12 rounded-xl object-cover border-2 border-[#F5C453]"
           />
@@ -104,9 +104,7 @@ export const InviteCard: React.FC<InviteCardProps> = ({
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h4 className="text-sm font-bold text-white truncate">
-              {challengerName}
-            </h4>
+            <h4 className="text-sm font-bold text-white truncate">{challengerName}</h4>
             <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-[#F5C453]/15 text-[#F5C453] border border-[#F5C453]/30">
               {challengerElo}
             </span>
