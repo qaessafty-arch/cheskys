@@ -92,14 +92,24 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
 
   // Load friends for quick invite
   useEffect(() => {
-    if (!profile?.uid) return;
-    const unsub = listenToFriendsList(profile.uid, (list) => {
-      if (Array.isArray(list)) {
-        setFriends(list.slice(0, 6));
-      }
-    });
-    return () => unsub?.();
-  }, [profile?.uid]);
+  // Only the invitee needs to listen for the creator's provisioned gameId
+  if (!currentRoom || isCreator || !cleanRoomCode) return;
+
+  const roomRef = doc(db, 'rooms', cleanRoomCode);
+  const unsub = onSnapshot(roomRef, (snap) => {
+    const data = snap.data();
+    if (data?.gameId) {
+      // Verify the match document actually exists in the 'online_matches' collection
+      verifyOnlineMatchExists(data.gameId).then(exists => {
+        if (exists) {
+          navigateToMatch(data.gameId);
+        }
+      });
+    }
+  });
+
+  return () => unsub();
+}, [cleanRoomCode, isCreator]);
 
   /**
    * Verified Navigation for Invitees:
