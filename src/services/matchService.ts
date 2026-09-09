@@ -162,15 +162,15 @@ export const getOnlineMatchSessionLocal = (
 
 /**
  * Handshake Verification Helper:
-
  * Strictly verifies that a given gameId exists in Firestore under the 'online_matches' collection
  * or verified in-session storage and possesses valid game state before navigation.
+ * Returns the session if valid, otherwise null.
  */
 export const verifyOnlineMatchExists = async (
   gameId: string | null | undefined
-): Promise<boolean> => {
+): Promise<OnlineMatchSession | null> => {
   if (!gameId || typeof gameId !== 'string' || gameId.trim() === '') {
-    return false;
+    return null;
   }
   const cleanId = gameId.trim();
   const matchDocRef = doc(db, 'online_matches', cleanId);
@@ -180,7 +180,7 @@ export const verifyOnlineMatchExists = async (
     try {
       const snap = await getDoc(matchDocRef);
       if (snap.exists()) {
-        const data = snap.data();
+        const data = snap.data() as OnlineMatchSession;
         // Validate essential match properties
         const hasValidId = Boolean(data?.id || data?.code);
         const hasValidFen = Boolean(typeof data?.fen === 'string' && data.fen.trim().length > 0);
@@ -195,7 +195,7 @@ export const verifyOnlineMatchExists = async (
           try {
             localStorage.setItem(`chess_match_${cleanId}`, JSON.stringify(data));
           } catch {}
-          return true;
+          return data;
         }
       }
     } catch (err) {
@@ -211,14 +211,14 @@ export const verifyOnlineMatchExists = async (
   try {
     const localMatch = localStorage.getItem(`chess_match_${cleanId}`) || localStorage.getItem(`online_match_${cleanId}`);
     if (localMatch) {
-      const parsed = JSON.parse(localMatch);
+      const parsed = JSON.parse(localMatch) as OnlineMatchSession;
       if (parsed?.id && parsed?.fen && (parsed.status === 'active' || parsed.status === 'in_progress' || parsed.status === 'waiting' || parsed.status === 'ready')) {
-        return true;
+        return parsed;
       }
     }
   } catch {}
 
-  return false;
+  return null;
 };
 
 export default {

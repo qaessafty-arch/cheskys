@@ -165,8 +165,13 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
 
     timeoutId = setTimeout(() => {
       if (loadStateRef.current === 'loading') {
-        import('../services/matchService').then(m => m.verifyOnlineMatchExists(matchId)).then(exists => {
-          if (!exists) setLoadState('missing');
+        import('../services/matchService').then(m => m.verifyOnlineMatchExists(matchId)).then(session => {
+          if (!session) {
+            setLoadState('missing');
+          } else {
+            setSession(session);
+            setLoadState('ready');
+          }
         });
       }
     }, 8000);
