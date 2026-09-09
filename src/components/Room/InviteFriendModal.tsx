@@ -47,7 +47,7 @@ export const InviteFriendModal: React.FC<InviteFriendModalProps> = ({ isOpen, on
     if (!room.currentRoom || invitedUids.has(friend.uid)) return;
     setInvitingUid(friend.uid);
     try {
-      await room.inviteFriend(friend.uid, friend.displayName, friend.photoURL);
+      await room.inviteFriend(room.currentRoom.roomCode, friend.uid);
       if (room.inviteFriendNotify) {
         await room.inviteFriendNotify(friend.uid, friend.displayName, room.currentRoom.roomCode);
       }

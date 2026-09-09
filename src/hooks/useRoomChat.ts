@@ -62,15 +62,15 @@ export function useRoomChat() {
 
   const handleSend = useCallback(async () => {
     const msg = pending.trim();
-    if (!msg || sending) return;
+    if (!msg || sending || !currentRoom) return;
     setPending('');
     setSending(true);
     try {
-      await sendChatMessage(msg);
+      await sendChatMessage(currentRoom.roomCode, msg);
     } finally {
       setSending(false);
     }
-  }, [pending, sending, sendChatMessage]);
+  }, [pending, sending, sendChatMessage, currentRoom]);
 
   const handleTyping = useCallback(
     (uid: string, name: string) => {

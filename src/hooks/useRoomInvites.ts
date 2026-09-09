@@ -40,16 +40,18 @@ export function useRoomInvites() {
 
   const accept = useCallback(
     async (inviteId: string) => {
-      await acceptInvite(inviteId);
+      if (!currentRoom) return;
+      await acceptInvite(inviteId, currentRoom.roomCode);
     },
-    [acceptInvite],
+    [acceptInvite, currentRoom],
   );
 
   const decline = useCallback(
     async (inviteId: string) => {
-      await declineInvite(inviteId);
+      if (!currentRoom) return;
+      await declineInvite(inviteId, currentRoom.roomCode);
     },
-    [declineInvite],
+    [declineInvite, currentRoom],
   );
 
   return { invites, loading, accept, decline };

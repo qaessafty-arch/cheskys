@@ -217,7 +217,13 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
           try {
             const gameSessionId = await createOnlineMatch(
               { uid: room.creatorId, displayName: room.creatorName, elo: room.creatorElo },
-              { id: room.settings.timeControlId, name: room.settings.timeControlName, initialSeconds: room.settings.initialSeconds, incrementSeconds: room.settings.incrementSeconds },
+              {
+                id: room.settings.timeControlId,
+                name: room.settings.timeControlName,
+                initialSeconds: room.settings.initialSeconds,
+                incrementSeconds: room.settings.incrementSeconds,
+                category: room.settings.initialSeconds < 180 ? 'bullet' : room.settings.initialSeconds < 600 ? 'blitz' : 'rapid'
+              },
               room.settings.color,
               cleanCode,
               { uid: room.opponentId || '', displayName: room.opponentName || 'Challenger', elo: room.opponentElo || 1200 }
@@ -395,7 +401,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const sendChatMessage = async (roomCode: string, message: string) => {
-    socketService.emit('room_message', { roomCode, message, senderId: user?.uid });
+    socketService.getSocket()?.emit('room_message', { roomCode, message, senderId: user?.uid });
   };
 
   const markRoomExpiredIfDue = () => {
