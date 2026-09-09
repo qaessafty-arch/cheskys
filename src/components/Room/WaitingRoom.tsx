@@ -501,7 +501,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
                 <Swords className="w-8 h-8" />
               </div>
               <div className="text-xl font-black uppercase tracking-widest text-white">
-                Opponent Joined!
+                Rival Aligned!
               </div>
               <p className="text-xs text-white/70">
                 {isCreator
@@ -519,40 +519,36 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
         )}
       </AnimatePresence>
 
-      {/* Invitee Provisioning & Verification Loading Overlay */}
+      {/* Invitee Provisioning & Verification Loading Banner (Non-Blocking) */}
       <AnimatePresence>
         {!isCreator && (isProvisioning || isVerifyingMatch) && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="p-4 rounded-xl bg-[#0F172A]/90 border border-[#F5C453]/40 flex items-center justify-between shadow-xl"
+            className="p-4 rounded-xl bg-[#0F172A]/90 border border-[#F5C453]/40 flex items-center justify-between shadow-xl mb-4"
           >
             <div className="flex items-center gap-3">
               <Loader2 className="w-5 h-5 text-[#F5C453] animate-spin" />
-              <div>
+              <div className="flex flex-col">
                 <p className="text-sm font-bold text-white">
                   {!hasDetectedValidGameId
-                    ? 'State Guard: Awaiting gameId in Snapshot...'
+                    ? 'State Guard: Awaiting gameId...'
                     : isVerifyingMatch
                     ? 'Verifying Match Arena...'
                     : 'Synchronizing Handshake...'}
                 </p>
                 <p className="text-xs text-white/60">
                   {!hasDetectedValidGameId
-                    ? 'Invitee navigation is guarded until the room creator writes a valid gameId in Firestore'
+                    ? 'Waiting for host to provision the match session'
                     : isVerifyingMatch
-                    ? 'Confirming valid match session in Firestore before launching board'
-                    : 'Waiting for room creator to provision match arena'}
+                    ? 'Confirming session exists in Firestore'
+                    : 'Finalizing connection'}
                 </p>
               </div>
             </div>
             <span className="text-xs font-mono text-[#F5C453] bg-[#F5C453]/10 px-2 py-1 rounded">
-              {!hasDetectedValidGameId
-                ? 'State Guard: Active'
-                : isVerifyingMatch
-                ? 'Verifying Game ID'
-                : 'Handshake Active'}
+              {!hasDetectedValidGameId ? 'Guarded' : isVerifyingMatch ? 'Verifying' : 'Active'}
             </span>
           </motion.div>
         )}
@@ -626,7 +622,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-base font-black uppercase tracking-wider text-white">
-                  Private Room
+                  Astral Sanctum
                 </h2>
                 <span
                   className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-black uppercase tracking-wider ${
@@ -635,7 +631,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
                       : 'bg-amber-400/20 text-amber-300 border border-amber-400/30'
                   }`}
                 >
-                  {isReady ? 'Ready · Handshake Active' : isInProgress ? 'In Progress' : 'Waiting for Invitee'}
+                  {isReady ? 'Ready · Handshake Active' : isInProgress ? 'In Progress' : 'Awaiting Rival alignment'}
                 </span>
               </div>
               <p className="text-xs text-white/60 flex items-center gap-1.5 mt-0.5">
@@ -646,7 +642,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
                 )}
                 {isInvitee && (
                   <span className="text-emerald-300 font-semibold flex items-center gap-1">
-                    <Swords className="w-3 h-3" /> Invitee (Challenger)
+                    <Swords className="w-3 h-3" /> Astral Rival (Challenger)
                   </span>
                 )}
                 {isSpectator && <span className="text-white/40">Spectator</span>}
@@ -674,7 +670,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
               ) : (
                 <Play className="w-3.5 h-3.5 fill-current" />
               )}
-              <span>Launch Arena</span>
+              <span>Initiate Trial</span>
             </button>
           )}
 
@@ -735,11 +731,11 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
         <div className="flex items-center gap-2 text-xs font-semibold text-white/80">
           {isOpponentJoined ? (
             <span className="text-emerald-400 flex items-center gap-1.5 font-bold">
-              <Check className="w-4 h-4" /> Opponent Joined! Launching match...
+              <Check className="w-4 h-4" /> Rival Aligned! Launching match...
             </span>
           ) : (
             <div className="flex items-center gap-2">
-              <span>Waiting for opponent</span>
+              <span>Awaiting Rival alignment</span>
               <div className="waiting-dots">
                 <span />
                 <span />
@@ -772,7 +768,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
         </div>
       </div>
 
-      {/* 3. Middle Row: Players (Left) & Invites (Right) */}
+      {/* 3. Middle Row: Players (Left) & Summons (Right) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {/* Left: 👤 Players */}
         <div className="room-glass-card p-5 sm:p-6 flex flex-col gap-4">
@@ -780,7 +776,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-[#F5C453]" />
               <span className="text-xs font-black uppercase tracking-wider text-white">
-                Battle Contenders
+                Celestial Aspirants
               </span>
             </div>
             <span className="text-[11px] font-mono text-white/40">
@@ -846,7 +842,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
                       {currentRoom.opponentName}
                     </span>
                     <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                      Invitee (Challenger)
+                      Astral Rival (Challenger)
                     </span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-white/50 font-mono mt-0.5">
@@ -868,7 +864,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
                   </div>
                   <div>
                     <div className="text-xs font-bold text-white/60">
-                      Waiting for opponent...
+                      Awaiting Rival alignment...
                     </div>
                     <div className="text-[11px] text-white/40">
                       Share code or invite friends
@@ -877,29 +873,29 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setShowInviteModal(true)}
+                  onClick={() => setShowSummonModal(true)}
                   className="room-btn-action gold !py-2 !px-3 !text-xs cursor-pointer"
                 >
                   <UserPlus className="w-3.5 h-3.5" />
-                  <span>Invite</span>
+                  <span>Summon</span>
                 </button>
               </div>
             )}
           </div>
         </div>
 
-        {/* Right: 📨 Invites & Allies */}
+        {/* Right: 📨 Summons & Allies */}
         <div className="room-glass-card p-5 sm:p-6 flex flex-col gap-4">
           <div className="flex items-center justify-between border-b border-white/10 pb-3">
             <div className="flex items-center gap-2">
               <UserPlus className="w-4 h-4 text-[#F5C453]" />
               <span className="text-xs font-black uppercase tracking-wider text-white">
-                Invite Allies
+                Summon Allies
               </span>
             </div>
             <button
               type="button"
-              onClick={() => setShowInviteModal(true)}
+              onClick={() => setShowSummonModal(true)}
               className="text-xs font-bold text-[#F5C453] hover:underline cursor-pointer flex items-center gap-1"
             >
               <span>View All</span>
@@ -966,7 +962,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
                           : 'bg-[#F5C453] text-black font-black uppercase text-[10px] hover:brightness-110'
                       } disabled:opacity-40 disabled:cursor-not-allowed`}
                     >
-                      {isInvited ? 'Invited' : 'Invite'}
+                      {isInvited ? 'Summoned' : 'Summon'}
                     </button>
                   </div>
                 );
@@ -979,7 +975,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
       {/* 4. Bottom Card: 💬 Room Chat */}
       <RoomChat />
 
-      {/* Invite Friends Modal */}
+      {/* Summon Friends Modal */}
       <InviteFriendModal
         isOpen={showInviteModal}
         onClose={() => setShowInviteModal(false)}

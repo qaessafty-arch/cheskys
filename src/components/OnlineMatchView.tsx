@@ -127,22 +127,170 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
   useEffect(() => {
     if (!matchId) return;
 
+    let timeoutId: NodeJS.Timeout;
+
     const unsub = listenToOnlineMatchSession(matchId, newSession => {
       if (!newSession) {
         setLoadState('missing');
         return;
       }
-      setLoadState('ready');
-      setSession(newSession);
-      socketService.getSocket()?.emit('join_match', { matchId, uid: myUid, session: newSession });
 
-      // Synchronize chess game instance
+      // Atomic update to avoid "Loading" flicker
+      setSession(newSession);
+      setLoadState('ready');
+
+      socketService.getSocket()?.emit('join_match', { matchId, uid: myUid, session: newSession });
+    });
+
+    const socket = socketService.getSocket() || socketService.connect(myUid);
+    setSocketStatus(socket.connected ? 'connected' : 'connecting');
+
+    // Timeout to prevent permanent "Loading" state if Firestore is lagging
+    timeoutId = setTimeout(() => {
+      if (loadState === 'loading') {
+        console.warn('[OnlineMatchView] Loading timeout reached. Checking session existence...');
+        // Try one last manual fetch
+        import('../services/onlineMatchService').then(m => m.verifyOnlineMatchExists(matchId)).then(exists => {
+          if (!exists) setLoadState('missing');
+        });
+      }
+    }, 8000);
+
+    const fallbackTimer = setTimeout(() => {
+      setSocketStatus(prev => (prev === 'connecting' || prev === 'error' ? 'connected' : prev));
+    }, 2500);
+
+    const onConnect = () => {
+      clearTimeout(fallbackTimer);
+      setSocketStatus('connected');
+      socket.emit('join_match', { matchId, uid: myUid });
+    };
+    const onDisconnect = () => setSocketStatus('reconnecting');
+    const onConnectError = () => {
+      console.warn('[Arena] Socket connection error; falling back to Firestore sync.');
+      setSocketStatus('connected');
+    };
+    const onMatchJoined = (data: any) => {
+      if (data.success) {
+        setLoadState(prev => prev === 'loading' ? 'ready' : prev);
+        setSession(prev => {
+          if (prev) return prev;
+          return {
+            id: data.matchId,
+            hostId: data.whitePlayer?.uid || '',
+            whitePlayer: { uid: data.whitePlayer?.uid || '', displayName: data.whitePlayer?.name || 'Player 1', elo: data.whitePlayer?.rating || 1200 },
+            blackPlayer: { uid: data.blackPlayer?.uid || '', displayName: data.blackPlayer?.name || 'Player 2', elo: data.blackPlayer?.rating || 1200 },
+            fen: data.fen,
+            pgn: '',
+            turn: data.turn,
+            status: data.status,
+            winner: null,
+            timeControl: { name: 'Rapid', initialSeconds: data.whiteSecondsRemaining, incrementSeconds: 0 },
+            whiteSecondsRemaining: data.whiteSecondsRemaining,
+            blackSecondsRemaining: data.blackSecondsRemaining,
+            moves: [],
+            moveCount: data.movesCount || 0
+          } as any;
+        });
+      }
+    };
+    const onMoveMade = (data: any) => {
+      console.log('[Socket] Move made:', data.san);
+      setIsPendingMove(false);
       try {
-        const targetFen = newSession.fen && newSession.fen.trim().length > 0
-          ? newSession.fen
-          : 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
-        const updatedGame = new Chess(targetFen);
+        const updatedGame = new Chess(data.fen);
         setGame(updatedGame);
+        setMoveHistory(updatedGame.history());
+        setEvalScore(evaluateBoard(updatedGame));
+        setLastMove({ from: data.from, to: data.to });
+        setWhiteTime(data.whiteSecondsRemaining);
+        setBlackTime(data.blackSecondsRemaining);
+        setMoveIndex(data.moveIndex);
+        if (updatedGame.isCheckmate()) soundManager.playVictory();
+        else if (updatedGame.inCheck()) soundManager.playCheck();
+        else if (data.san.includes('x')) soundManager.playCapture('p', 'w');
+        else soundManager.playMove('p', 'w');
+      } catch (e) {
+        console.error('Error processing socket move:', e);
+      }
+    };
+    const onClockSync = (data: { white: number, black: number }) => {
+      setWhiteTime(data.white);
+      setBlackTime(data.black);
+    };
+    const onGameOver = (data: { reason: string, winner: string, result?: string }) => {
+      if (data.result === 'aborted' || !data.winner || data.winner === 'draw') {
+        return;
+      }
+      if (data.winner === myColor) {
+        soundManager.playVictory();
+      } else {
+        soundManager.playDefeat();
+      }
+    };
+    const onMatchAborted = (data: { reason: string }) => {
+      setSession(prev => prev ? { ...prev, status: 'aborted', reason: data.reason || 'Match was aborted.' } : prev);
+    };
+    const onReconnectSuccess = (data: any) => {
+      const g = new Chess(data.fen);
+      setGame(g);
+      setMoveHistory(g.history());
+      setWhiteTime(data.whiteSecondsRemaining);
+      setBlackTime(data.blackSecondsRemaining);
+      setMoveIndex(g.history().length);
+    };
+    const onMoveRejected = (data: any) => {
+      console.warn('[Socket] Move rejected notice:', data?.error);
+      setIsPendingMove(false);
+      if (data?.error && data.error.includes('not found')) {
+        socket.emit('join_match', { matchId, uid: myUid });
+      }
+      if (data?.currentFen) {
+        setGame(new Chess(data.currentFen));
+      }
+    };
+    const onOpponentDisconnected = () => {
+      setIsOpponentPresent(false);
+    };
+    const onOpponentReconnected = () => {
+      setIsOpponentPresent(true);
+    };
+    socket.on('match_joined', onMatchJoined);
+    socket.on('move_made', onMoveMade);
+    socket.on('moveMade', onMoveMade);
+    socket.on('move_rejected', onMoveRejected);
+    socket.on('moveRejected', onMoveRejected);
+    socket.on('clock_sync', onClockSync);
+    socket.on('game_over', onGameOver);
+    socket.on('match_aborted', onMatchAborted);
+    socket.on('reconnect_success', onReconnectSuccess);
+    socket.on('connect', onConnect);
+    socket.on('disconnect', onDisconnect);
+    socket.on('connect_error', onConnectError);
+    socket.on('opponentDisconnected', onOpponentDisconnected);
+    socket.on('playerReconnected', onOpponentReconnected);
+    socket.emit('join_match', { matchId, uid: myUid });
+
+    return () => {
+      clearTimeout(timeoutId);
+      clearTimeout(fallbackTimer);
+      if (unsub) unsub();
+      socket.off('match_joined', onMatchJoined);
+      socket.off('move_made', onMoveMade);
+      socket.off('moveMade', onMoveMade);
+      socket.off('move_rejected', onMoveRejected);
+      socket.off('moveRejected', onMoveRejected);
+      socket.off('clock_sync', onClockSync);
+      socket.off('game_over', onGameOver);
+      socket.off('match_aborted', onMatchAborted);
+      socket.off('reconnect_success', onReconnectSuccess);
+      socket.off('connect', onConnect);
+      socket.off('disconnect', onDisconnect);
+      socket.off('connect_error', onConnectError);
+      socket.off('opponentDisconnected', onOpponentDisconnected);
+      socket.off('playerReconnected', onOpponentReconnected);
+    };
+  }, [matchId, onClose, myUid]);
         setEvalScore(evaluateBoard(updatedGame));
         if (newSession.lastMoveFrom && newSession.lastMoveTo) {
           setLastMove({ from: newSession.lastMoveFrom, to: newSession.lastMoveTo });

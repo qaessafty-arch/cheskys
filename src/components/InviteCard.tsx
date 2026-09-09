@@ -80,7 +80,7 @@ export const InviteCard: React.FC<InviteCardProps> = ({
             <h4 className="text-sm font-bold text-white truncate">{challengerName}</h4>
             <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-[#F5C453]/15 text-[#F5C453] border border-[#F5C453]/30">{challengerElo}</span>
           </div>
-          <p className="text-xs text-white/60 flex items-center gap-1 mt-0.5 font-medium"><Sparkles className="w-3 h-3 text-[#F5C453]" /><span>Private Room Challenge</span></p>
+          <p className="text-xs text-white/60 flex items-center gap-1 mt-0.5 font-medium"><Sparkles className="w-3 h-3 text-[#F5C453]" /><span>Astral Sanctum Trial</span></p>
         </div>
       </div>
 
@@ -93,8 +93,8 @@ export const InviteCard: React.FC<InviteCardProps> = ({
       </div>
 
       <div className="grid grid-cols-2 gap-2 pt-1">
-        <button onClick={handleAccept} className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-gradient-to-r from-[#F5C453] to-[#E5B544] text-black text-xs font-black uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all shadow-lg cursor-pointer"><Check className="w-4 h-4 stroke-[3]" />Accept</button>
-        <button onClick={handleDecline} className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-white/80 hover:text-white text-xs font-bold active:scale-95 transition-all cursor-pointer"><X className="w-4 h-4" />Decline</button>
+        <button onClick={handleAccept} className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-gradient-to-r from-[#F5C453] to-[#E5B544] text-black text-xs font-black uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all shadow-lg cursor-pointer"><Check className="w-4 h-4 stroke-[3]" />Ascend</button>
+        <button onClick={handleDecline} className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-white/80 hover:text-white text-xs font-bold active:scale-95 transition-all cursor-pointer"><X className="w-4 h-4" />Dismiss</button>
       </div>
     </motion.div>
   );

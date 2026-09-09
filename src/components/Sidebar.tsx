@@ -113,7 +113,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       id: 'multiplayer',
       mode: 'multiplayer' as GameMode,
-      label: t('sidebar.multiplayer'),
+      label: 'Celestial Realm',
       icon: <Swords className="w-5 h-5 text-amber-400" />,
       action: () => {
         onSelectMode('multiplayer');
@@ -123,7 +123,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       id: 'private_room',
       mode: 'private_room' as GameMode,
-      label: 'Private Room',
+      label: 'Astral Sanctum',
       icon: <Users className="w-5 h-5 text-[#F5C453]" />,
       action: () => {
         onSelectMode('private_room');
@@ -205,7 +205,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'private-room',
-      label: 'Private Room',
+      label: 'Astral Sanctum',
       icon: <Users className="w-5 h-5 text-[#F59E0B]" />,
       action: () => {
         onSelectMode('multiplayer');
@@ -295,7 +295,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       PRO
                     </span>
                   </div>
-                  <p className="text-[10px] text-[var(--text-muted)] font-mono mt-1 uppercase tracking-widest opacity-60">Architect System</p>
+                  <p className="text-[10px] text-[var(--text-muted)] font-mono mt-1 uppercase tracking-widest opacity-60">Celestial Matrix</p>
                 </div>
               </div>
 
@@ -313,7 +313,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {/* Sidebar Navigation Items */}
             <div className="flex-1 min-h-0 overflow-y-auto p-4 pb-6 space-y-2 overscroll-contain">
               <div className="px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)] opacity-50 font-mono">
-                System Main
+                Astral Planes
               </div>
 
               {navItems.map(item => {
@@ -372,7 +372,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </div>
                   <div className="text-left leading-tight">
                     <div className="text-xs font-black text-white flex items-center gap-2">
-                      <span>VISUAL CORES</span>
+                      <span>ASTRAL CORES</span>
                       <span className="text-[8px] px-1.5 py-0.5 rounded bg-[var(--secondary-accent)] text-[var(--app-bg)] font-black font-mono">
                         NEW
                       </span>

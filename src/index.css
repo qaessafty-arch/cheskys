@@ -12,25 +12,25 @@
 @import "./styles/settings.css";
 
 :root {
-  --app-bg: #05070a;
-  --surface-base: #070A12;
-  --surface-raised: #0E1424;
+  --app-bg: #0A0B1E;
+  --surface-base: #0D0E2B;
+  --surface-raised: #1A1B3C;
   --panel-surface: rgba(17, 24, 39, 0.8);
   --panel-surface-2: rgba(12, 18, 32, 0.9);
   --panel-border: rgba(31, 41, 61, 0.5);
   --panel-border-soft: rgba(255, 255, 255, 0.08);
-  --accent-gold: #FFD700;
+  --accent-gold: #F5C453;
   --accent-gold-soft: #FFE162;
   --accent-gold-deep: #B8860B;
-  --secondary-accent: #F5C453;
-  --primary-accent: #52673A;
-  --accent-glow: rgba(245, 196, 83, 0.2);
+  --secondary-accent: #A855F7;
+  --primary-accent: #C084FC;
+  --accent-glow: rgba(168, 85, 247, 0.3);
   --accent-red: #EF4444;
   --accent-red-glow: rgba(239, 68, 68, 0.3);
   --text-main: #F8FAFC;
   --text-muted: #94A3B8;
-  --glass-bg: rgba(255, 255, 255, 0.03);
-  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-bg: rgba(168, 85, 247, 0.05);
+  --glass-border: rgba(168, 85, 247, 0.2);
   --glass-panel: rgba(11, 15, 25, 0.85);
 }
 

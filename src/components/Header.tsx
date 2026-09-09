@@ -137,7 +137,7 @@ export const Header: React.FC<HeaderProps> = ({
                     {/* Header */}
                     <div className="p-4 border-b border-[var(--glass-border)] flex items-center justify-between bg-[var(--app-bg)]/50">
                       <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-black text-white uppercase tracking-widest">Inbox</span>
+                        <span className="text-[11px] font-black text-white uppercase tracking-widest">Celestial Messages</span>
                         {unreadCount > 0 && (
                           <span className="px-1.5 py-0.5 rounded bg-[var(--secondary-accent)] text-[var(--app-bg)] text-[9px] font-black shadow-sm">{unreadCount}</span>
                         )}
@@ -170,7 +170,7 @@ export const Header: React.FC<HeaderProps> = ({
                           </div>
                           <div>
                             <p className="text-sm font-black text-white uppercase tracking-tight">System Status: All Clear</p>
-                            <p className="text-[10px] text-[var(--text-muted)] font-mono mt-1 opacity-60">No pending notifications in matrix</p>
+                            <p className="text-[10px] text-[var(--text-muted)] font-mono mt-1 opacity-60">The astral planes are silent</p>
                           </div>
                         </div>
                       )}
@@ -190,7 +190,7 @@ export const Header: React.FC<HeaderProps> = ({
           className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#52673A] to-[#8C2425] hover:brightness-110 text-white text-[10px] font-black uppercase tracking-widest border border-[#F5C453]/40 shadow-lg transition-all cursor-pointer"
         >
           <Swords className="w-3.5 h-3.5" />
-          Private Room
+          Astral Sanctum
         </button>
 
         <button
@@ -273,58 +273,58 @@ const NotificationListItem: React.FC<{
             <div className="flex items-center gap-2 mt-3">
               {(notification.type === 'challenge' || notification.type === 'room_invite') ? (
                 <>
-                  <button 
+                  <button
                     onClick={(e) => {
                       e.stopPropagation();
                       const cleanCode = (
-                        notification.actionData?.roomCode || 
-                        notification.actionData?.matchId || 
+                        notification.actionData?.roomCode ||
+                        notification.actionData?.matchId ||
                         ''
                       ).trim().toUpperCase();
 
                       if (cleanCode) {
-                        window.dispatchEvent(new CustomEvent('accept-challenge', { 
-                          detail: { 
-                            matchId: cleanCode, 
-                            roomCode: cleanCode, 
+                        window.dispatchEvent(new CustomEvent('accept-challenge', {
+                          detail: {
+                            matchId: cleanCode,
+                            roomCode: cleanCode,
                             inviteId: notification.id,
                             notificationType: notification.type
-                          } 
+                          }
                         }));
-                        window.dispatchEvent(new CustomEvent('room_invite_response', { 
-                          detail: { 
-                            status: 'accepted', 
-                            inviteId: notification.id, 
-                            roomCode: cleanCode 
-                          } 
+                        window.dispatchEvent(new CustomEvent('room_invite_response', {
+                          detail: {
+                            status: 'accepted',
+                            inviteId: notification.id,
+                            roomCode: cleanCode
+                          }
                         }));
                       }
                       onRead();
                     }}
                     className="px-3 py-1.5 rounded-lg bg-emerald-500 text-black text-[10px] font-black uppercase tracking-widest hover:bg-emerald-400 hover:scale-105 active:scale-95 transition-all"
                   >
-                    Accept
+                    Ascend
                   </button>
-                  <button 
+                  <button
                     onClick={(e) => {
                       e.stopPropagation();
                       const cleanCode = (
-                        notification.actionData?.roomCode || 
-                        notification.actionData?.matchId || 
+                        notification.actionData?.roomCode ||
+                        notification.actionData?.matchId ||
                         ''
                       ).trim().toUpperCase();
-                      window.dispatchEvent(new CustomEvent('room_invite_response', { 
-                        detail: { 
-                          status: 'declined', 
-                          inviteId: notification.id, 
-                          roomCode: cleanCode 
-                        } 
+                      window.dispatchEvent(new CustomEvent('room_invite_response', {
+                        detail: {
+                          status: 'declined',
+                          inviteId: notification.id,
+                          roomCode: cleanCode
+                        }
                       }));
                       onRead();
                     }}
                     className="px-3 py-1.5 rounded-lg bg-red-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-red-400 hover:scale-105 active:scale-95 transition-all"
                   >
-                    Decline
+                    Dismiss
                   </button>
                 </>
               ) : (
