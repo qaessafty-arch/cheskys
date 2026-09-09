@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useRoom } from '../../hooks/useRoom';
 import { listenToFriendsList } from '../../services/friendService';
 import { FriendUser } from '../../types/chess';
+import { normalizeRoomCode } from '../../utils/roomResolver';
 
 interface FriendInviteProps {
   onClose: () => void;
@@ -18,6 +19,8 @@ export const FriendInvite: React.FC<FriendInviteProps> = ({ onClose, onInvited }
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [inviting, setInviting] = useState<string | null>(null);
+
+  const cleanRoomCode = normalizeRoomCode(currentRoom?.roomCode);
 
   useEffect(() => {
     if (!profile) return;
@@ -50,7 +53,7 @@ export const FriendInvite: React.FC<FriendInviteProps> = ({ onClose, onInvited }
       if (!friend) continue;
       try {
         await inviteFriend(friend.uid, friend.displayName, friend.photoURL);
-        await inviteFriendNotify(friend.uid, friend.displayName, currentRoom?.roomCode || '');
+        await inviteFriendNotify(friend.uid, friend.displayName, cleanRoomCode);
         sent++;
       } catch {}
     }

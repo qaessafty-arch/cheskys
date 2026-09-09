@@ -111,7 +111,7 @@ export const MultiplayerLobbyView: React.FC<MultiplayerLobbyViewProps> = ({
           (session.guestId && session.guestId !== buildLocalPlayer().uid))
       ) {
         setOpponentJoined(true);
-        soundManager.playVictory();
+        soundManager.playMatchFound();
         // Brief delay before starting
         setTimeout(() => {
           onStartMatch(createdMatchId);
@@ -337,7 +337,7 @@ export const MultiplayerLobbyView: React.FC<MultiplayerLobbyViewProps> = ({
           pairWithBotRef.current = null;
           setIsSearching(false);
           setSearchStatus('');
-          soundManager.playVictory();
+          soundManager.playMatchFound();
           onStartMatch(matchId);
         },
         setSearchStatus,
@@ -405,7 +405,7 @@ export const MultiplayerLobbyView: React.FC<MultiplayerLobbyViewProps> = ({
     try {
       await joinOnlineMatch(cleanId, buildLocalPlayer());
       setIsJoining(false);
-      soundManager.playVictory();
+      soundManager.playMatchFound();
       onStartMatch(cleanId);
     } catch (e: any) {
       console.error('Join room error:', e);

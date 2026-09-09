@@ -601,6 +601,61 @@ async function startServer() {
     }
   });
 
+  // GET & POST /api/rooms/join/:code → Resilient Tier 5 fallback for in-memory Node.js/Socket rooms
+  app.get('/api/rooms/join/:code', (req, res) => {
+    try {
+      const code = (req.params.code || '').trim().toUpperCase();
+      const match = matchmaking.getMatch(code);
+      if (match) {
+        return res.json({
+          success: true,
+          roomCode: code,
+          gameId: match.matchId,
+          status: match.state === 'waiting' ? 'waiting' : 'in_progress',
+          hostId: match.player1?.uid || 'host',
+          hostName: match.player1?.name || 'Host',
+          hostElo: match.player1?.rating || 1200,
+        });
+      }
+      return res.status(404).json({ error: 'No in-memory room found for code ' + code });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message || 'Failed to query room' });
+    }
+  });
+
+  app.post('/api/rooms/join/:code', (req, res) => {
+    try {
+      const code = (req.params.code || '').trim().toUpperCase();
+      const { playerInfo } = req.body || {};
+      const result = matchmaking.joinCustomRoom(code, {
+        uid: playerInfo?.uid || 'guest_' + Date.now(),
+        name: playerInfo?.displayName || playerInfo?.name || 'Player 2',
+        rating: playerInfo?.elo || playerInfo?.rating || 1200
+      });
+      res.json({
+        success: true,
+        playerColor: result.playerColor,
+        gameId: result.match.matchId,
+        gameCode: result.match.gameCode,
+        roomCode: code,
+        game: matchmaking.getGameState(result.match.matchId)
+      });
+    } catch (e: any) {
+      // Check if match already exists
+      const match = matchmaking.getMatch(req.params.code?.trim().toUpperCase());
+      if (match) {
+        return res.json({
+          success: true,
+          gameId: match.matchId,
+          gameCode: match.gameCode,
+          roomCode: req.params.code?.trim().toUpperCase(),
+          status: 'in_progress'
+        });
+      }
+      res.status(400).json({ error: e.message || 'Failed to join room' });
+    }
+  });
+
   // GET /api/games/:id/state → Full game state
   app.get('/api/games/:id/state', (req, res) => {
     const state = matchmaking.getGameState(req.params.id);

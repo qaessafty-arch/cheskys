@@ -614,6 +614,8 @@ export const createOnlineMatch = async (
     id: matchId,
     code: matchId,
     hostId: hostPlayer.uid,
+    whiteId: isHostWhite ? hostPlayer.uid : undefined,
+    blackId: isHostWhite ? undefined : hostPlayer.uid,
     whitePlayer: isHostWhite ? hostPlayer : null,
     blackPlayer: isHostWhite ? null : hostPlayer,
     fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
@@ -624,6 +626,11 @@ export const createOnlineMatch = async (
     status: 'waiting',
     winner: null,
     timeControl,
+    clocks: {
+      white: timeControl.initialSeconds,
+      black: timeControl.initialSeconds,
+      lastMoveTimestamp: Date.now(),
+    },
     whiteSecondsRemaining: timeControl.initialSeconds,
     blackSecondsRemaining: timeControl.initialSeconds,
     createdAt: new Date().toISOString(),
@@ -888,6 +895,9 @@ export const joinOnlineMatch = async (
   }
 
   const session = snap.data() as OnlineMatchSession;
+  if (['completed', 'aborted', 'resigned', 'checkmate', 'draw', 'timeout'].includes(session.status)) {
+    throw new Error('This match has already ended.');
+  }
   if (session.status !== 'waiting' && session.guestId && session.guestId !== guestPlayer.uid) {
     throw new Error('Match room is already full or in progress.');
   }
@@ -900,6 +910,7 @@ export const joinOnlineMatch = async (
     whitePlayer,
     blackPlayer,
     status: 'in_progress',
+    winner: null,
     updatedAt: new Date().toISOString()
   };
 

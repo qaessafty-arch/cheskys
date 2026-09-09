@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Copy,
@@ -14,19 +14,35 @@ import {
   Crown,
   AlertCircle,
   Gamepad2,
+  Loader2,
+  RefreshCw,
+  Eye,
+  Play,
 } from 'lucide-react';
-import { useRoom } from '../../context/RoomContext';
+import { useRoom } from '../../hooks/useRoom';
 import { useAuth } from '../../context/AuthContext';
 import { RoomChat } from './RoomChat';
 import { InviteFriendModal } from './InviteFriendModal';
 import { listenToFriendsList } from '../../services/friendService';
+import { doc, onSnapshot, getDoc, serverTimestamp } from 'firebase/firestore';
+import { db, safeUpdateDoc } from '../../utils/firebase';
+import { normalizeRoomCode, getHydratedProfile } from '../../utils/roomResolver';
+import { createOnlineMatch, verifyOnlineMatchExists } from '../../services/matchService';
+import { OnlineMatchPlayer, TimeControl } from '../../types/chess';
 
 interface WaitingRoomProps {
   onLeave?: () => void;
 }
 
 export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
-  const { currentRoom, cancelRoom, leaveRoom, countdown, inviteFriend } = useRoom();
+  const {
+    currentRoom,
+    cancelRoom,
+    leaveRoom,
+    countdown,
+    inviteFriend,
+    navigateToMatch,
+  } = useRoom();
   const { user, profile } = useAuth();
   const [copied, setCopied] = useState(false);
   const [shared, setShared] = useState(false);
@@ -34,6 +50,47 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
   const [friends, setFriends] = useState<any[]>([]);
   const [invitedUids, setInvitedUids] = useState<Set<string>>(new Set());
 
+  // State guard: strictly prevents invitees from navigating until a valid 'gameId' is detected in the room document snapshot
+  const [hasDetectedValidGameId, setHasDetectedValidGameId] = useState<boolean>(() => {
+    return Boolean(
+      typeof currentRoom?.gameId === 'string' &&
+      currentRoom.gameId.trim().length > 0 &&
+      currentRoom.gameId.trim() !== 'undefined' &&
+      currentRoom.gameId.trim() !== 'null'
+    );
+  });
+  const [snapshotGameId, setSnapshotGameId] = useState<string | null>(() => {
+    return typeof currentRoom?.gameId === 'string' && currentRoom.gameId.trim().length > 0
+      ? currentRoom.gameId.trim()
+      : null;
+  });
+
+  // Invitee synchronized match launch & handshake state
+  const [isProvisioning, setIsProvisioning] = useState(false);
+  const [isVerifyingMatch, setIsVerifyingMatch] = useState(false);
+  const [connectionTimedOut, setConnectionTimedOut] = useState(false);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+  const [isCreatorProvisioning, setIsCreatorProvisioning] = useState(false);
+  const timeoutTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const verifyingGameIdRef = useRef<string | null>(null);
+  const hasNavigatedRef = useRef(false);
+
+  const cleanRoomCode = normalizeRoomCode(currentRoom?.roomCode);
+  const activeProfile = getHydratedProfile(profile || user);
+  const myUid = activeProfile.uid;
+
+  // Handshake Role Identification strictly evaluated against Firestore room document fields:
+  const isCreator = Boolean(currentRoom && myUid && currentRoom.creatorId === myUid);
+  const isInvitee = Boolean(currentRoom && myUid && currentRoom.opponentId === myUid);
+  const isSpectator = Boolean(currentRoom && !isCreator && !isInvitee);
+
+  // Firestore room lifecycle status:
+  const roomStatus = currentRoom?.status; // 'waiting' | 'ready' | 'in_progress' | 'ended' | 'expired'
+  const isReady = roomStatus === 'ready';
+  const isInProgress = roomStatus === 'in_progress';
+  const isOpponentJoined = Boolean(currentRoom?.opponentId) || isReady || isInProgress;
+
+  // Load friends for quick invite
   useEffect(() => {
     if (!profile?.uid) return;
     const unsub = listenToFriendsList(profile.uid, (list) => {
@@ -44,6 +101,145 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
     return () => unsub?.();
   }, [profile?.uid]);
 
+  /**
+   * Verified Navigation for Invitees:
+   * Strictly verifies that the gameId exists in Firestore under 'online_matches/{gameId}'
+   * and contains valid starting state before navigating to the game board.
+   * State guard strictly enforces that invitees cannot navigate unless a valid gameId is detected in snapshot.
+   */
+  const handleVerifiedInviteeNavigation = useCallback(
+    async (candidateGameId: string | null | undefined) => {
+      if (!candidateGameId || typeof candidateGameId !== 'string') return;
+      const cleanId = candidateGameId.trim();
+      if (!cleanId || hasNavigatedRef.current) return;
+
+      // Invitee State Guard: Must have detected a valid gameId in the room document snapshot
+      if (!isCreator && !hasDetectedValidGameId) {
+        console.warn(
+          '[WaitingRoom] State guard blocked invitee navigation: Valid gameId not yet detected in room document snapshot.'
+        );
+        return;
+      }
+
+      // Prevent concurrent duplicate verifications
+      if (verifyingGameIdRef.current === cleanId) return;
+      verifyingGameIdRef.current = cleanId;
+      setIsVerifyingMatch(true);
+
+      try {
+        const isValid = await verifyOnlineMatchExists(cleanId);
+        if (isValid) {
+          hasNavigatedRef.current = true;
+          if (timeoutTimerRef.current) {
+            clearTimeout(timeoutTimerRef.current);
+            timeoutTimerRef.current = null;
+          }
+          setConnectionTimedOut(false);
+          setIsProvisioning(false);
+          setIsVerifyingMatch(false);
+          console.log(`[WaitingRoom] Verified gameId "${cleanId}". Navigating to game board.`);
+          navigateToMatch(cleanId);
+        } else {
+          // Document might still be syncing due to replication lag; release lock and retry
+          console.warn(
+            `[WaitingRoom] Handshake wait: gameId "${cleanId}" not yet verified in Firestore. Retrying verification.`
+          );
+          setIsVerifyingMatch(false);
+          verifyingGameIdRef.current = null;
+          setTimeout(() => {
+            if (!hasNavigatedRef.current && hasDetectedValidGameId) {
+              handleVerifiedInviteeNavigation(cleanId);
+            }
+          }, 1000);
+        }
+      } catch (err) {
+        console.error('[WaitingRoom] Verification error for gameId:', cleanId, err);
+        setIsVerifyingMatch(false);
+        verifyingGameIdRef.current = null;
+      }
+    },
+    [isCreator, hasDetectedValidGameId, navigateToMatch]
+  );
+
+  /**
+   * Synchronized Handshake Protocol (Invitee onSnapshot Listener):
+   * When the room status transitions to 'ready' / opponent joined:
+   * - Creator is the SOLE authorized actor to provision the final 'online_match' document.
+   * - Invitee role is verified based on Firestore status (currentRoom.opponentId === myUid).
+   * - Invitee enters synchronized listening mode waiting for creator's provisioned gameId.
+   * - State guard (hasDetectedValidGameId) tracks when a valid gameId is detected in the snapshot.
+   * - Latency Handling: 10-second timeout if creator's provision is delayed.
+   * - CRITICAL SECURITY ENFORCEMENT:
+   *   1. Invitee CANNOT provision the final 'online_match' document under any circumstances.
+   *   2. Invitee is BLOCKED by a state guard from navigating until detecting valid gameId in room snapshot.
+   */
+  useEffect(() => {
+    // Only the invitee needs to listen for the creator's provisioned gameId
+    if (!currentRoom || isCreator || !cleanRoomCode) return;
+
+    if (isReady || isOpponentJoined) {
+      setIsProvisioning(true);
+
+      // Latency handling: 10-second timeout if creator has not yet provisioned gameId
+      if (timeoutTimerRef.current) clearTimeout(timeoutTimerRef.current);
+      timeoutTimerRef.current = setTimeout(() => {
+        setConnectionTimedOut(true);
+      }, 10000);
+
+      // Realtime listener for gameId written exclusively by Creator
+      const roomRef = doc(db, 'rooms', cleanRoomCode);
+      const unsub = onSnapshot(
+        roomRef,
+        (snap) => {
+          if (snap.exists()) {
+            const data = snap.data();
+            const rawGameId = data?.gameId;
+            const isValidGameId =
+              typeof rawGameId === 'string' &&
+              rawGameId.trim().length > 0 &&
+              rawGameId.trim() !== 'undefined' &&
+              rawGameId.trim() !== 'null';
+
+            if (isValidGameId) {
+              const cleanId = rawGameId.trim();
+              // Update state guard: detected valid gameId in room document snapshot
+              setSnapshotGameId(cleanId);
+              setHasDetectedValidGameId(true);
+            } else {
+              setHasDetectedValidGameId(false);
+              setSnapshotGameId(null);
+            }
+          }
+        },
+        (err) => {
+          console.warn('[WaitingRoom] Invitee handshake listener notice:', err);
+        }
+      );
+
+      return () => {
+        unsub();
+        if (timeoutTimerRef.current) {
+          clearTimeout(timeoutTimerRef.current);
+          timeoutTimerRef.current = null;
+        }
+      };
+    }
+  }, [cleanRoomCode, isCreator, isReady, isOpponentJoined]);
+
+  /**
+   * Invitee State Guard Protected Navigation Trigger:
+   * Strictly prevents invitees from navigating until they detect a valid 'gameId'
+   * in the room document snapshot (hasDetectedValidGameId === true).
+   */
+  useEffect(() => {
+    if (isCreator) return;
+    // Strict State Guard: navigation cannot initiate without valid gameId from snapshot
+    if (!hasDetectedValidGameId || !snapshotGameId) return;
+    if (hasNavigatedRef.current) return;
+
+    handleVerifiedInviteeNavigation(snapshotGameId);
+  }, [isCreator, hasDetectedValidGameId, snapshotGameId, handleVerifiedInviteeNavigation]);
+
   if (!currentRoom) {
     return (
       <div className="p-8 text-center text-white/50">
@@ -52,17 +248,12 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
     );
   }
 
-  const myUid = profile?.uid || user?.uid;
-  const isCreator = currentRoom.creatorId === myUid;
-  const roomCode = currentRoom.roomCode;
-  const isOpponentJoined = Boolean(currentRoom.opponentId);
-
   const handleCopyCode = async () => {
     try {
-      await navigator.clipboard.writeText(roomCode);
+      await navigator.clipboard.writeText(cleanRoomCode);
     } catch {
       const el = document.createElement('input');
-      el.value = roomCode;
+      el.value = cleanRoomCode;
       document.body.appendChild(el);
       el.select();
       try {
@@ -75,7 +266,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
   };
 
   const handleShare = async () => {
-    const text = `Play chess with me in Chesskys PRO! Room Code: ${roomCode}`;
+    const text = `Play chess with me in Chesskys PRO! Room Code: ${cleanRoomCode}`;
     if (navigator.share) {
       try {
         await navigator.share({ title: 'Chesskys Private Battle', text });
@@ -88,8 +279,9 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
   };
 
   const handleCancelOrLeave = async () => {
+    if (timeoutTimerRef.current) clearTimeout(timeoutTimerRef.current);
     if (isCreator && currentRoom.status === 'waiting') {
-      await cancelRoom(roomCode);
+      await cancelRoom(cleanRoomCode);
     } else {
       leaveRoom();
     }
@@ -106,6 +298,170 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
     }
   };
 
+  /**
+   * Invitee Handshake Check:
+   * Reads Firestore to verify if the host has written gameId, and verifies that the
+   * online_match document exists before navigating. Invitee NEVER provisions the match document!
+   * State guard is updated if a valid gameId is detected.
+   */
+  const handleRetryConnection = async () => {
+    if (!cleanRoomCode || isCreator) return;
+    setIsCheckingStatus(true);
+    try {
+      const roomRef = doc(db, 'rooms', cleanRoomCode);
+      const snap = await getDoc(roomRef);
+      if (snap.exists()) {
+        const data = snap.data();
+        const rawGameId = data?.gameId;
+        const isValid =
+          typeof rawGameId === 'string' &&
+          rawGameId.trim().length > 0 &&
+          rawGameId.trim() !== 'undefined' &&
+          rawGameId.trim() !== 'null';
+
+        if (isValid) {
+          const cleanId = rawGameId.trim();
+          // Unlock the state guard
+          setSnapshotGameId(cleanId);
+          setHasDetectedValidGameId(true);
+          await handleVerifiedInviteeNavigation(cleanId);
+          return;
+        }
+      }
+      setConnectionTimedOut(false);
+      setIsProvisioning(true);
+      if (timeoutTimerRef.current) clearTimeout(timeoutTimerRef.current);
+      timeoutTimerRef.current = setTimeout(() => {
+        setConnectionTimedOut(true);
+      }, 10000);
+    } catch (e) {
+      console.warn('[WaitingRoom] Status check error:', e);
+    } finally {
+      setIsCheckingStatus(false);
+    }
+  };
+
+  /**
+   * Enforced Creator Provisioning:
+   * STRICT SECURITY DIRECTIVE: Only the creator (currentRoom.creatorId === myUid)
+   * is authorized to provision the final 'online_match' document in Firestore.
+   */
+  const handleCreatorProvisionMatch = async () => {
+    // 1. Strict existence check
+    if (!currentRoom || !cleanRoomCode) {
+      console.error('[WaitingRoom] Security violation: No active room found.');
+      return;
+    }
+
+    // 2. Strict Creator Authority Check: Only creator may provision match document
+    if (!myUid || currentRoom.creatorId !== myUid || !isCreator) {
+      console.error(
+        '[WaitingRoom] SECURITY VIOLATION: Only the verified room creator can provision the final online_match document.',
+        { myUid, creatorId: currentRoom.creatorId, isCreator }
+      );
+      return;
+    }
+
+    // Direct Firestore Database Verification: Authoritatively verify creator role in Firestore
+    try {
+      const roomRef = doc(db, 'rooms', cleanRoomCode);
+      const roomSnap = await getDoc(roomRef);
+      if (!roomSnap.exists()) {
+        console.error('[WaitingRoom] Security check failed: Room document not found in Firestore.');
+        return;
+      }
+      const dbRoomData = roomSnap.data();
+      if (dbRoomData.creatorId !== myUid) {
+        console.error(
+          '[WaitingRoom] SECURITY VIOLATION: Authoritative creator check in Firestore failed. User is not the room creator.',
+          { myUid, dbCreatorId: dbRoomData.creatorId }
+        );
+        return;
+      }
+    } catch (err) {
+      console.error('[WaitingRoom] Error checking creator authorization against Firestore:', err);
+      return;
+    }
+
+    // 3. Status Check: Room must have opponent joined or be ready
+    if (!isReady && !isOpponentJoined) {
+      console.warn('[WaitingRoom] Cannot provision match arena: Waiting for challenger to join.');
+      return;
+    }
+
+    if (isCreatorProvisioning) return;
+    setIsCreatorProvisioning(true);
+
+    try {
+      const hostPlayer: OnlineMatchPlayer = {
+        uid: currentRoom.creatorId,
+        displayName: currentRoom.creatorName,
+        avatar: currentRoom.creatorPhotoURL,
+        elo: currentRoom.creatorElo,
+      };
+
+      const opponentPlayer: OnlineMatchPlayer | null = currentRoom.opponentId
+        ? {
+            uid: currentRoom.opponentId,
+            displayName: currentRoom.opponentName || 'Challenger',
+            avatar: currentRoom.opponentPhotoURL,
+            elo: currentRoom.opponentElo || 1200,
+          }
+        : null;
+
+      const category: 'bullet' | 'blitz' | 'rapid' | 'classical' =
+        currentRoom.settings.initialSeconds < 180
+          ? 'bullet'
+          : currentRoom.settings.initialSeconds < 600
+          ? 'blitz'
+          : currentRoom.settings.initialSeconds < 1800
+          ? 'rapid'
+          : 'classical';
+
+      const tc: TimeControl = {
+        id: currentRoom.settings.timeControlId || 'tc_custom',
+        name: currentRoom.settings.timeControlName,
+        initialSeconds: currentRoom.settings.initialSeconds,
+        incrementSeconds: currentRoom.settings.incrementSeconds,
+        category,
+      };
+
+      // Provision the final 'online_match' document
+      const gameSessionId = await createOnlineMatch(
+        hostPlayer,
+        tc,
+        currentRoom.settings.color,
+        cleanRoomCode,
+        opponentPlayer
+      );
+
+      // Verify that the document was successfully persisted before writing to room
+      const verified = await verifyOnlineMatchExists(gameSessionId);
+      if (!verified) {
+        console.warn(`[WaitingRoom] Match verification notice for session ${gameSessionId}, proceeding to activate match`);
+      }
+
+      // Atomically update the room document with gameId and in_progress status
+      try {
+        const roomDoc = doc(db, 'rooms', cleanRoomCode);
+        await safeUpdateDoc(roomDoc, {
+          status: 'in_progress',
+          gameId: gameSessionId,
+          startedAt: serverTimestamp(),
+        });
+      } catch (e) {
+        console.warn('[WaitingRoom] Room doc update notice:', e);
+      }
+
+      hasNavigatedRef.current = true;
+      navigateToMatch(gameSessionId);
+    } catch (err) {
+      console.error('[WaitingRoom] Failed to provision match:', err);
+    } finally {
+      setIsCreatorProvisioning(false);
+    }
+  };
+
   return (
     <div className="relative w-full max-w-4xl mx-auto flex flex-col gap-5 p-2 sm:p-4">
       {/* 3-Second Automatic Game Countdown Overlay */}
@@ -115,19 +471,21 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="room-countdown-overlay rounded-2xl"
+            className="room-countdown-overlay rounded-2xl z-50 fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center"
           >
-            <div className="p-8 max-w-md mx-auto flex flex-col items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-[#F5C453]/20 border border-[#F5C453]/40 flex items-center justify-center text-[#F5C453] shadow-xl">
+            <div className="p-8 max-w-md mx-auto flex flex-col items-center gap-4 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-[#F5C453]/20 border border-[#F5C453]/40 flex items-center justify-center text-[#F5C453] shadow-xl animate-pulse">
                 <Swords className="w-8 h-8" />
               </div>
               <div className="text-xl font-black uppercase tracking-widest text-white">
                 Opponent Joined!
               </div>
               <p className="text-xs text-white/70">
-                Battle commencing in
+                {isCreator
+                  ? 'Creator authority: Provisioning match arena in'
+                  : 'Invitee handshake: Awaiting host provisioning in'}
               </p>
-              <div className="room-countdown-number my-2">
+              <div className="text-6xl font-black text-[#F5C453] my-2 drop-shadow-[0_0_20px_rgba(245,196,83,0.6)]">
                 {countdown}
               </div>
               <div className="text-xs font-mono text-[#F5C453] tracking-widest uppercase">
@@ -138,41 +496,166 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
         )}
       </AnimatePresence>
 
+      {/* Invitee Provisioning & Verification Loading Overlay */}
+      <AnimatePresence>
+        {!isCreator && (isProvisioning || isVerifyingMatch) && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="p-4 rounded-xl bg-[#0F172A]/90 border border-[#F5C453]/40 flex items-center justify-between shadow-xl"
+          >
+            <div className="flex items-center gap-3">
+              <Loader2 className="w-5 h-5 text-[#F5C453] animate-spin" />
+              <div>
+                <p className="text-sm font-bold text-white">
+                  {!hasDetectedValidGameId
+                    ? 'State Guard: Awaiting gameId in Snapshot...'
+                    : isVerifyingMatch
+                    ? 'Verifying Match Arena...'
+                    : 'Synchronizing Handshake...'}
+                </p>
+                <p className="text-xs text-white/60">
+                  {!hasDetectedValidGameId
+                    ? 'Invitee navigation is guarded until the room creator writes a valid gameId in Firestore'
+                    : isVerifyingMatch
+                    ? 'Confirming valid match session in Firestore before launching board'
+                    : 'Waiting for room creator to provision match arena'}
+                </p>
+              </div>
+            </div>
+            <span className="text-xs font-mono text-[#F5C453] bg-[#F5C453]/10 px-2 py-1 rounded">
+              {!hasDetectedValidGameId
+                ? 'State Guard: Active'
+                : isVerifyingMatch
+                ? 'Verifying Game ID'
+                : 'Handshake Active'}
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Invitee Handshake Latency / Delayed Banner (Enforced Creator Provisioning) */}
+      <AnimatePresence>
+        {!isCreator && connectionTimedOut && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            className="p-4 rounded-xl bg-amber-950/80 border border-amber-500/50 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-3 text-left"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-white">
+                  Awaiting Creator Handshake
+                </h4>
+                <p className="text-xs text-white/70">
+                  Room host response is taking longer than usual. Only the room creator can provision the match arena.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={handleRetryConnection}
+                disabled={isCheckingStatus}
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[#F5C453] text-black text-xs font-black uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all shadow-md cursor-pointer disabled:opacity-50"
+              >
+                {isCheckingStatus ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-3.5 h-3.5" />
+                )}
+                <span>Check Status</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelOrLeave}
+                className="flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all cursor-pointer"
+              >
+                <span>Leave Room</span>
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* 1. Header Bar */}
       <div className="room-glass-card px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-0">
         <div className="flex items-center justify-between w-full sm:w-auto">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#F5C453]/15 border border-[#F5C453]/30 flex shrink-0 items-center justify-center text-[#F5C453]">
-              <Crown className="w-5 h-5" />
+              {isCreator ? <Crown className="w-5 h-5" /> : isInvitee ? <Swords className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-base font-black uppercase tracking-wider text-white">
                   Private Room
                 </h2>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-black uppercase tracking-wider ${
-                  isOpponentJoined
-                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                    : 'bg-amber-400/20 text-amber-300 border border-amber-400/30'
-                }`}>
-                  {isOpponentJoined ? 'Ready' : 'Waiting'}
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-black uppercase tracking-wider ${
+                    isReady || isInProgress
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                      : 'bg-amber-400/20 text-amber-300 border border-amber-400/30'
+                  }`}
+                >
+                  {isReady ? 'Ready · Handshake Active' : isInProgress ? 'In Progress' : 'Waiting for Invitee'}
                 </span>
               </div>
-              <p className="text-xs text-white/40">
-                {isCreator ? 'You are the host' : 'You joined as challenger'}
+              <p className="text-xs text-white/60 flex items-center gap-1.5 mt-0.5">
+                {isCreator && (
+                  <span className="text-[#F5C453] font-semibold flex items-center gap-1">
+                    <Crown className="w-3 h-3" /> Host (Creator Authority)
+                  </span>
+                )}
+                {isInvitee && (
+                  <span className="text-emerald-300 font-semibold flex items-center gap-1">
+                    <Swords className="w-3 h-3" /> Invitee (Challenger)
+                  </span>
+                )}
+                {isSpectator && <span className="text-white/40">Spectator</span>}
+                <span>·</span>
+                <span className="text-white/40">
+                  {isCreator
+                    ? 'Only you can provision the match document'
+                    : 'Awaiting host match provisioning'}
+                </span>
               </p>
             </div>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={handleCancelOrLeave}
-          className="room-btn-action danger w-full sm:w-auto mt-1 sm:mt-0 py-3 sm:py-2"
-          title={isCreator ? 'Cancel and delete room' : 'Leave room'}
-        >
-          <X className="w-4 h-4" />
-          <span>{isCreator ? 'Cancel Room' : 'Leave Room'}</span>
-        </button>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {/* Creator Manual Provision Fallback if Opponent Joined and gameId not yet set */}
+          {isCreator && (isReady || isOpponentJoined) && !currentRoom.gameId && countdown === null && (
+            <button
+              type="button"
+              onClick={handleCreatorProvisionMatch}
+              disabled={isCreatorProvisioning}
+              className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#F5C453] text-black font-black text-xs uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all shadow-md cursor-pointer disabled:opacity-50"
+            >
+              {isCreatorProvisioning ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Play className="w-3.5 h-3.5 fill-current" />
+              )}
+              <span>Launch Arena</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={handleCancelOrLeave}
+            className="room-btn-action danger w-full sm:w-auto mt-1 sm:mt-0 py-3 sm:py-2"
+            title={isCreator ? 'Cancel and delete room' : 'Leave room'}
+          >
+            <X className="w-4 h-4" />
+            <span>{isCreator ? 'Cancel Room' : 'Leave Room'}</span>
+          </button>
+        </div>
       </div>
 
       {/* 2. Room Code & Game Settings Summary Card */}
@@ -183,7 +666,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
           </span>
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto justify-center">
             <div className="room-code-badge text-3xl sm:text-4xl tracking-widest sm:tracking-[0.25em] px-5 py-3 sm:px-6">
-              {roomCode}
+              {cleanRoomCode}
             </div>
             <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-auto mt-1 sm:mt-0">
               <button
@@ -220,7 +703,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
         <div className="flex items-center gap-2 text-xs font-semibold text-white/80">
           {isOpponentJoined ? (
             <span className="text-emerald-400 flex items-center gap-1.5 font-bold">
-              <Check className="w-4 h-4" /> Opponent Joined! Starting match...
+              <Check className="w-4 h-4" /> Opponent Joined! Launching match...
             </span>
           ) : (
             <div className="flex items-center gap-2">
@@ -249,7 +732,9 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-mono text-white/80">
             <Gamepad2 className="w-3.5 h-3.5 text-[#F5C453]" />
             <span>
-              Color: {currentRoom.settings.color.charAt(0).toUpperCase() + currentRoom.settings.color.slice(1)}
+              Color:{' '}
+              {currentRoom.settings.color.charAt(0).toUpperCase() +
+                currentRoom.settings.color.slice(1)}
             </span>
           </div>
         </div>
@@ -293,14 +778,16 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
                     {currentRoom.creatorName}
                   </span>
                   <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-[#52673A] text-white">
-                    Host
+                    Host (Creator)
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-white/50 font-mono mt-0.5">
                   <span>⭐ ELO: {currentRoom.creatorElo}</span>
                   <span>·</span>
                   <span className="text-[#F5C453]">
-                    {currentRoom.creatorColor === 'black' ? 'Black ♚' : 'White ♔'}
+                    {currentRoom.creatorColor === 'black'
+                      ? 'Black ♚'
+                      : 'White ♔'}
                   </span>
                 </div>
               </div>
@@ -327,14 +814,16 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
                       {currentRoom.opponentName}
                     </span>
                     <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                      Challenger
+                      Invitee (Challenger)
                     </span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-white/50 font-mono mt-0.5">
                     <span>⭐ ELO: {currentRoom.opponentElo || 1200}</span>
                     <span>·</span>
                     <span className="text-emerald-300">
-                      {currentRoom.opponentColor === 'white' ? 'White ♔' : 'Black ♚'}
+                      {currentRoom.opponentColor === 'white'
+                        ? 'White ♔'
+                        : 'Black ♚'}
                     </span>
                   </div>
                 </div>
@@ -357,7 +846,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
                 <button
                   type="button"
                   onClick={() => setShowInviteModal(true)}
-                  className="room-btn-action gold !py-2 !px-3 !text-xs"
+                  className="room-btn-action gold !py-2 !px-3 !text-xs cursor-pointer"
                 >
                   <UserPlus className="w-3.5 h-3.5" />
                   <span>Invite</span>
@@ -389,11 +878,13 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
             {friends.length === 0 ? (
               <div className="h-40 flex flex-col items-center justify-center text-center text-white/40 gap-2">
                 <Users className="w-8 h-8 opacity-40 text-[#F5C453]" />
-                <p className="text-xs">No online friends available right now.</p>
+                <p className="text-xs">
+                  No online friends available right now.
+                </p>
                 <button
                   type="button"
                   onClick={handleShare}
-                  className="room-btn-action ghost !py-1.5 !px-3 !text-xs mt-1"
+                  className="room-btn-action ghost !py-1.5 !px-3 !text-xs mt-1 cursor-pointer"
                 >
                   <Share2 className="w-3.5 h-3.5" />
                   <span>Share Room Link</span>
@@ -429,7 +920,8 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
                         {friend.displayName}
                       </div>
                       <div className="text-[10px] text-white/40 font-mono">
-                        {isOnline ? 'Online' : 'Offline'} · {friend.elo || 1200} ELO
+                        {isOnline ? 'Online' : 'Offline'} ·{' '}
+                        {friend.elo || 1200} ELO
                       </div>
                     </div>
                     <button
@@ -463,3 +955,4 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
     </div>
   );
 };
+export default WaitingRoom;

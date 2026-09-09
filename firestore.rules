@@ -68,7 +68,7 @@ service cloud.firestore {
     function isValidOnlineMatch(data) {
       return data.keys().hasAll(['id', 'fen', 'status', 'turn'])
         && data.id is string && data.id.size() <= 128
-        && data.status in ['waiting', 'in_progress', 'completed', 'aborted', 'checkmate', 'resigned', 'draw', 'timeout', 'abandoned']
+        && data.status in ['waiting', 'ready', 'active', 'in_progress', 'completed', 'aborted', 'checkmate', 'resigned', 'draw', 'timeout', 'abandoned']
         && data.turn in ['w', 'b'];
     }
 
@@ -117,27 +117,54 @@ service cloud.firestore {
     }
 
     match /online_matches/{matchId} {
-      function isPlayer() {
+      function isMatchPlayer() {
         let whiteId = resource.data.get(['whitePlayer', 'uid'], '');
         let blackId = resource.data.get(['blackPlayer', 'uid'], '');
         let guestId = resource.data.get('guestId', '');
         let hostId = resource.data.get('hostId', '');
-        return isOwnerOf(whiteId) || isOwnerOf(blackId) || isOwnerOf(guestId) || isOwnerOf(hostId);
+        let whiteRawId = resource.data.get('whiteId', '');
+        let blackRawId = resource.data.get('blackId', '');
+        return isOwnerOf(whiteId) || isOwnerOf(blackId) || isOwnerOf(guestId) || isOwnerOf(hostId) || isOwnerOf(whiteRawId) || isOwnerOf(blackRawId);
       }
 
-      allow read: if true; // Allow spectators
-      allow create: if isSignedIn() && isValidOnlineMatch(incoming());
-      allow update: if (isPlayer() || resource.data.status == 'waiting' || isDeveloper()) && isValidOnlineMatch(incoming());
-      allow delete: if isDeveloper();
+      function isNewMatchPlayer() {
+        let whiteId = incoming().get(['whitePlayer', 'uid'], '');
+        let blackId = incoming().get(['blackPlayer', 'uid'], '');
+        let guestId = incoming().get('guestId', '');
+        let hostId = incoming().get('hostId', '');
+        let whiteRawId = incoming().get('whiteId', '');
+        let blackRawId = incoming().get('blackId', '');
+        return isOwnerOf(whiteId) || isOwnerOf(blackId) || isOwnerOf(guestId) || isOwnerOf(hostId) || isOwnerOf(whiteRawId) || isOwnerOf(blackRawId);
+      }
+
+      function isJoiningPlayer() {
+        let incomingGuest = incoming().get('guestId', '');
+        let incomingBlack = incoming().get(['blackPlayer', 'uid'], '');
+        let incomingWhite = incoming().get(['whitePlayer', 'uid'], '');
+        return (resource.data.status in ['waiting', 'ready']) && (
+          isOwnerOf(incomingGuest) || isOwnerOf(incomingBlack) || isOwnerOf(incomingWhite)
+        );
+      }
+
+      allow read: if true; // Allow spectators to watch live matches
+      allow create: if (isSignedIn() || request.auth == null) && isValidOnlineMatch(incoming());
+      allow update: if (
+        request.auth == null ||
+        isMatchPlayer() ||
+        isJoiningPlayer() ||
+        isDeveloper() ||
+        resource.data.status in ['waiting', 'ready', 'active', 'in_progress']
+      ) && isValidOnlineMatch(incoming());
+      allow delete: if isDeveloper() || (isSignedIn() && isOwnerOf(resource.data.get('hostId', '')) && resource.data.status in ['waiting', 'aborted']);
 
       match /chat/{messageId} {
         allow read: if true;
-        allow create: if isSignedIn() && isOwnerOf(incoming().senderUid);
+        allow create: if (isSignedIn() || request.auth == null);
       }
 
       match /typing/{typingUserId} {
         allow read: if true;
-        allow write: if isOwnerOf(typingUserId);
+        allow write: if isOwnerOf(typingUserId) || request.auth == null;
       }
     }
 
@@ -215,42 +242,61 @@ service cloud.firestore {
       allow write: if isDeveloper();
     }
 
-    // Private Rooms - accessible to authenticated users
+    // Private Rooms - accessible to authenticated users & guest challenges
     match /rooms/{roomId} {
+      function isRoomParticipant() {
+        return isSignedIn() && (
+          resource.data.creatorId == uid() ||
+          resource.data.opponentId == uid() ||
+          incoming().creatorId == uid() ||
+          incoming().opponentId == uid() ||
+          isDeveloper()
+        );
+      }
+
+      function isAtomicGameOrStatusUpdate() {
+        // Allows authenticated users to perform atomic updates to room documents for 'gameId' and 'status' fields
+        return isSignedIn() && (
+          request.resource.data.diff(resource.data).affectedKeys().hasAny(['gameId', 'status'])
+        );
+      }
+
       allow read: if true;
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && (
-        resource.data.creatorId == uid() ||
-        resource.data.opponentId == uid() ||
-        resource.data.status == 'waiting' ||
-        isDeveloper()
+      allow create: if isSignedIn() || request.auth == null;
+      allow update: if (
+        request.auth == null ||
+        (isSignedIn() && (
+          isRoomParticipant() ||
+          isAtomicGameOrStatusUpdate() ||
+          resource.data.status in ['waiting', 'ready', 'in_progress'] ||
+          isDeveloper()
+        ))
       );
-      allow delete: if isSignedIn() && (
-        (resource.data.creatorId == uid() && resource.data.status == 'waiting') ||
-        isDeveloper()
+      allow delete: if (
+        request.auth == null ||
+        (isSignedIn() && (
+          (resource.data.creatorId == uid() && resource.data.status == 'waiting') ||
+          isDeveloper()
+        ))
       );
 
       match /invites/{inviteId} {
-        allow read, write: if isSignedIn();
+        allow read, write: if true;
       }
 
       match /chat/{chatId} {
-        allow read, write: if isSignedIn();
+        allow read, write: if true;
       }
 
       match /messages/{messageId} {
-        allow read, write: if isSignedIn();
+        allow read, write: if true;
       }
     }
 
     // User invites - for notifications and direct room invites
     match /user_invites/{inviteId} {
-      allow read: if isSignedIn() && (
-        resource.data.userId == uid() ||
-        resource.data.invitedBy == uid() ||
-        isDeveloper()
-      );
-      allow write: if isSignedIn();
+      allow read: if true;
+      allow write: if true;
     }
   }
 }

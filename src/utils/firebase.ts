@@ -106,14 +106,10 @@ export function isFirestoreQuotaExhaustedError(error: unknown): boolean {
 const TODAY = new Date().toISOString().slice(0, 10);
 const QUOTA_KEY = 'firestore_write_quota_exhausted_day';
 
-// Today's quota reached: mark true by default to immediately stop all rejected write streams
-let quotaExhaustedNoticeShown = true;
+// Quota exhaustion flag - default to false so writes operate normally
+let quotaExhaustedNoticeShown = false;
 
 export function isFirestoreQuotaExhausted(): boolean {
-  try {
-    const savedDay = localStorage.getItem(QUOTA_KEY);
-    if (savedDay === TODAY) return true;
-  } catch {}
   return quotaExhaustedNoticeShown;
 }
 

@@ -20,8 +20,10 @@ import { db, handleFirestoreError, OperationType, safeAddDoc, safeSetDoc, safeUp
 import { soundManager } from '../utils/audio';
 import { socketService } from '../utils/socket';
 import { toast } from 'sonner';
-import { createOnlineMatch, joinOnlineMatch, recordLocalUserCreatedRoom } from '../services/onlineMatchService';
+import { createOnlineMatch, verifyOnlineMatchExists } from '../services/matchService';
+import { joinOnlineMatch, recordLocalUserCreatedRoom } from '../services/onlineMatchService';
 import { OnlineMatchPlayer, TimeControl } from '../types/chess';
+import { resolveRoom, normalizeRoomCode, getHydratedProfile } from '../utils/roomResolver';
 
 export type RoomStatus = 'waiting' | 'ready' | 'in_progress' | 'ended' | 'expired';
 export type ConnectionStatus = 'connected' | 'connecting' | 'disconnected';
@@ -101,8 +103,16 @@ interface RoomContextType {
   activeGameId: string | null;
   setCurrentRoom: (room: PrivateRoom | null) => void;
   setJoinError: (v: string | null) => void;
-  createRoom: (code: string, settings: RoomSettings) => Promise<PrivateRoom>;
-  joinRoom: (code: string) => Promise<PrivateRoom>;
+  createPrivateRoom: (
+    settingsOrCode?: RoomSettings | string,
+    settings?: RoomSettings
+  ) => Promise<PrivateRoom>;
+  createRoom: (
+    codeOrSettings: string | RoomSettings,
+    settings?: RoomSettings
+  ) => Promise<PrivateRoom>;
+  joinRoom: (code: string, inviteFallback?: Partial<UserInvite>) => Promise<PrivateRoom>;
+  joinRoomWithContext: (inviteOrCode: string | UserInvite | any) => Promise<PrivateRoom>;
   cancelRoom: (code?: string) => Promise<void>;
   leaveRoom: () => void;
   updateRoomStatus: (status: RoomStatus) => Promise<void>;
@@ -159,17 +169,24 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const currentRoomRef = useRef<PrivateRoom | null>(null);
   const launchedRoomRef = useRef<string | null>(null);
+  const cleanedUpRoomsRef = useRef<Set<string>>(new Set());
   currentRoomRef.current = currentRoom;
 
   // Migration helper: Strip legacy bloated fields and backfill subcollections if present
   const cleanUpLegacyRoomDoc = useCallback(async (roomCode: string, data: PrivateRoom) => {
+    if (!roomCode || cleanedUpRoomsRef.current.has(roomCode)) return;
+    const hasChat = Array.isArray(data.chat) && data.chat.length > 0;
+    const hasInvites = data.invites && typeof data.invites === 'object' && Object.keys(data.invites).length > 0;
+    if (!hasChat && !hasInvites) return;
+
+    cleanedUpRoomsRef.current.add(roomCode);
     try {
       const roomRef = doc(db, 'rooms', roomCode);
 
       // Backfill messages to subcollection if present on doc
-      if (Array.isArray(data.chat) && data.chat.length > 0) {
+      if (hasChat) {
         const msgColl = collection(db, 'rooms', roomCode, 'messages');
-        for (const msg of data.chat) {
+        for (const msg of data.chat!) {
           if (msg && msg.message) {
             await safeAddDoc(msgColl, {
               userId: msg.userId || 'system',
@@ -185,7 +202,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       // Backfill invites to subcollection if present on doc
-      if (data.invites && typeof data.invites === 'object') {
+      if (hasInvites) {
         const invitesColl = collection(db, 'rooms', roomCode, 'invites');
         for (const inv of Object.values(data.invites) as any[]) {
           if (inv && inv.userId) {
@@ -249,8 +266,12 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const prevOpponent = currentRoomRef.current?.opponentId;
 
         // Auto-cleanup legacy bloated fields if found on existing room
-        if (data.chat || data.invites) {
-          cleanUpLegacyRoomDoc(currentRoom.roomCode, data);
+        if (
+          !docSnap.metadata.hasPendingWrites &&
+          ((Array.isArray(data.chat) && data.chat.length > 0) ||
+            (data.invites && typeof data.invites === 'object' && Object.keys(data.invites).length > 0))
+        ) {
+          cleanUpLegacyRoomDoc(data.roomCode || currentRoom?.roomCode || '', data);
         }
 
         setCurrentRoom(data);
@@ -270,9 +291,22 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
           startCountdownFlow(data);
         }
 
-        // If gameId is set and status in_progress, transition to active match
+        // If gameId is set and status in_progress, transition to active match ONLY after verified existence
         if (data.status === 'in_progress' && data.gameId) {
-          setActiveGameId(data.gameId);
+          const activeProf = getHydratedProfile(profile || user);
+          const currentUid = activeProf.uid;
+          if (currentUid === data.creatorId) {
+            setActiveGameId(data.gameId);
+          } else {
+            // Invitee verifies the match document in Firestore before activating game
+            verifyOnlineMatchExists(data.gameId).then((exists) => {
+              if (exists) {
+                setActiveGameId(data.gameId);
+              } else {
+                console.warn('[RoomContext] Invitee gameId pending verification in Firestore:', data.gameId);
+              }
+            });
+          }
         }
       },
       (error) => {
@@ -401,9 +435,10 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [user]);
 
-  // 3-second automatic countdown when status is 'ready'
+  // 3-second automatic countdown when status is 'ready' (Synchronized 3-Second Handshake)
   const startCountdownFlow = (room: PrivateRoom) => {
-    if (countdownTimerRef.current || launchedRoomRef.current === room.roomCode) return;
+    const cleanCode = normalizeRoomCode(room.roomCode);
+    if (countdownTimerRef.current || launchedRoomRef.current === cleanCode) return;
 
     let count = 3;
     setCountdown(count);
@@ -420,9 +455,11 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCountdown(null);
         soundManager.playCountdownTick(true);
 
-        // Only the creator launches the session, and only once per room.
-        if (profile?.uid === room.creatorId && launchedRoomRef.current !== room.roomCode) {
-          launchedRoomRef.current = room.roomCode;
+        const activeProfile = getHydratedProfile(profile);
+
+        // Strict Handshake: Creator creates match document, Invitee waits for gameId confirmation
+        if (activeProfile.uid === room.creatorId && launchedRoomRef.current !== cleanCode) {
+          launchedRoomRef.current = cleanCode;
           try {
             const hostPlayer: OnlineMatchPlayer = {
               uid: room.creatorId,
@@ -430,6 +467,15 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
               avatar: room.creatorPhotoURL,
               elo: room.creatorElo,
             };
+
+            const opponentPlayer: OnlineMatchPlayer | null = room.opponentId
+              ? {
+                  uid: room.opponentId,
+                  displayName: room.opponentName || 'Challenger',
+                  avatar: room.opponentPhotoURL,
+                  elo: room.opponentElo || 1200,
+                }
+              : null;
 
             const category: 'bullet' | 'blitz' | 'rapid' | 'classical' =
               room.settings.initialSeconds < 180
@@ -448,85 +494,205 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
               category,
             };
 
-            const preferredSide =
-              room.settings.color === 'random'
-                ? Math.random() < 0.5
-                  ? 'w'
-                  : 'b'
-                : room.settings.color === 'black'
-                ? 'b'
-                : 'w';
+            // Atomically initialize online_matches/{gameId} with starting FEN and strictly mapped colors
+            const gameSessionId = await createOnlineMatch(
+              hostPlayer,
+              tc,
+              room.settings.color,
+              cleanCode,
+              opponentPlayer
+            );
 
-            const gameSessionId = await createOnlineMatch(hostPlayer, tc, preferredSide, room.roomCode);
-
-            // Add opponent to match session
-            if (room.opponentId) {
-              const opponentPlayer: OnlineMatchPlayer = {
-                uid: room.opponentId,
-                displayName: room.opponentName || 'Challenger',
-                avatar: room.opponentPhotoURL,
-                elo: room.opponentElo || 1200,
-              };
-
-              try {
-                const matchDocRef = doc(db, 'online_matches', gameSessionId);
-                const isHostWhite = preferredSide === 'w';
-                await safeUpdateDoc(matchDocRef, {
-                  [isHostWhite ? 'blackPlayer' : 'whitePlayer']: opponentPlayer,
-                  guestId: room.opponentId,
-                  status: 'in_progress',
-                  updatedAt: new Date().toISOString(),
-                });
-              } catch (e) {
-                console.warn('Match doc update bypassed in startCountdownFlow (quota/offline):', e);
-              }
+            // Verify that the match document is created and reachable in Firestore
+            const verified = await verifyOnlineMatchExists(gameSessionId);
+            if (!verified) {
+              console.warn(`[RoomContext] Match verification notice for ID ${gameSessionId}, proceeding with session.`);
             }
 
-            // Update room to in_progress with gameId
+            // Update room to in_progress with gameId for invitee to detect and navigate
             try {
-              const roomDoc = doc(db, 'rooms', room.roomCode);
+              const roomDoc = doc(db, 'rooms', cleanCode);
               await safeUpdateDoc(roomDoc, {
                 status: 'in_progress',
                 gameId: gameSessionId,
                 startedAt: serverTimestamp(),
               });
             } catch (e) {
-              console.warn('Room doc update bypassed in startCountdownFlow (quota/offline):', e);
+              console.warn('[RoomContext] Room doc update notice:', e);
             }
 
             setActiveGameId(gameSessionId);
           } catch (err: any) {
-            console.error('Failed to launch room game session:', err);
+            console.error('[RoomContext] Failed to launch match session:', err);
           }
-        } else if (profile?.uid !== room.creatorId) {
-          // Transition opponent into active match session
-          const targetGameId = room.gameId || room.roomCode;
-          setActiveGameId(targetGameId);
+        } else if (activeProfile.uid !== room.creatorId) {
+          // Invitee: Wait for creator's gameId to be verified in Firestore. NO premature navigation!
+          if (room.gameId) {
+            verifyOnlineMatchExists(room.gameId).then((exists) => {
+              if (exists) {
+                setActiveGameId(room.gameId);
+              }
+            });
+          }
         }
       }
     }, 1000);
   };
 
-  const createRoom = useCallback(
-    async (code: string, settings: RoomSettings): Promise<PrivateRoom> => {
-      const activeProfile = profile || {
-        uid: 'guest_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
-        displayName: 'Guest Challenger',
-        photoURL: null,
-        elo: 1200
-      };
-      
-      const cleanCode = code.trim().toUpperCase();
+  /**
+   * Generates a unique, uppercase, 6-character room code using a Firestore transaction.
+   * Stores the room with 'waiting' status, and only navigates to the WaitingRoom
+   * once the server confirms the document's existence in Firestore.
+   */
+  const createPrivateRoom = useCallback(
+    async (
+      settingsOrCode?: RoomSettings | string,
+      possibleSettings?: RoomSettings
+    ): Promise<PrivateRoom> => {
+      const activeProfile = getHydratedProfile(profile || user);
+
+      let customCode: string | undefined;
+      let settings: RoomSettings;
+
+      if (typeof settingsOrCode === 'string') {
+        customCode = settingsOrCode.trim();
+        settings = possibleSettings || {
+          timeControlId: 'rapid',
+          timeControlName: 'Rapid 10+0',
+          initialSeconds: 600,
+          incrementSeconds: 0,
+          color: 'white',
+          rated: true,
+        };
+      } else if (settingsOrCode && typeof settingsOrCode === 'object') {
+        settings = settingsOrCode;
+        if (typeof possibleSettings === 'string') {
+          customCode = (possibleSettings as string).trim();
+        }
+      } else {
+        settings = {
+          timeControlId: 'rapid',
+          timeControlName: 'Rapid 10+0',
+          initialSeconds: 600,
+          incrementSeconds: 0,
+          color: 'white',
+          rated: true,
+        };
+      }
+
+      const creatorColor = settings.color;
+      const opponentColor =
+        creatorColor === 'white' ? 'black' : creatorColor === 'black' ? 'white' : 'black';
       const now = new Date();
       const expiresAt = new Date(now.getTime() + 10 * 60 * 1000);
 
-      const creatorColor = settings.color;
-      const opponentColor = creatorColor === 'white' ? 'black' : creatorColor === 'black' ? 'white' : 'black';
+      // Uppercase alphanumeric character set for generating clean 6-character codes
+      const UPPERCASE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      const generate6CharRoomCode = (): string => {
+        let code = '';
+        for (let i = 0; i < 6; i++) {
+          const idx = Math.floor(Math.random() * UPPERCASE_CHARS.length);
+          code += UPPERCASE_CHARS[idx];
+        }
+        return code.toUpperCase();
+      };
 
-      // Keep main room document lean (essential metadata only) to strictly avoid 1MB document size limit
-      const room: PrivateRoom = {
-        roomId: cleanCode,
-        roomCode: cleanCode,
+      const MAX_ATTEMPTS = 5;
+      let confirmedRoomCode = '';
+
+      // Execute a Firestore transaction to claim a unique, uppercase, 6-character room code and store 'waiting' status
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        let candidateCode: string;
+        if (attempt === 1 && customCode && customCode.length === 6) {
+          candidateCode = customCode.toUpperCase();
+        } else {
+          candidateCode = generate6CharRoomCode();
+        }
+
+        const candidateRef = doc(db, 'rooms', candidateCode);
+
+        try {
+          await runTransaction(db, async (transaction) => {
+            // 1. Transaction Read: verify uniqueness
+            const existingSnap = await transaction.get(candidateRef);
+            if (existingSnap.exists()) {
+              const existingData = existingSnap.data();
+              const isStillActive =
+                existingData?.status === 'waiting' ||
+                existingData?.status === 'ready' ||
+                existingData?.status === 'in_progress';
+
+              const isExpired = existingData?.expiresAt?.toDate
+                ? existingData.expiresAt.toDate().getTime() < Date.now()
+                : false;
+
+              // If active room owned by someone else, treat as collision
+              if (isStillActive && !isExpired && existingData?.creatorId !== activeProfile.uid) {
+                throw new Error('COLLISION');
+              }
+            }
+
+            // 2. Transaction Write: store room document with 'waiting' status
+            transaction.set(candidateRef, {
+              roomId: candidateCode,
+              roomCode: candidateCode,
+              creatorId: activeProfile.uid,
+              creatorName: activeProfile.displayName || 'You',
+              creatorPhotoURL: activeProfile.photoURL || null,
+              creatorElo: typeof activeProfile.elo === 'number' ? activeProfile.elo : 1200,
+              creatorColor,
+              opponentColor,
+              opponentId: null,
+              opponentName: null,
+              opponentElo: null,
+              status: 'waiting',
+              settings,
+              gameId: null,
+              createdAt: serverTimestamp(),
+              expiresAt: Timestamp.fromDate(expiresAt),
+            });
+          });
+
+          confirmedRoomCode = candidateCode;
+          break; // Successfully claimed code and stored waiting room via transaction!
+        } catch (err: any) {
+          if (err?.message === 'COLLISION') {
+            if (attempt < MAX_ATTEMPTS) {
+              console.warn(
+                `[RoomContext] Room code collision on "${candidateCode}". Retrying with a new 6-char code (attempt ${attempt + 1}/${MAX_ATTEMPTS})...`
+              );
+              continue;
+            }
+            throw new Error('Could not reserve a unique room code. Please try again.');
+          }
+          throw err;
+        }
+      }
+
+      if (!confirmedRoomCode) {
+        throw new Error('Failed to generate or confirm room code.');
+      }
+
+      // 3. Confirm document existence on the server before updating state and navigating
+      const confirmedDocRef = doc(db, 'rooms', confirmedRoomCode);
+      const serverSnap = await getDoc(confirmedDocRef);
+
+      if (!serverSnap.exists()) {
+        throw new Error(
+          `Server failed to confirm existence of room document for code ${confirmedRoomCode}`
+        );
+      }
+
+      const serverData = serverSnap.data();
+      if (!serverData || serverData.status !== 'waiting') {
+        throw new Error(
+          `Room document verification failed: expected status 'waiting', received '${serverData?.status}'`
+        );
+      }
+
+      const verifiedRoom: PrivateRoom = {
+        roomId: confirmedRoomCode,
+        roomCode: confirmedRoomCode,
         creatorId: activeProfile.uid,
         creatorName: activeProfile.displayName || 'You',
         creatorPhotoURL: activeProfile.photoURL || null,
@@ -540,50 +706,28 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
         settings,
         createdAt: now,
         expiresAt,
+        gameId: null,
       };
 
-      const roomDoc = doc(db, 'rooms', cleanCode);
-
-      // Fast check with a short timeout to prevent slow network/long-polling hangs
-      const checkPromise = getDoc(roomDoc);
-      const timeoutPromise = new Promise<'timeout'>((res) => setTimeout(() => res('timeout'), 1500));
-      try {
-        const raceResult = await Promise.race([checkPromise, timeoutPromise]);
-        if (raceResult !== 'timeout' && raceResult.exists()) {
-          const data = raceResult.data() as PrivateRoom;
-          // If the room belongs to someone else and is still active/waiting
-          if (data.creatorId && data.creatorId !== profile.uid && data.status === 'waiting') {
-            throw new Error('This room code is already active. Please generate a different code.');
-          }
-        }
-      } catch (err: any) {
-        if (err?.message?.includes('already active')) {
-          throw err;
-        }
-        // Non-blocking for network hiccups
-      }
-
-      // Write room document to Firestore safely FIRST to prevent onSnapshot race conditions
-      try {
-        await safeSetDoc(roomDoc, {
-          ...room,
-          createdAt: serverTimestamp(),
-          expiresAt: Timestamp.fromDate(expiresAt),
-        });
-      } catch (err: any) {
-        console.warn('[RoomContext] Firestore room creation write bypassed (quota/offline mode):', err?.message);
-      }
-
-      // Set the current room locally so user enters the waiting room
-      setCurrentRoom(room);
+      // 4. Update state and navigate ONLY after the server confirms document existence
+      setCurrentRoom(verifiedRoom);
       setJoinError(null);
       soundManager.playNotification();
 
-      // Persist to localStorage and server REST API
+      // Dispatch navigation event so view transitions to the WaitingRoom
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('navigate-to-room', {
+            detail: { roomCode: confirmedRoomCode },
+          })
+        );
+      }
+
+      // 5. Background non-blocking persistence & subcollection tasks
       try {
-        localStorage.setItem(`chess_room_${cleanCode}`, JSON.stringify(room));
+        localStorage.setItem(`chess_room_${confirmedRoomCode}`, JSON.stringify(verifiedRoom));
         recordLocalUserCreatedRoom({
-          code: cleanCode,
+          code: confirmedRoomCode,
           hostId: activeProfile.uid,
           timeControl: {
             id: settings.timeControlId || 'tc_custom',
@@ -603,7 +747,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            customCode: cleanCode,
+            customCode: confirmedRoomCode,
             timeControl: {
               initialSeconds: settings.initialSeconds,
               incrementSeconds: settings.incrementSeconds,
@@ -613,318 +757,267 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
               uid: activeProfile.uid,
               name: activeProfile.displayName || 'Host',
               elo: activeProfile.elo || 1200,
-            }
-          })
+            },
+          }),
         }).catch(() => {});
       } catch {}
 
-      // Background non-blocking tasks: Subcollection welcome message & online_matches mirroring
-      (async () => {
-        // 1. Initial message into subcollection (rooms/{code}/messages)
-        try {
-          const msgColl = collection(db, 'rooms', cleanCode, 'messages');
-          await safeAddDoc(msgColl, {
-            userId: 'system',
-            userName: 'System',
-            message: `Battle room created! Code: ${cleanCode}. Waiting for challenger.`,
-            timestamp: serverTimestamp(),
-            isSystem: true,
-            type: 'system',
-          });
-        } catch (err) {
-          console.warn('Could not write initial room message to subcollection:', err);
-        }
+      try {
+        const msgColl = collection(db, 'rooms', confirmedRoomCode, 'messages');
+        safeAddDoc(msgColl, {
+          userId: 'system',
+          userName: 'System',
+          message: `Battle room created! Code: ${confirmedRoomCode}. Waiting for challenger.`,
+          timestamp: serverTimestamp(),
+          isSystem: true,
+          type: 'system',
+        }).catch(() => {});
+      } catch (err) {
+        console.warn('Could not write initial room message to subcollection:', err);
+      }
 
-        // 2. Mirror into online_matches collection so the room is discoverable and joinable
-        try {
-          const hostPlayer: OnlineMatchPlayer = {
-            uid: profile.uid,
-            displayName: profile.displayName || 'Host',
-            avatar: profile.photoURL || null,
-            elo: typeof profile.elo === 'number' ? profile.elo : 1200,
-          };
-          const preferredSide = settings.color === 'white' ? 'w' : settings.color === 'black' ? 'b' : 'random';
-          const category =
-            settings.initialSeconds < 180
-              ? 'bullet'
-              : settings.initialSeconds < 600
-              ? 'blitz'
-              : settings.initialSeconds < 1800
-              ? 'rapid'
-              : 'classical';
-
-          const tc: TimeControl = {
-            id: settings.timeControlId || 'tc_custom',
-            name: settings.timeControlName,
-            initialSeconds: settings.initialSeconds,
-            incrementSeconds: settings.incrementSeconds,
-            category,
-          };
-          await createOnlineMatch(hostPlayer, tc, preferredSide, cleanCode);
-        } catch (err) {
-          console.warn('Could not mirror room to online_matches:', err);
-        }
-      })().catch((err) => console.warn('Background room setup failed:', err));
-
-      return room;
+      return verifiedRoom;
     },
-    [profile]
+    [profile, user]
   );
 
-  const joinRoom = useCallback(
-    async (code: string, inviteFallback?: Partial<UserInvite>): Promise<PrivateRoom> => {
-      const activeProfile = profile || {
-        uid: 'guest_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
-        displayName: 'Guest Challenger',
-        photoURL: null,
-        elo: 1200
-      };
-      
-      const cleanCode = (code || inviteFallback?.roomCode || inviteFallback?.roomId || '').trim().toUpperCase();
+  const createRoom = createPrivateRoom;
+
+  const joinRoomWithContext = useCallback(
+    async (inviteOrCode: string | UserInvite | any): Promise<PrivateRoom> => {
+      const activeProfile = getHydratedProfile(profile || user);
+      let rawCode = '';
+      let targetInvite: any = null;
+
+      if (typeof inviteOrCode === 'string') {
+        rawCode = inviteOrCode;
+      } else if (inviteOrCode && typeof inviteOrCode === 'object') {
+        rawCode = inviteOrCode.roomCode || inviteOrCode.roomId || inviteOrCode.code || '';
+        targetInvite = inviteOrCode;
+      }
+
+      const cleanCode = normalizeRoomCode(rawCode);
       if (!cleanCode) {
         throw new Error('No room code provided. Please enter a valid room code.');
       }
 
-      let snap: any = null;
-      const roomDoc = doc(db, 'rooms', cleanCode);
-
-      // Strategy 1: Direct doc lookup by code in rooms collection
-      try {
-        snap = await getDoc(roomDoc);
-      } catch (e) {
-        console.warn('Room getDoc notice (proceeding with fallback checks):', e);
-      }
-
-      // Strategy 2: Query rooms by roomCode or roomId field
-      if (!snap || !snap.exists()) {
-        try {
-          const qRoomCode = query(collection(db, 'rooms'), where('roomCode', '==', cleanCode), limit(1));
-          const snapRooms = await getDocs(qRoomCode);
-          if (!snapRooms.empty) {
-            snap = snapRooms.docs[0];
-          } else {
-            const qRoomId = query(collection(db, 'rooms'), where('roomId', '==', cleanCode), limit(1));
-            const snapRoomsById = await getDocs(qRoomId);
-            if (!snapRoomsById.empty) {
-              snap = snapRoomsById.docs[0];
-            }
-          }
-        } catch (e) {
-          console.warn('Rooms collection query notice:', e);
-        }
-      }
-
-      let data: PrivateRoom | null = snap && snap.exists() ? (snap.data() as PrivateRoom) : null;
-
-      // Strategy 3: Check local storage cache
-      if (!data) {
-        try {
-          const cached = localStorage.getItem(`chess_room_${cleanCode}`);
-          if (cached) {
-            data = JSON.parse(cached);
-          }
-        } catch {}
-      }
-
-      // Strategy 4: Fallback to online_matches collection
-      if (!data) {
-        try {
-          const matchDocRef = doc(db, 'online_matches', cleanCode);
-          let matchSnap = await getDoc(matchDocRef);
-          if (!matchSnap.exists()) {
-            const qMatches = query(collection(db, 'online_matches'), where('code', '==', cleanCode), limit(1));
-            const matchDocs = await getDocs(qMatches);
-            if (!matchDocs.empty) {
-              matchSnap = matchDocs.docs[0];
-            }
-          }
-
-          if (matchSnap && matchSnap.exists()) {
-            const matchSession = matchSnap.data() as any;
-            const guestPlayer: OnlineMatchPlayer = {
-              uid: activeProfile.uid,
-              displayName: activeProfile.displayName || 'Opponent',
-              avatar: activeProfile.photoURL || null,
-              elo: typeof activeProfile.elo === 'number' ? activeProfile.elo : 1200,
-            };
-            await joinOnlineMatch(cleanCode, guestPlayer);
-            setActiveGameId(matchSnap.id || cleanCode);
-
-            const synthRoom: PrivateRoom = {
-              roomId: matchSnap.id || cleanCode,
-              roomCode: cleanCode,
-              creatorId: matchSession.hostId,
-              creatorName: matchSession.whitePlayer?.displayName || 'Host',
-              creatorElo: matchSession.whitePlayer?.elo || 1200,
-              creatorColor: matchSession.whitePlayer?.uid === matchSession.hostId ? 'white' : 'black',
-              opponentColor: matchSession.whitePlayer?.uid === matchSession.hostId ? 'black' : 'white',
-              opponentId: activeProfile.uid,
-              opponentName: activeProfile.displayName || 'Opponent',
-              opponentElo: typeof activeProfile.elo === 'number' ? activeProfile.elo : 1200,
-              status: 'in_progress',
-              settings: {
-                timeControlId: matchSession.timeControl?.id || 'rapid',
-                timeControlName: matchSession.timeControl?.name || 'Rapid 10+0',
-                initialSeconds: matchSession.timeControl?.initialSeconds || 600,
-                incrementSeconds: matchSession.timeControl?.incrementSeconds || 0,
-                color: 'random',
-                rated: true,
-              },
-              createdAt: new Date(),
-              expiresAt: new Date(Date.now() + 600000),
-              gameId: matchSnap.id || cleanCode,
-            };
-            setCurrentRoom(synthRoom);
-            soundManager.playMatchFound();
-            return synthRoom;
-          }
-        } catch (e: any) {
-          console.warn('online_matches lookup notice:', e?.message);
-        }
-      }
-
-      // Strategy 5: Direct joinOnlineMatch attempt (supports in-memory server & REST games)
-      if (!data) {
-        try {
-          const guestPlayer: OnlineMatchPlayer = {
-            uid: activeProfile.uid,
-            displayName: activeProfile.displayName || 'Opponent',
-            avatar: activeProfile.photoURL || null,
-            elo: typeof activeProfile.elo === 'number' ? activeProfile.elo : 1200,
-          };
-          const session = await joinOnlineMatch(cleanCode, guestPlayer);
-          if (session) {
-            setActiveGameId(session.id || cleanCode);
-            const synthRoom: PrivateRoom = {
-              roomId: session.id || cleanCode,
-              roomCode: cleanCode,
-              creatorId: session.hostId || 'host',
-              creatorName: session.whitePlayer?.displayName || 'Host',
-              creatorElo: session.whitePlayer?.elo || 1200,
-              creatorColor: session.whitePlayer?.uid === session.hostId ? 'white' : 'black',
-              opponentColor: session.whitePlayer?.uid === session.hostId ? 'black' : 'white',
-              opponentId: activeProfile.uid,
-              opponentName: activeProfile.displayName || 'Opponent',
-              opponentElo: typeof activeProfile.elo === 'number' ? activeProfile.elo : 1200,
-              status: 'in_progress',
-              settings: {
-                timeControlId: session.timeControl?.id || 'rapid',
-                timeControlName: session.timeControl?.name || 'Rapid 10+0',
-                initialSeconds: session.timeControl?.initialSeconds || 600,
-                incrementSeconds: session.timeControl?.incrementSeconds || 0,
-                color: 'random',
-                rated: true,
-              },
-              createdAt: new Date(),
-              expiresAt: new Date(Date.now() + 600000),
-              gameId: session.id || cleanCode,
-            };
-            setCurrentRoom(synthRoom);
-            soundManager.playMatchFound();
-            return synthRoom;
-          }
-        } catch (joinErr: any) {
-          console.warn('Direct joinOnlineMatch notice:', joinErr?.message);
-        }
-      }
-
-      // Strategy 6: Synthesize from inviteFallback (or matching pending incoming invite)
       const matchedInvite =
-        inviteFallback ||
-        incomingInvites.find((i) => i.roomCode === cleanCode || i.roomId === cleanCode);
+        targetInvite ||
+        incomingInvites.find(
+          (i) =>
+            normalizeRoomCode(i.roomCode) === cleanCode ||
+            normalizeRoomCode(i.roomId) === cleanCode
+        );
 
-      if (!data && matchedInvite) {
-        const synthRoom: PrivateRoom = {
-          roomId: cleanCode,
-          roomCode: cleanCode,
-          creatorId: matchedInvite.invitedBy || 'host',
-          creatorName: matchedInvite.invitedByName || 'Challenger',
-          creatorElo: 1200,
-          creatorColor: matchedInvite.settings?.color === 'black' ? 'black' : 'white',
-          opponentColor: matchedInvite.settings?.color === 'black' ? 'white' : 'black',
-          opponentId: activeProfile.uid,
-          opponentName: activeProfile.displayName || 'Opponent',
-          opponentPhotoURL: activeProfile.photoURL || undefined,
-          opponentElo: typeof activeProfile.elo === 'number' ? activeProfile.elo : 1200,
-          status: 'ready',
-          settings: matchedInvite.settings || {
-            timeControlId: 'rapid',
-            timeControlName: 'Rapid 10+0',
-            initialSeconds: 600,
-            incrementSeconds: 0,
-            color: 'random',
-            rated: true,
-          },
-          createdAt: new Date(),
-          expiresAt: new Date(Date.now() + 600000),
-          gameId: cleanCode,
-        };
+      // Phase 1: 6-Tier Room Resolution Engine
+      // (1) Direct Doc -> (2) Indexed Query -> (3) Local Cache -> (4) online_matches check -> (5) Server REST -> (6) Fallback Synthesis
+      const resolved = await resolveRoom(cleanCode, activeProfile, matchedInvite);
 
-        // Best effort write back to rooms collection so host can observe
-        safeSetDoc(doc(db, 'rooms', cleanCode), synthRoom).catch(() => {});
-        try {
-          localStorage.setItem(`chess_room_${cleanCode}`, JSON.stringify(synthRoom));
-        } catch {}
-
-        setCurrentRoom(synthRoom);
-        setActiveGameId(cleanCode);
-        soundManager.playMatchFound();
-        return synthRoom;
-      }
-
-      if (!data) {
+      if (!resolved || !resolved.room) {
         throw new Error('No room found with that code. Please check and try again.');
       }
 
-      // If room is already in progress or ready, admit player directly into active match!
-      if (data.status === 'in_progress' || (data.status === 'ready' && data.opponentId === activeProfile.uid)) {
-        const targetGame = data.gameId || data.roomCode || cleanCode;
-        setActiveGameId(targetGame);
-        setCurrentRoom(data);
-        soundManager.playMatchFound();
-        return data;
+      const roomData = resolved.room;
+
+      // Direct Routing & Status Logic: NO PREMATURE NAVIGATION!
+      // Only navigate if an existing, verified gameId is already present on the room document
+      if (
+        (resolved.alreadyStarted || roomData.status === 'in_progress') &&
+        (resolved.gameId || roomData.gameId)
+      ) {
+        const targetGame = resolved.gameId || roomData.gameId;
+        if (targetGame) {
+          setActiveGameId(targetGame);
+          setCurrentRoom(roomData);
+          soundManager.playMatchFound();
+          return roomData;
+        }
       }
 
       const opponentName = activeProfile.displayName || 'Opponent';
       const opponentPhotoURL = activeProfile.photoURL || null;
       const opponentElo = typeof activeProfile.elo === 'number' ? activeProfile.elo : 1200;
 
-      // Claim the room atomically before doing any nonessential writes.
-      const updatePayload: Record<string, any> = {
+      // Phase 1: Atomic Handshake Transaction via Firestore runTransaction
+      // Atomically verify that the room exists, prevent race conditions (duplicate opponent claims),
+      // update opponentId, and set status to 'ready' during handshake.
+      const targetDocId = resolved.room.roomId || cleanCode;
+      const roomDoc = doc(db, 'rooms', targetDocId);
+      let claimedRoom: PrivateRoom | null = null;
+      let lastTxError: any = null;
+
+      const atomicUpdatePayload: Record<string, any> = {
         opponentId: activeProfile.uid,
         opponentName,
-        opponentPhotoURL,
+        opponentPhotoURL: opponentPhotoURL || null,
         opponentElo,
         status: 'ready',
         updatedAt: serverTimestamp(),
       };
-      if (data.chat) updatePayload.chat = deleteField();
-      if (data.invites) updatePayload.invites = deleteField();
 
-      let claimedRoom = data;
-      try {
-        claimedRoom = await runTransaction(db, async (transaction) => {
-          const latestSnap = await transaction.get(roomDoc);
-          if (!latestSnap.exists()) return data;
-          const latestRoom = latestSnap.data() as PrivateRoom;
-          if (latestRoom.status !== 'waiting') {
-            return latestRoom;
-          }
-          transaction.update(roomDoc, updatePayload);
-          return latestRoom;
-        });
-      } catch (txErr: any) {
-        console.warn('[Room] Transaction write bypassed (quota/offline fallback):', txErr?.message);
+      const isVersionOrContentionError = (err: any) => {
+        const msg = (err?.message || '').toLowerCase();
+        return (
+          msg.includes('stored version') ||
+          msg.includes('base version') ||
+          err?.code === 'aborted' ||
+          err?.code === 'failed-precondition' ||
+          msg.includes('contention')
+        );
+      };
+
+      // Attempt handshake transaction with retries on optimistic concurrency version conflicts
+      for (let attempt = 0; attempt < 3; attempt++) {
         try {
-          await safeUpdateDoc(roomDoc, updatePayload);
-        } catch (fallbackErr) {
-          console.warn('Fallback safeUpdateDoc also failed:', fallbackErr);
+          claimedRoom = await runTransaction(db, async (transaction) => {
+            const roomSnap = await transaction.get(roomDoc);
+
+            if (!roomSnap.exists()) {
+              if (resolved.room) {
+                // Room was discovered via Tier 3, 4, 5, or 6
+                const newRoomPayload: any = {
+                  ...resolved.room,
+                  roomId: cleanCode,
+                  roomCode: cleanCode,
+                  opponentId: activeProfile.uid,
+                  opponentName,
+                  opponentPhotoURL: opponentPhotoURL || null,
+                  opponentElo,
+                  status: 'ready',
+                  createdAt: serverTimestamp(),
+                  updatedAt: serverTimestamp(),
+                };
+                transaction.set(roomDoc, newRoomPayload);
+                return {
+                  ...resolved.room,
+                  ...newRoomPayload,
+                  roomCode: cleanCode,
+                };
+              }
+              throw new Error(`Room "${cleanCode}" not found. Please verify the code and try again.`);
+            }
+
+            const currentRoomData = roomSnap.data() as PrivateRoom;
+
+            // Check if already claimed by this user (e.g. from previous attempt or concurrent accept)
+            if (currentRoomData.opponentId === activeProfile.uid) {
+              return {
+                ...currentRoomData,
+                roomCode: cleanCode,
+              };
+            }
+
+            // Prevent race condition: check if another challenger already claimed this room
+            if (
+              currentRoomData.opponentId &&
+              currentRoomData.opponentId !== activeProfile.uid
+            ) {
+              throw new Error('This room is already full. Another player has joined.');
+            }
+
+            // Prevent joining an expired or ended room
+            if (currentRoomData.status === 'ended' || currentRoomData.status === 'expired') {
+              throw new Error('This room has ended or expired.');
+            }
+
+            // If game is already in progress with another player
+            if (
+              currentRoomData.status === 'in_progress' &&
+              currentRoomData.opponentId !== activeProfile.uid
+            ) {
+              throw new Error('This game is already in progress.');
+            }
+
+            transaction.update(roomDoc, atomicUpdatePayload);
+
+            return {
+              ...currentRoomData,
+              ...atomicUpdatePayload,
+              roomCode: cleanCode,
+            };
+          });
+
+          // Handshake transaction succeeded
+          break;
+        } catch (txErr: any) {
+          lastTxError = txErr;
+          if (isVersionOrContentionError(txErr)) {
+            console.warn(`[RoomContext] Handshake version contention on attempt ${attempt + 1}, retrying...`);
+            if (attempt < 2) {
+              await new Promise((r) => setTimeout(r, 150 * (attempt + 1)));
+              continue;
+            }
+          } else {
+            // Fatal business logic error, break out immediately
+            break;
+          }
         }
       }
 
-      // Sync into server REST endpoint
+      // If transaction failed due to version contention after retries, try direct read & safeUpdateDoc fallback
+      if (!claimedRoom) {
+        if (isVersionOrContentionError(lastTxError)) {
+          try {
+            console.warn('[RoomContext] Handshake version contention detected; executing fallback verification...');
+            const fallbackSnap = await getDoc(roomDoc);
+            if (fallbackSnap.exists()) {
+              const currentRoomData = fallbackSnap.data() as PrivateRoom;
+              if (currentRoomData.opponentId === activeProfile.uid) {
+                claimedRoom = {
+                  ...currentRoomData,
+                  roomCode: cleanCode,
+                };
+              } else if (!currentRoomData.opponentId) {
+                await safeUpdateDoc(roomDoc, atomicUpdatePayload);
+                claimedRoom = {
+                  ...currentRoomData,
+                  ...atomicUpdatePayload,
+                  roomCode: cleanCode,
+                };
+              } else {
+                throw new Error('This room is already full. Another player has joined.');
+              }
+            } else if (resolved.room) {
+              const newRoomPayload: any = {
+                ...resolved.room,
+                roomId: cleanCode,
+                roomCode: cleanCode,
+                opponentId: activeProfile.uid,
+                opponentName,
+                opponentPhotoURL: opponentPhotoURL || null,
+                opponentElo,
+                status: 'ready',
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+              };
+              await safeSetDoc(roomDoc, newRoomPayload);
+              claimedRoom = {
+                ...resolved.room,
+                ...newRoomPayload,
+                roomCode: cleanCode,
+              };
+            }
+          } catch (fallbackErr: any) {
+            console.warn('[RoomContext] Handshake contention fallback error:', fallbackErr);
+          }
+        }
+
+        if (!claimedRoom) {
+          if (
+            lastTxError?.code === 'permission-denied' ||
+            lastTxError?.message?.includes('Missing or insufficient permissions')
+          ) {
+            handleFirestoreError(lastTxError, OperationType.UPDATE, `rooms/${cleanCode}`);
+          }
+          console.error('[RoomContext] Handshake transaction failed:', lastTxError?.message || lastTxError);
+          setJoinError(lastTxError?.message || 'Failed to join room.');
+          throw lastTxError;
+        }
+      }
+
+      // Sync into server REST endpoints
       try {
-        fetch(`/api/games/${encodeURIComponent(cleanCode)}/join`, {
+        fetch(`/api/rooms/join/${encodeURIComponent(cleanCode)}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -959,14 +1052,14 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
         timestamp: serverTimestamp(),
         isSystem: true,
         type: 'system',
-      }).catch((err) => console.warn('Could not write join message to subcollection:', err));
+      }).catch(() => {});
 
       const joinedRoom: PrivateRoom = {
         ...claimedRoom,
         roomCode: cleanCode,
         opponentId: activeProfile.uid,
         opponentName,
-        opponentPhotoURL,
+        opponentPhotoURL: opponentPhotoURL || undefined,
         opponentElo,
         status: 'ready',
       };
@@ -980,10 +1073,32 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCurrentRoom(joinedRoom);
       setJoinError(null);
       soundManager.playMatchFound();
-      startCountdownFlow(joinedRoom);
+
+      // If gameId already exists from creator, set it only if verified
+      if (joinedRoom.gameId) {
+        verifyOnlineMatchExists(joinedRoom.gameId).then((valid) => {
+          if (valid) {
+            setActiveGameId(joinedRoom.gameId);
+          }
+        });
+      } else {
+        // Both players are in the waiting room; trigger countdown
+        startCountdownFlow(joinedRoom);
+      }
+
       return joinedRoom;
     },
-    [profile, incomingInvites, startCountdownFlow]
+    [profile, user, incomingInvites, startCountdownFlow]
+  );
+
+  const joinRoom = useCallback(
+    async (code: string, inviteFallback?: Partial<UserInvite>): Promise<PrivateRoom> => {
+      return joinRoomWithContext({
+        roomCode: code,
+        ...(inviteFallback || {}),
+      });
+    },
+    [joinRoomWithContext]
   );
 
   const cancelRoom = useCallback(
@@ -1148,10 +1263,15 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const acceptInvite = useCallback(
     async (inviteId: string, roomCode?: string) => {
       const targetInvite = incomingInvites.find(
-        (inv) => inv.id === inviteId || inv.roomCode === roomCode || inv.roomId === roomCode
+        (inv) =>
+          inv.id === inviteId ||
+          normalizeRoomCode(inv.roomCode) === normalizeRoomCode(roomCode) ||
+          normalizeRoomCode(inv.roomId) === normalizeRoomCode(roomCode)
       );
-      const code = roomCode || targetInvite?.roomCode || targetInvite?.roomId || currentRoom?.roomCode;
-      if (!code) {
+      const cleanCode = normalizeRoomCode(
+        roomCode || targetInvite?.roomCode || targetInvite?.roomId || currentRoom?.roomCode
+      );
+      if (!cleanCode) {
         setJoinError('Room code not found in invite.');
         return;
       }
@@ -1168,12 +1288,12 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         // Update room subcollection invite if possible
         try {
-          const roomInviteRef = doc(db, 'rooms', code, 'invites', inviteId);
+          const roomInviteRef = doc(db, 'rooms', cleanCode, 'invites', inviteId);
           await safeUpdateDoc(roomInviteRef, { status: 'accepted' });
         } catch {}
 
         // Join room as opponent, passing fallback targetInvite
-        await joinRoom(code, targetInvite);
+        await joinRoom(cleanCode, targetInvite);
       } catch (err: any) {
         console.error('[RoomContext] Failed to join invited room:', err);
         setJoinError(err?.message || 'Could not join invited room.');
@@ -1267,8 +1387,10 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
         activeGameId,
         setCurrentRoom,
         setJoinError,
+        createPrivateRoom,
         createRoom,
         joinRoom,
+        joinRoomWithContext,
         cancelRoom,
         leaveRoom,
         updateRoomStatus,
@@ -1291,3 +1413,5 @@ export const useRoom = () => {
   if (!ctx) throw new Error('useRoom must be used within a RoomProvider');
   return ctx;
 };
+
+export default RoomProvider;

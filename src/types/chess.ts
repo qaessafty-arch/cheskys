@@ -150,7 +150,7 @@ export interface OnlineMatchPlayer {
   botId?: string;
 }
 
-export type OnlineMatchStatus = 'waiting' | 'in_progress' | 'checkmate' | 'resigned' | 'draw' | 'timeout' | 'aborted';
+export type OnlineMatchStatus = 'waiting' | 'ready' | 'in_progress' | 'active' | 'checkmate' | 'resigned' | 'draw' | 'timeout' | 'aborted' | 'completed' | 'abandoned';
 
 export interface OnlineMatchClock {
   whiteMs: number;
@@ -165,8 +165,10 @@ export interface OnlineMatchSession {
   code?: string;
   hostId: string;
   guestId?: string;
-  whitePlayer: OnlineMatchPlayer;
-  blackPlayer: OnlineMatchPlayer;
+  whiteId?: string;
+  blackId?: string;
+  whitePlayer: OnlineMatchPlayer | null;
+  blackPlayer: OnlineMatchPlayer | null;
   fen: string;
   startFen?: string;
   pgn: string;
@@ -179,6 +181,11 @@ export interface OnlineMatchSession {
   reason?: string;
   timeControl: TimeControl;
   clock?: OnlineMatchClock;
+  clocks?: {
+    white: number;
+    black: number;
+    lastMoveTimestamp?: number;
+  };
   vsBot?: boolean;
   isRated?: boolean;
   drawDeclinedAt?: number | null;

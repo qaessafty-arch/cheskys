@@ -276,13 +276,27 @@ const NotificationListItem: React.FC<{
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (notification.type === 'room_invite' && notification.actionData?.roomCode) {
-                        window.dispatchEvent(new CustomEvent('room_invite_response', { 
-                          detail: { status: 'accepted', inviteId: notification.id, roomCode: notification.actionData.roomCode } 
-                        }));
-                      } else if (notification.type === 'challenge' && notification.actionData?.matchId) {
+                      const cleanCode = (
+                        notification.actionData?.roomCode || 
+                        notification.actionData?.matchId || 
+                        ''
+                      ).trim().toUpperCase();
+
+                      if (cleanCode) {
                         window.dispatchEvent(new CustomEvent('accept-challenge', { 
-                          detail: { matchId: notification.actionData.matchId } 
+                          detail: { 
+                            matchId: cleanCode, 
+                            roomCode: cleanCode, 
+                            inviteId: notification.id,
+                            notificationType: notification.type
+                          } 
+                        }));
+                        window.dispatchEvent(new CustomEvent('room_invite_response', { 
+                          detail: { 
+                            status: 'accepted', 
+                            inviteId: notification.id, 
+                            roomCode: cleanCode 
+                          } 
                         }));
                       }
                       onRead();
@@ -294,11 +308,18 @@ const NotificationListItem: React.FC<{
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (notification.type === 'room_invite') {
-                        window.dispatchEvent(new CustomEvent('room_invite_response', { 
-                          detail: { status: 'declined', inviteId: notification.id, roomCode: notification.actionData?.roomCode } 
-                        }));
-                      }
+                      const cleanCode = (
+                        notification.actionData?.roomCode || 
+                        notification.actionData?.matchId || 
+                        ''
+                      ).trim().toUpperCase();
+                      window.dispatchEvent(new CustomEvent('room_invite_response', { 
+                        detail: { 
+                          status: 'declined', 
+                          inviteId: notification.id, 
+                          roomCode: cleanCode 
+                        } 
+                      }));
                       onRead();
                     }}
                     className="px-3 py-1.5 rounded-lg bg-red-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-red-400 hover:scale-105 active:scale-95 transition-all"
@@ -339,3 +360,6 @@ const NotificationListItem: React.FC<{
     </div>
   );
 };
+
+export default Header;
+

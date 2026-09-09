@@ -22,6 +22,7 @@ import { getRespectProfile, recordVictory, recordMercy } from './utils/respectSy
 import { useAuth } from './context/AuthContext';
 import { useRoom } from './context/RoomContext';
 import { useSettings } from './context/SettingsContext';
+import { normalizeRoomCode } from './utils/roomResolver';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -85,7 +86,7 @@ const UserProfilePage = lazyPreload(() => import('./components/UserProfilePage')
 
 export default function App() {
   const { user, profile: authProfile, updateRespectMetrics } = useAuth();
-  const { currentRoom, activeGameId, acceptInvite, declineInvite } = useRoom();
+  const { currentRoom, activeGameId, acceptInvite, declineInvite, joinRoom, joinRoomWithContext } = useRoom();
   const { t, i18n } = useTranslation();
 
   // Global Settings and Background managed via SettingsContext
@@ -152,10 +153,11 @@ export default function App() {
   useEffect(() => {
     const handleRoomInviteResponse = async (e: Event) => {
       const customEvent = e as CustomEvent;
-      const { status, inviteId, roomCode } = customEvent.detail;
+      const { status, inviteId, roomCode } = customEvent.detail || {};
+      const cleanCode = normalizeRoomCode(roomCode);
       if (status === 'accepted') {
         setActiveMode('private_room');
-        await acceptInvite(inviteId, roomCode);
+        await acceptInvite(inviteId, cleanCode);
       } else {
         await declineInvite(inviteId);
       }
@@ -165,7 +167,29 @@ export default function App() {
   }, [acceptInvite, declineInvite]);
 
   useEffect(() => {
-    const handleAcceptChallenge = (e: Event) => {
+    const handleAcceptChallenge = async (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const { matchId, roomCode, inviteId, invite, fallbackInvite } = customEvent.detail || {};
+      const targetInvite = invite || fallbackInvite;
+      const cleanCode = normalizeRoomCode(roomCode || matchId || targetInvite?.roomCode);
+
+      if (inviteId) {
+        setActiveMode('private_room');
+        await acceptInvite(inviteId, cleanCode);
+      } else if (cleanCode && cleanCode.length <= 10) {
+        setActiveMode('private_room');
+        try {
+          await joinRoomWithContext(targetInvite || cleanCode);
+        } catch (err) {
+          console.warn('[App] accept-challenge joinRoomWithContext notice:', err);
+        }
+      } else if (matchId) {
+        setActiveOnlineMatchId(matchId);
+        setActiveMode('online_match');
+      }
+    };
+
+    const handleNavigateToMatch = (e: Event) => {
       const customEvent = e as CustomEvent;
       const { matchId } = customEvent.detail || {};
       if (matchId) {
@@ -173,9 +197,21 @@ export default function App() {
         setActiveMode('online_match');
       }
     };
+
+    const handleNavigateToRoom = () => {
+      setActiveMode('private_room');
+    };
+
     window.addEventListener('accept-challenge', handleAcceptChallenge);
-    return () => window.removeEventListener('accept-challenge', handleAcceptChallenge);
-  }, []);
+    window.addEventListener('navigate-to-match', handleNavigateToMatch);
+    window.addEventListener('navigate-to-room', handleNavigateToRoom);
+
+    return () => {
+      window.removeEventListener('accept-challenge', handleAcceptChallenge);
+      window.removeEventListener('navigate-to-match', handleNavigateToMatch);
+      window.removeEventListener('navigate-to-room', handleNavigateToRoom);
+    };
+  }, [acceptInvite, joinRoom]);
 
   useEffect(() => {
     if (currentRoom && activeMode !== 'private_room' && activeMode !== 'online_match') {
@@ -368,17 +404,11 @@ export default function App() {
   }, []);
 
   // Clock countdown interval
-
-
   useEffect(() => {
-    // Guard clause: Check for player presence. If a player disconnects before the first move,
-    // ensure the match timer remains in its idle/paused state and does not begin counting down.
-    const isPlayerDisconnected = socketService.getSocket()?.disconnected;
-    if ((activeMode === 'online_match' || activeMode === 'multiplayer') && moveLogs.length === 0 && isPlayerDisconnected) {
-      return;
-    }
-
+    // The App.tsx local chess clock should ONLY run for local game modes (ai and pass_and_play)
+    if (activeMode !== 'ai' && activeMode !== 'pass_and_play') return;
     if (!isClockRunning || gameResult || timeControl.category === 'unlimited') return;
+    if (moveLogs.length === 0) return; // Clocks should never count down before the first move
 
     const timer = setInterval(() => {
       const turn = game.turn();
@@ -406,7 +436,7 @@ export default function App() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isClockRunning, game, gameResult, timeControl]);
+  }, [isClockRunning, game, gameResult, timeControl, activeMode, moveLogs.length]);
 
   // Execute a verified legal move
   const executeMove = useCallback(
@@ -1466,7 +1496,7 @@ export default function App() {
       )}
 
       {/* Game Over Modal */}
-      {gameResult && !isJudgmentModalOpen && (
+      {gameResult && !isJudgmentModalOpen && (activeMode === 'ai' || activeMode === 'pass_and_play') && (
         <GameOverModal
           result={gameResult}
           pgn={game.pgn()}

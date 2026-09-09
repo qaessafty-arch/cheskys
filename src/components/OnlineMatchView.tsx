@@ -108,9 +108,16 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
   const [moveIndex, setMoveIndex] = useState(0);
 
   const myUid = profile?.uid || user?.uid || getLocalPlayerUid();
-  const isWhitePlayer = session?.whitePlayer?.uid === myUid;
+  const sessionWhiteId = session?.whiteId || session?.whitePlayer?.uid;
+  const sessionBlackId = session?.blackId || session?.blackPlayer?.uid;
+
+  const isWhitePlayer =
+    sessionWhiteId === myUid ||
+    (!sessionBlackId && session?.hostId === myUid) ||
+    (session?.whitePlayer?.uid === myUid);
   const myColor: PieceColor = isWhitePlayer ? 'w' : 'b';
-  const isMyTurn = session?.status === 'in_progress' && session?.turn === myColor;
+  const isGameLive = session?.status === 'in_progress' || session?.status === 'active';
+  const isMyTurn = isGameLive && session?.turn === myColor;
   const capturedMaterial = getCapturedMaterial(game);
 
   const opponent = isWhitePlayer ? session?.blackPlayer : session?.whitePlayer;
@@ -131,14 +138,19 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
 
       // Synchronize chess game instance
       try {
-        const updatedGame = new Chess(newSession.fen);
+        const targetFen = newSession.fen && newSession.fen.trim().length > 0
+          ? newSession.fen
+          : 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+        const updatedGame = new Chess(targetFen);
         setGame(updatedGame);
         setEvalScore(evaluateBoard(updatedGame));
         if (newSession.lastMoveFrom && newSession.lastMoveTo) {
           setLastMove({ from: newSession.lastMoveFrom, to: newSession.lastMoveTo });
         }
-        setWhiteTime(newSession.whiteSecondsRemaining);
-        setBlackTime(newSession.blackSecondsRemaining);
+        const whiteRemaining = newSession.clocks?.white ?? (newSession.clocks as any)?.whiteSeconds ?? newSession.whiteSecondsRemaining;
+        const blackRemaining = newSession.clocks?.black ?? (newSession.clocks as any)?.blackSeconds ?? newSession.blackSecondsRemaining;
+        if (typeof whiteRemaining === 'number') setWhiteTime(whiteRemaining);
+        if (typeof blackRemaining === 'number') setBlackTime(blackRemaining);
       } catch (e) {
         console.error('Error syncing online chess game:', e);
       }
@@ -219,14 +231,19 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
       setBlackTime(data.black);
     };
 
-    const onGameOver = (data: { reason: string, winner: string }) => {
-      soundManager.playDefeat();
-      // Session update will come via Firestore to show the outcome banner
+    const onGameOver = (data: { reason: string, winner: string, result?: string }) => {
+      if (data.result === 'aborted' || !data.winner || data.winner === 'draw') {
+        return;
+      }
+      if (data.winner === myColor) {
+        soundManager.playVictory();
+      } else {
+        soundManager.playDefeat();
+      }
     };
 
     const onMatchAborted = (data: { reason: string }) => {
-      alert(`Match Aborted: ${data.reason}`);
-      onClose();
+      setSession(prev => prev ? { ...prev, status: 'aborted', reason: data.reason || 'Match was aborted.' } : prev);
     };
 
     const onReconnectSuccess = (data: any) => {
@@ -699,7 +716,13 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
     }
   };
 
-  if (!session) {
+  const isDocLoading =
+    loadState === 'loading' ||
+    !session ||
+    !session.fen ||
+    session.fen.trim().length === 0;
+
+  if (isDocLoading) {
     return (
       <PanelContainer>
         <div className="obsidian-panel rounded-3xl p-10 flex flex-col items-center justify-center gap-4 text-center">
@@ -714,7 +737,8 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
           ) : (
             <>
               <div className="w-10 h-10 rounded-full border-4 border-[#F59E0B] border-t-transparent animate-spin" />
-              <h2 className="text-lg font-black text-white">Connecting to the arena…</h2>
+              <h2 className="text-lg font-black text-white">Loading Game State...</h2>
+              <p className="text-xs text-[#94A3B8]">Synchronizing board and player credentials</p>
             </>
           )}
           <button
@@ -1157,8 +1181,56 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
             </div>
           </div>
 
-          {/* Match Outcome Banner -> GameOverModal */}
-          {session?.status && session.status !== 'in_progress' && session.status !== 'waiting' && (
+          {/* Aborted Match Notice (Zero-State Prevention: matches aborted before play never show victory) */}
+          {Boolean(
+            session?.status === 'aborted' ||
+            (session?.status === 'abandoned' && (!session.moves || session.moves.length === 0)) ||
+            (!['in_progress', 'waiting', 'active', 'ready'].includes(session?.status || '') &&
+              (!session?.moves || session.moves.length === 0) &&
+              session?.status !== 'resigned')
+          ) && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+                className="relative obsidian-panel rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center border-[#1F293D]"
+              >
+                <button
+                  onClick={onClose}
+                  className="absolute top-4 right-4 text-[#94A3B8] hover:text-white p-1.5 rounded-xl hover:bg-[#1F293D] transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+
+                <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-[#0B0F19] border border-amber-500/40 text-amber-400 flex items-center justify-center shadow-2xl">
+                  <AlertTriangle className="w-10 h-10" />
+                </div>
+
+                <h2 className="text-2xl sm:text-3xl font-black text-white mb-2 tracking-tight uppercase">
+                  Match Aborted
+                </h2>
+                <p className="text-xs font-black text-[#94A3B8] uppercase tracking-[0.2em] mb-6 opacity-80">
+                  {session?.reason || 'The match was aborted before play started. No rating changes were applied.'}
+                </p>
+
+                <button
+                  onClick={onClose}
+                  className="w-full flex items-center justify-center gap-2 py-4 px-4 rounded-2xl bg-[#52673A] hover:bg-[#627c45] text-white font-black text-sm transition-all shadow-xl active:scale-95 cursor-pointer uppercase tracking-widest"
+                >
+                  <span>Return to Lobby</span>
+                </button>
+              </motion.div>
+            </div>
+          )}
+
+          {/* Match Outcome Banner -> GameOverModal (Only for genuinely played or explicitly resigned games) */}
+          {session?.status &&
+            !['in_progress', 'waiting', 'active', 'ready', 'aborted'].includes(session.status) &&
+            !(session.status === 'abandoned' && (!session.moves || session.moves.length === 0)) &&
+            ((session.moves && session.moves.length > 0) || session.status === 'resigned') &&
+            ['checkmate', 'resigned', 'draw', 'timeout', 'completed', 'abandoned'].includes(session.status) &&
+            Boolean(session?.fen && session.fen.trim().length > 0) && (
             <GameOverModal
               result={{
                 winner: session.winner || 'draw',
