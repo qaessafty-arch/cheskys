@@ -707,6 +707,29 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
     !session.fen ||
     session.fen.trim().length === 0;
 
+  const isGameOver = useCallback(() => {
+    if (!session?.status) return false;
+
+    const isNotActive = !['in_progress', 'waiting', 'active', 'ready', 'aborted'].includes(session.status);
+    const isNotFreshAbandon = !(session.status === 'abandoned' && (!session.moves || session.moves.length === 0));
+    const hasPlayOrResigned = (session.moves && session.moves.length > 0) || session.status === 'resigned';
+    const isFinalState = ['checkmate', 'resigned', 'draw', 'timeout', 'completed', 'abandoned'].includes(session.status);
+    const hasFen = Boolean(session?.fen && session.fen.trim().length > 0);
+
+    const result = isNotActive && isNotFreshAbandon && hasPlayOrResigned && isFinalState && hasFen;
+
+    if (result) {
+      console.log('[OnlineMatchView] Game Over trigger detected. Session state:', {
+        status: session.status,
+        winner: session.winner,
+        moveCount: session.moves?.length,
+        fen: session.fen
+      });
+    }
+
+    return result;
+  }, [session]);
+
   if (isDocLoading) {
     return (
       <PanelContainer>
@@ -1216,12 +1239,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
           )}
 
           {/* Match Outcome Banner -> GameOverModal (Only for genuinely played or explicitly resigned games) */}
-          {session?.status &&
-            !['in_progress', 'waiting', 'active', 'ready', 'aborted'].includes(session.status) &&
-            !(session.status === 'abandoned' && (!session.moves || session.moves.length === 0)) &&
-            ((session.moves && session.moves.length > 0) || session.status === 'resigned') &&
-            ['checkmate', 'resigned', 'draw', 'timeout', 'completed', 'abandoned'].includes(session.status) &&
-            Boolean(session?.fen && session.fen.trim().length > 0) && (
+          {isGameOver() && (
             <GameOverModal
               result={{
                 winner: session.winner || 'draw',
