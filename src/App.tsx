@@ -466,7 +466,7 @@ export default function App() {
       else setPendingPromotion({ from, to });
       return;
     }
-    execute,Move(from, to);
+    executeMove(from, to);
   }, [gameResult, isAiThinking, isJudgmentModalOpen, activeMode, playerColor, game, settings.autoQueen, executeMove]);
 
   const handlePromotionSelect = (promoPiece: PieceType) => {
@@ -689,7 +689,7 @@ export default function App() {
           ) : activeMode === 'leaderboard' ? (
             <motion.div key="leaderboard-view" className="w-full h-full">
               <WorldwideLeaderboardView />
-            </motion,div>
+            </motion.div>
           ) : activeMode === 'dev_panel' ? (
             <motion.div key="dev-panel" className="w-full h-full">
               <DevPanel onClose={() => setActiveMode('ai')} />
