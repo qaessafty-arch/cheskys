@@ -21,6 +21,8 @@ import {
 } from 'lucide-react';
 import { useRoom } from '../../hooks/useRoom';
 import { useAuth } from '../../context/AuthContext';
+import { useNotification } from '../../context/NotificationContext';
+import { toast } from 'sonner';
 import { RoomChat } from './RoomChat';
 import { InviteFriendModal } from './InviteFriendModal';
 import { listenToFriendsList } from '../../services/friendService';
@@ -44,6 +46,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
     navigateToMatch,
   } = useRoom();
   const { user, profile } = useAuth();
+  const { sendNotification } = useNotification();
   const [copied, setCopied] = useState(false);
   const [shared, setShared] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -92,8 +95,18 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
 
   // Load friends for quick invite
   useEffect(() => {
+    if (!profile?.uid) return;
+    const unsub = listenToFriendsList(profile.uid, (list) => {
+      if (Array.isArray(list)) {
+        setFriends(list);
+      }
+    });
+    return () => unsub?.();
+  }, [profile?.uid]);
+
   // Only the invitee needs to listen for the creator's provisioned gameId
-  if (!currentRoom || isCreator || !cleanRoomCode) return;
+  useEffect(() => {
+    if (!currentRoom || isCreator || !cleanRoomCode) return;
 
   const roomRef = doc(db, 'rooms', cleanRoomCode);
   const unsub = onSnapshot(roomRef, (snap) => {
@@ -328,6 +341,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
       toast.error('Failed to nudge host.');
     }
   };
+  const handleRetryConnection = async () => {
     if (!cleanRoomCode || isCreator) return;
     setIsCheckingStatus(true);
     try {
@@ -344,7 +358,6 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
 
         if (isValid) {
           const cleanId = rawGameId.trim();
-          // Unlock the state guard
           setSnapshotGameId(cleanId);
           setHasDetectedValidGameId(true);
           await handleVerifiedInviteeNavigation(cleanId);
@@ -873,7 +886,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setShowSummonModal(true)}
+                  onClick={() => setShowInviteModal(true)}
                   className="room-btn-action gold !py-2 !px-3 !text-xs cursor-pointer"
                 >
                   <UserPlus className="w-3.5 h-3.5" />
@@ -895,7 +908,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
             </div>
             <button
               type="button"
-              onClick={() => setShowSummonModal(true)}
+              onClick={() => setShowInviteModal(true)}
               className="text-xs font-bold text-[#F5C453] hover:underline cursor-pointer flex items-center gap-1"
             >
               <span>View All</span>

@@ -152,7 +152,7 @@ export default function App() {
           setActiveMode('private_room');
           await acceptInvite(inviteId, cleanCode);
         } else {
-          await declineInvite(inviteId);
+          await declineInvite(inviteId, cleanCode);
         }
       } catch (err: any) {
         console.error('[App] room_invite_response failure:', err);
@@ -429,7 +429,7 @@ export default function App() {
   );
 
   useEffect(() => {
-    if (activeMode !== 'ai' || gameResult || isJudgmentModalHOpen) return;
+    if (activeMode !== 'ai' || gameResult || isJudgmentModalOpen) return;
     const isAiTurn = (playerColor === 'w' && game.turn() === 'b') || (playerColor === 'b' && game.turn() === 'w');
     if (!isAiTurn) { setIsAiThinking(false); return; }
     setIsAiThinking(true);
@@ -684,7 +684,7 @@ export default function App() {
             </motion.div>
           ) : activeMode === 'database' ? (
             <motion.div key="database-view" className="w-full h-full">
-              <DatabaseView settings={settings} onOpenAnalysisWithFen={fen => { try { const g = new Chess(fen); setGame(g); setActiveMode('analysis'); } catch {} }} />
+              <DatabaseView onClose={() => setActiveMode('ai')} />
             </motion.div>
           ) : activeMode === 'leaderboard' ? (
             <motion.div key="leaderboard-view" className="w-full h-full">
@@ -692,11 +692,11 @@ export default function App() {
             </motion.div>
           ) : activeMode === 'dev_panel' ? (
             <motion.div key="dev-panel" className="w-full h-full">
-              <DevPanel onClose={() => setActiveMode('ai')} />
+              <DevPanel onClose={() => setActiveMode('ai')} onNavigate={mode => setActiveMode(mode as GameMode)} />
             </motion.div>
           ) : activeMode === 'daily_puzzle' ? (
             <motion.div key="daily-puzzle-view" className="w-full h-full">
-              <DailyPuzzleView settings={settings} onNavigateHome={() => setActiveMode('ai')} />
+              <DailyPuzzleView settings={settings} onNavigateMode={() => setActiveMode('ai')} />
             </motion.div>
           ) : activeMode === 'puzzle' ? (
             <motion.div key="puzzle-mode" className="w-full h-full">
@@ -816,13 +816,13 @@ export default function App() {
         <GameOverModal result={gameResult} pgn={game.pgn()} onRematch={() => { handleStartGame({ mode: activeMode, bot: currentBot, playerColor: playerColor, timeControl: timeControl }); }} onNewGame={() => { setGameResult(null); setIsNewGameModalOpen(true); }} onPracticePuzzles={() => { setGameResult(null); setActiveMode("puzzle_practice"); }} onAnalyze={() => { setGameResult(null); setActiveMode('analysis'); }} onClose={() => setGameResult(null)} />
       )}
       {isNewGameModalOpen && (
-        <NewGameModal isOpen={isNewGameModalOpen} onClose={() => setIsNewGameModalOpen(false)} onStartGame={handleStartGame} onOpenWorldwideModal={() => { setIsWorldwideMatchModalOpen(true); }} onOpenDailyPuzzle={() => { setActiveMode('daily_puzzle'); }} />
+        <NewGameModal isOpen={isNewGameModalOpen} onClose={() => setIsNewGameModalOpen(false)} onStartGame={handleStartGame} onOpenWorldwideMatch={() => { setIsWorldwideMatchModalOpen(true); }} onOpenDailyPuzzle={() => { setActiveMode('daily_puzzle'); }} />
       )}
       {isWorldwideMatchModalOpen && (
         <WorldwideMatchModal isOpen={isWorldwideMatchModalOpen} onClose={() => setIsWorldwideMatchModalOpen(false)} onMatchFound={matchId => { setIsWorldwideMatchModalOpen(false); setActiveOnlineMatchId(matchId); setActiveMode('online_match'); }} />
       )}
       {isThemeModalOpen && (
-        <ThemeSelectorModal isOpen={isThemeModalOpen} onClose={() => setIsThemeModalOpen(false)} settings={settings} onUpdateSettings={newS => setSettings(prev => ({ ...prev, ...newS }))} onOpenAnalysisWithFen={fen => { try { const g = new Chess(fen); setGame(g); setIsSettingsModalOpen(false); setActiveMode('analysis'); } catch {} }} />
+        <ThemeSelectorModal isOpen={isThemeModalOpen} onClose={() => setIsThemeModalOpen(false)} settings={settings} onUpdateSettings={newS => setSettings(prev => ({ ...prev, ...newS }))} />
       )}
       {isSettingsModalOpen && (
         <SettingsModal isOpen={isSettingsModalOpen} onClose={() => setIsSettingsModalOpen(false)} settings={settings} onUpdateSettings={newS => setSettings(prev => ({ ...prev, ...newS }))} onThemeChange={theme => { setSettings(prev => ({ ...prev, uiThemeId: theme.id })); }} onOpenAnalysisWithFen={fen => { try { const g = new Chess(fen); setGame(g); setIsSettingsModalOpen(false); setActiveMode('analysis'); } catch {} }} />

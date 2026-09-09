@@ -50,7 +50,7 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
     setCreating(true);
     setError(null);
     try {
-      await room.createRoom(cleanCode, settings as IRoomSettings);
+      await room.createPrivateRoom(settings as IRoomSettings, cleanCode);
       onRoomCreated?.(cleanCode);
       onClose();
     } catch (err: any) {

@@ -155,10 +155,10 @@ export function useRoom() {
     }
   };
 
-  const hostRoom = async (code: string, settings: Parameters<typeof room.createRoom>[1]) => {
+  const hostRoom = async (code: string, settings: Parameters<typeof room.createPrivateRoom>[0]) => {
     const cleanCode = normalizeRoomCode(code);
     try {
-      await room.createRoom(cleanCode, settings);
+      await room.createPrivateRoom(settings, cleanCode);
       showToast({
         type: 'room_join',
         title: 'Room Created',

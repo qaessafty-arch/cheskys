@@ -138,10 +138,10 @@ export const PrivateRoom: React.FC<PrivateRoomProps> = ({
                   roomCode={invite.roomCode}
                   invitedByName={invite.invitedByName}
                   invitedByPhoto={invite.invitedByPhoto}
-                  timeControlName={invite.settings.timeControlName}
-                  rated={invite.settings.rated}
-                  onAccept={acceptInvite}
-                  onDecline={declineInvite}
+                  timeControlName={invite.settings?.timeControlName}
+                  rated={invite.settings?.rated}
+                  onAscend={acceptInvite}
+                  onDismiss={(id) => declineInvite(id, invite.roomCode)}
                 />
               ))}
             </div>

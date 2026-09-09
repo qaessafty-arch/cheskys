@@ -25,23 +25,117 @@ import { joinOnlineMatch, recordLocalUserCreatedRoom } from '../services/onlineM
 import { OnlineMatchPlayer, TimeControl } from '../types/chess';
 import { resolveRoom, normalizeRoomCode, getHydratedProfile } from '../utils/roomResolver';
 
-// ... (Keep your interfaces: RoomStatus, ConnectionStatus, RoomSettings, etc. exactly as they are) ...
+export type RoomStatus = 'waiting' | 'ready' | 'in_progress' | 'completed' | 'aborted';
+export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
-export const RoomProvider = ({ children }) => {
+export interface RoomSettings {
+  timeControlId: string;
+  timeControlName: string;
+  initialSeconds: number;
+  incrementSeconds: number;
+  color: 'white' | 'black' | 'random';
+}
+
+export interface PrivateRoom {
+  roomId: string;
+  roomCode: string;
+  creatorId: string;
+  creatorName: string;
+  creatorPhotoURL?: string;
+  creatorElo: number;
+  creatorColor?: string;
+  opponentId?: string;
+  opponentName?: string;
+  opponentPhotoURL?: string;
+  opponentElo?: number;
+  status: RoomStatus;
+  settings: RoomSettings;
+  gameId?: string;
+  createdAt: any;
+  updatedAt?: any;
+  chat?: RoomChatMessage[];
+}
+
+export interface RoomChatMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  text: string;
+  timestamp: any;
+}
+
+export interface RoomInvite {
+  id: string;
+  roomCode: string;
+  inviterId: string;
+  inviteeId: string;
+  status: 'pending' | 'accepted' | 'declined';
+  invitedAt: any;
+}
+
+export interface UserInvite {
+  userId: string;
+  roomCode: string;
+  roomId: string;
+  invitedBy: string;
+  invitedByName: string;
+  settings?: RoomSettings;
+  createdAt: any;
+}
+
+interface RoomContextType {
+  connectionStatus: ConnectionStatus;
+  currentRoom: PrivateRoom | null;
+  incomingInvites: UserInvite[];
+  loading: boolean;
+  joinError: string | null;
+  countdown: number | null;
+  activeGameId: string | null;
+  setCurrentRoom: React.Dispatch<React.SetStateAction<PrivateRoom | null>>;
+  setJoinError: React.Dispatch<React.SetStateAction<string | null>>;
+  createPrivateRoom: (settings: RoomSettings, customCode?: string) => Promise<string>;
+  joinRoom: (inviteOrCode: any) => Promise<PrivateRoom>;
+  joinRoomWithContext: (inviteOrCode: any) => Promise<PrivateRoom>;
+  cancelRoom: (roomCode: string) => Promise<void>;
+  leaveRoom: () => Promise<void>;
+  updateRoomStatus: (roomCode: string, status: RoomStatus) => Promise<void>;
+  addOpponent: (roomCode: string, opponent: any) => Promise<void>;
+  inviteFriend: (roomCode: string, friendUid: string) => Promise<void>;
+  acceptInvite: (inviteId: string, roomCode: string) => Promise<void>;
+  declineInvite: (inviteId: string, roomCode: string) => Promise<void>;
+  sendChatMessage: (roomCode: string, message: string) => Promise<void>;
+  markRoomExpiredIfDue: () => void;
+  dismissActiveGame: () => void;
+}
+
+const RoomContext = createContext<RoomContextType | undefined>(undefined);
+
+export const useRoom = () => {
+  const context = useContext(RoomContext);
+  if (context === undefined) {
+    throw new Error('useRoom must be used within a RoomProvider');
+  }
+  return context;
+};
+
+export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, profile } = useAuth();
-  const [connectionStatus, setConnectionStatus] = useState('disconnected');
-  const [currentRoom, setCurrentRoom] = useState(null);
-  const [incomingInvites, setIncomingInvites] = useState([]);
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
+  const [currentRoom, setCurrentRoom] = useState<PrivateRoom | null>(null);
+  const [incomingInvites, setIncomingInvites] = useState<UserInvite[]>([]);
   const [loading, setLoading] = useState(false);
-  const [joinError, setJoinError] = useState(null);
-  const [countdown, setCountdown] = useState(null);
-  const [activeGameId, setActiveGameId] = useState(null);
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [activeGameId, setActiveGameId] = useState<string | null>(null);
 
-  const countdownTimerRef = useRef(null);
-  const currentRoomRef = useRef(null);
-  const launchedRoomRef = useRef(null);
-  const cleanedUpRoomsRef = useRef(new Set());
-  currentRoomRef.current = currentRoom;
+  const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const currentRoomRef = useRef<PrivateRoom | null>(null);
+  const launchedRoomRef = useRef<string | null>(null);
+  const cleanedUpRoomsRef = useRef(new Set<string>());
+
+  useEffect(() => {
+    currentRoomRef.current = currentRoom;
+  }, [currentRoom]);
 
   // Real-time listener for current room
   useEffect(() => {
@@ -62,18 +156,15 @@ export const RoomProvider = ({ children }) => {
         return;
       }
 
-      const data = docSnap.data();
-      const prevStatus = currentRoomRef.current?.status;
+      const data = docSnap.data() as PrivateRoom;
       setCurrentRoom(data);
 
       if (data.status === 'ready' && launchedRoomRef.current !== data.roomCode) {
-        // Only start countdown if we aren't already in a countdown or have already launched
         if (!countdownTimerRef.current) {
           startCountdownFlow(data);
         }
       }
 
-      // Invitee transition: wait for gameId to be written by creator
       if (data.status === 'in_progress' && data.gameId) {
         const activeProf = getHydratedProfile(profile, user);
         if (activeProf.uid !== data.creatorId) {
@@ -90,10 +181,9 @@ export const RoomProvider = ({ children }) => {
       unsub();
       if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
     };
-  }, [currentRoom?.roomCode]);
+  }, [currentRoom?.roomCode, profile, user]);
 
-  // THE STRICT HANDSHAKE: Only Creator provisions the match
-  const startCountdownFlow = (room) => {
+  const startCountdownFlow = (room: PrivateRoom) => {
     const cleanCode = normalizeRoomCode(room.roomCode);
     if (countdownTimerRef.current || launchedRoomRef.current === cleanCode) return;
 
@@ -107,14 +197,13 @@ export const RoomProvider = ({ children }) => {
         setCountdown(count);
         soundManager.playCountdownTick(false);
       } else {
-        clearInterval(countdownTimerRef.current);
+        clearInterval(countdownTimerRef.current!);
         countdownTimerRef.current = null;
         setCountdown(null);
         soundManager.playCountdownTick(true);
 
         const activeProfile = getHydratedProfile(profile, user);
 
-        // ONLY the creator creates the online_match document
         if (activeProfile.uid === room.creatorId && launchedRoomRef.current !== cleanCode) {
           launchedRoomRef.current = cleanCode;
           try {
@@ -123,7 +212,7 @@ export const RoomProvider = ({ children }) => {
               { id: room.settings.timeControlId, name: room.settings.timeControlName, initialSeconds: room.settings.initialSeconds, incrementSeconds: room.settings.incrementSeconds },
               room.settings.color,
               cleanCode,
-              { uid: room.opponentId, displayName: room.opponentName, elo: room.opponentElo }
+              { uid: room.opponentId || '', displayName: room.opponentName || 'Challenger', elo: room.opponentElo || 1200 }
             );
 
             await safeUpdateDoc(doc(db, 'rooms', cleanCode), {
@@ -142,13 +231,12 @@ export const RoomProvider = ({ children }) => {
   };
 
   const joinRoomWithContext = useCallback(
-    async (inviteOrCode) => {
+    async (inviteOrCode: any) => {
       const activeProfile = getHydratedProfile(profile, user);
       let rawCode = typeof inviteOrCode === 'string' ? inviteOrCode : (inviteOrCode?.roomCode || inviteOrCode?.roomId);
       const cleanCode = normalizeRoomCode(rawCode);
       if (!cleanCode) throw new Error('No room code provided.');
 
-      // 6-Tier Resolution
       const resolved = await resolveRoom(cleanCode, activeProfile, inviteOrCode);
       if (!resolved) throw new Error('No room found with that code.');
 
@@ -166,17 +254,24 @@ export const RoomProvider = ({ children }) => {
           const snap = await transaction.get(roomRef);
 
           if (!snap.exists() && synthesize) {
-            const newRoom = { ...room, roomId: cleanCode, roomCode: cleanCode, opponentId: activeProfile.uid, status: 'ready', createdAt: serverTimestamp() };
+            const newRoom: PrivateRoom = {
+              ...room,
+              roomId: cleanCode,
+              roomCode: cleanCode,
+              opponentId: activeProfile.uid,
+              status: 'ready',
+              createdAt: serverTimestamp()
+            };
             transaction.set(roomRef, newRoom);
             return newRoom;
           }
 
-          const data = snap.data();
+          const data = snap.data() as PrivateRoom;
           if (data.opponentId && data.opponentId !== activeProfile.uid) throw new Error('Room is full.');
 
-          const updated = { ...data, opponentId: activeProfile.uid, opponentName: activeProfile.displayName, status: 'ready' };
+          const updated = { ...data, opponentId: activeProfile.uid, opponentName: activeProfile.displayName, status: 'ready' as RoomStatus };
           transaction.update(roomRef, updated);
-          return updated;
+          return updated as PrivateRoom;
         });
 
         setCurrentRoom(claimedRoom);
@@ -192,28 +287,125 @@ export const RoomProvider = ({ children }) => {
     [profile, user]
   );
 
-  // ... (Keep existing createPrivateRoom, cancelRoom, leaveRoom, etc. logic) ...
-  // Update acceptInvite to use the new context function:
+  const joinRoom = joinRoomWithContext;
+
+  const createPrivateRoom = async (settings: RoomSettings, customCode?: string) => {
+    const activeProfile = getHydratedProfile(profile, user);
+    const cleanCode = customCode ? normalizeRoomCode(customCode) || Math.random().toString(36).substring(2, 8).toUpperCase() : Math.random().toString(36).substring(2, 8).toUpperCase();
+    const roomRef = doc(db, 'rooms', cleanCode);
+
+    const newRoom: PrivateRoom = {
+      roomId: cleanCode,
+      roomCode: cleanCode,
+      creatorId: activeProfile.uid,
+      creatorName: activeProfile.displayName,
+      creatorElo: activeProfile.elo,
+      status: 'waiting',
+      settings,
+      createdAt: serverTimestamp(),
+    };
+
+    await safeSetDoc(roomRef, newRoom);
+    setCurrentRoom(newRoom);
+    return cleanCode;
+  };
+
+  const cancelRoom = async (roomCode: string) => {
+    const cleanCode = normalizeRoomCode(roomCode);
+    if (!cleanCode) return;
+    await safeDeleteDoc(doc(db, 'rooms', cleanCode));
+    setCurrentRoom(null);
+  };
+
+  const leaveRoom = async () => {
+    if (!currentRoom) return;
+    const cleanCode = normalizeRoomCode(currentRoom.roomCode);
+    if (!cleanCode) return;
+
+    const roomRef = doc(db, 'rooms', cleanCode);
+    const snap = await getDoc(roomRef);
+    if (snap.exists()) {
+      const data = snap.data() as PrivateRoom;
+      if (data.creatorId === profile?.uid) {
+        await safeDeleteDoc(roomRef);
+      } else {
+        await safeUpdateDoc(roomRef, {
+          opponentId: deleteField(),
+          opponentName: deleteField(),
+          status: 'waiting' as RoomStatus,
+        });
+      }
+    }
+    setCurrentRoom(null);
+  };
+
+  const updateRoomStatus = async (roomCode: string, status: RoomStatus) => {
+    const cleanCode = normalizeRoomCode(roomCode);
+    if (!cleanCode) return;
+    await safeUpdateDoc(doc(db, 'rooms', cleanCode), { status });
+  };
+
+  const addOpponent = async (roomCode: string, opponent: any) => {
+    const cleanCode = normalizeRoomCode(roomCode);
+    if (!cleanCode) return;
+    await safeUpdateDoc(doc(db, 'rooms', cleanCode), {
+      opponentId: opponent.uid,
+      opponentName: opponent.displayName,
+      opponentElo: opponent.elo,
+      status: 'ready' as RoomStatus,
+    });
+  };
+
+  const inviteFriend = async (roomCode: string, friendUid: string) => {
+    // This would typically involve sending a Firestore notification
+    await safeAddDoc(collection(db, 'notifications'), {
+      userId: friendUid,
+      type: 'room_invite',
+      title: 'Celestial Invitation',
+      message: `You are invited to join a private trial in room ${roomCode}`,
+      roomCode: roomCode,
+      isRead: false,
+      createdAt: serverTimestamp(),
+    });
+  };
+
   const acceptInvite = useCallback(
-    async (inviteId, roomCode) => {
+    async (inviteId: string, roomCode: string) => {
       const targetInvite = incomingInvites.find(inv => inv.id === inviteId || normalizeRoomCode(inv.roomCode) === normalizeRoomCode(roomCode));
       try {
         await joinRoomWithContext(targetInvite || roomCode);
-      } catch (err) {
+      } catch (err: any) {
         setJoinError(err.message);
       }
     },
     [incomingInvites, joinRoomWithContext]
   );
 
+  const declineInvite = async (inviteId: string, roomCode: string) => {
+    // Update notification status to read/declined
+    await safeUpdateDoc(doc(db, 'notifications', inviteId), { isRead: true });
+  };
+
+  const sendChatMessage = async (roomCode: string, message: string) => {
+    socketService.emit('room_message', { roomCode, message, senderId: user?.uid });
+  };
+
+  const markRoomExpiredIfDue = () => {
+    // Implementation for periodic cleanup of abandoned rooms
+  };
+
+  const dismissActiveGame = () => {
+    setActiveGameId(null);
+  };
+
   return (
-    <RoomContext.Provider value={{ 
-      connectionStatus, currentRoom, incomingInvites, loading, joinError, 
-      countdown, activeGameId, setCurrentRoom, setJoinError, 
-      createPrivateRoom, joinRoom: joinRoomWithContext, joinRoomWithContext, 
-      cancelRoom, leaveRoom, updateRoomStatus, addOpponent, 
-      inviteFriend, acceptInvite, declineInvite, sendChatMessage, 
-      markRoomExpiredIfDue, dismissActiveGame 
+    <RoomContext.Provider value={{
+      connectionStatus, currentRoom, incomingInvites, loading, joinError,
+      countdown, activeGameId, setCurrentRoom, setJoinError,
+      createPrivateRoom, joinRoom, joinRoomWithContext,
+      cancelRoom, leaveRoom, updateRoomStatus, addOpponent,
+      inviteFriend, acceptInvite, declineInvite, sendChatMessage,
+      markRoomExpiredIfDue, dismissActiveGame
     }}>
       {children}
     </RoomContext.Provider>
