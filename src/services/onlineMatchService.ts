@@ -1,18 +1,18 @@
-import { 
-  collection, 
-  doc, 
-  getDoc, 
+import {
+  collection,
+  doc,
+  getDoc,
   getDocs,
   query,
   where,
   limit,
-  onSnapshot, 
-  serverTimestamp, deleteField 
+  onSnapshot,
+  serverTimestamp, deleteField
 } from 'firebase/firestore';
-import { 
-  db, 
-  handleFirestoreError, 
-  OperationType, 
+import {
+  db,
+  handleFirestoreError,
+  OperationType,
   isFirestoreQuotaExhaustedError,
   safeSetDoc,
   safeUpdateDoc,
@@ -21,6 +21,7 @@ import {
 } from '../utils/firebase';
 import { OnlineMatchSession, OnlineMatchPlayer, TimeControl } from '../types/chess';
 import { Chess } from 'chess.js';
+import { logCompletedGame } from './loggingService';
 
 export interface MatchmakingTicket {
   id: string;
@@ -538,6 +539,55 @@ export const finalizeOnlineMatch = async (matchId: string, winner: 'w' | 'b' | '
     }
   } catch (e: any) {
     console.warn('finalizeOnlineMatch notice:', e?.message);
+  }
+};
+
+export const resolveFate = async (matchId: string, choice: 'execute' | 'spare', actingUid: string) => {
+  try {
+    const matchRef = doc(db, 'online_matches', matchId);
+    const snap = await getDoc(matchRef);
+    if (!snap.exists()) throw new Error('Match not found');
+    const session = snap.data() as OnlineMatchSession;
+
+    if (session.status !== 'awaiting_fate') throw new Error('Match is not awaiting fate');
+
+    const winnerColor = session.winner;
+    if (!winnerColor || winnerColor === 'draw') throw new Error('No winner to decide fate');
+
+    const winnerUid = winnerColor === 'w' ? session.whitePlayer?.uid : session.blackPlayer?.uid;
+    if (winnerUid !== actingUid) throw new Error('Only the winner can decide fate');
+
+    const finalResult = choice === 'execute' ? 'executed' : 'mercied';
+    const finalReason = choice === 'execute' ? 'Executed' : 'Spared';
+
+    await safeUpdateDoc(matchRef, {
+      status: 'completed',
+      reason: finalReason,
+      updatedAt: new Date().toISOString()
+    });
+
+    // Log the execution/mercy
+    await logCompletedGame({
+      mode: 'online_match',
+      opponentName: winnerColor === 'w' ? session.blackPlayer?.displayName || 'Opponent' : session.whitePlayer?.displayName || 'Opponent',
+      opponentAvatar: winnerColor === 'w' ? session.blackPlayer?.avatar : session.whitePlayer?.avatar,
+      opponentElo: winnerColor === 'w' ? session.blackPlayer?.elo : session.whitePlayer?.elo,
+      playerColor: winnerColor,
+      result: finalResult,
+      reason: finalReason,
+      movesCount: session.moves?.length || 0,
+      timeControlName: session.timeControl?.name || 'Rapid',
+      pgn: session.pgn || '',
+      finalFen: session.fen,
+      respectChange: choice === 'execute' ? 35 : 15, // Custom respect values
+      eloChange: 20,
+      userId: actingUid
+    });
+
+    return true;
+  } catch (e: any) {
+    console.error('Error resolving fate:', e);
+    throw e;
   }
 };
 

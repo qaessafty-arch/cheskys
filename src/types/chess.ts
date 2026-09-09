@@ -150,7 +150,7 @@ export interface OnlineMatchPlayer {
   botId?: string;
 }
 
-export type OnlineMatchStatus = 'waiting' | 'ready' | 'in_progress' | 'active' | 'checkmate' | 'resigned' | 'draw' | 'timeout' | 'aborted' | 'completed' | 'abandoned';
+export type OnlineMatchStatus = 'waiting' | 'ready' | 'in_progress' | 'active' | 'checkmate' | 'resigned' | 'draw' | 'timeout' | 'aborted' | 'completed' | 'abandoned' | 'awaiting_fate';
 
 export interface OnlineMatchClock {
   whiteMs: number;

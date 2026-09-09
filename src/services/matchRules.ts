@@ -140,9 +140,9 @@ export function terminalState(
   if (chess.isCheckmate()) {
     const winner = chess.turn() === 'w' ? 'b' : 'w';
     return {
-      status: 'checkmate',
+      status: 'awaiting_fate',
       winner,
-      reason: `Checkmate — ${winner === 'w' ? 'White' : 'Black'} wins.`
+      reason: `Checkmate — ${winner === 'w' ? 'White' : 'Black'} wins. Awaiting fate...`
     };
   }
   if (chess.isStalemate()) return { status: 'draw', winner: 'draw', reason: 'Draw by stalemate.' };

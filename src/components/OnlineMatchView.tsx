@@ -10,6 +10,7 @@ import {
   offerDrawOnlineMatch,
   acceptDrawOnlineMatch,
   finalizeOnlineMatch,
+  resolveFate,
   offerRematchOnlineMatch,
   acceptRematchOnlineMatch
 } from '../services/onlineMatchService';
@@ -861,6 +862,53 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                       {copiedLink ? <Check className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4" />}
                       <span>{copiedLink ? 'Copied to Clipboard' : 'Copy Room Code'}</span>
                     </button>
+                  </motion.div>
+                )}
+                {session?.status === 'awaiting_fate' && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0 z-[60] bg-black/80 backdrop-blur-md flex flex-col items-center justify-center gap-6 p-6 rounded-3xl text-center shadow-2xl border-2 border-[#F5C453]/30"
+                  >
+                    <div className="space-y-2">
+                      <h2 className="text-3xl font-black text-white tracking-tighter uppercase">
+                        Fate Decision
+                      </h2>
+                      <p className="text-xs text-[#DFD0B0]/70 font-bold uppercase tracking-widest">
+                        {session.winner === myUid || (session.winner === 'w' && isWhitePlayer) || (session.winner === 'b' && !isWhitePlayer)
+                          ? 'You have claimed victory. How shall the fallen be treated?'
+                          : 'Your fate is in the hands of your opponent...'}
+                      </p>
+                    </div>
+
+                    {session.winner === myUid || (session.winner === 'w' && isWhitePlayer) || (session.winner === 'b' && !isWhitePlayer) ? (
+                      <div className="flex flex-col sm:flex-row gap-4 w-full max-w-sm">
+                        <button
+                          onClick={async () => {
+                            try { await resolveFate(matchId, 'execute', myUid); } catch (e) { console.error(e); }
+                          }}
+                          className="flex-1 py-4 px-6 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-black text-sm uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-rose-900/40 border border-rose-400/30 cursor-pointer"
+                        >
+                          Execute
+                        </button>
+                        <button
+                          onClick={async () => {
+                            try { await resolveFate(matchId, 'spare', myUid); } catch (e) { console.error(e); }
+                          }}
+                          className="flex-1 py-4 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-emerald-900/40 border border-emerald-400/30 cursor-pointer"
+                        >
+                          Spare
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="w-12 h-12 rounded-full border-4 border-[#F5C453] border-t-transparent animate-spin" />
+                        <span className="text-xs font-black text-[#F5C453] uppercase tracking-widest">
+                          Awaiting Judgment...
+                        </span>
+                      </div>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
