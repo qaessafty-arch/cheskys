@@ -314,7 +314,20 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
    * online_match document exists before navigating. Invitee NEVER provisions the match document!
    * State guard is updated if a valid gameId is detected.
    */
-  const handleRetryConnection = async () => {
+  const handleRequestProvision = async () => {
+    if (!currentRoom?.creatorId) return;
+    try {
+      await sendNotification(currentRoom.creatorId, {
+        userId: currentRoom.creatorId,
+        type: 'room_nudge',
+        title: 'Opponent is waiting!',
+        message: `Your challenger is ready in room ${cleanRoomCode}. Please launch the arena!`,
+      });
+      toast.success('Nudge sent to host!');
+    } catch (e) {
+      toast.error('Failed to nudge host.');
+    }
+  };
     if (!cleanRoomCode || isCreator) return;
     setIsCheckingStatus(true);
     try {
@@ -593,6 +606,15 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Debug Info Overlay (Internal Only) */}
+      <div className="fixed bottom-4 right-4 z-[100] p-2 rounded bg-black/80 border border-white/10 text-[9px] font-mono text-white/40 pointer-events-none">
+        <div>Mode: {isCreator ? 'Creator' : isInvitee ? 'Invitee' : 'Spectator'}</div>
+        <div>Status: {roomStatus}</div>
+        <div>Guard: {hasDetectedValidGameId ? 'Unlocked' : 'Locked'}</div>
+        <div>GameID: {snapshotGameId || 'None'}</div>
+        <div>Provisioning: {isProvisioning ? 'Yes' : 'No'}</div>
+      </div>
 
       {/* 1. Header Bar */}
       <div className="room-glass-card px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-0">

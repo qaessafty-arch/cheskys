@@ -66,8 +66,11 @@ export const RoomProvider = ({ children }) => {
       const prevStatus = currentRoomRef.current?.status;
       setCurrentRoom(data);
 
-      if (data.status === 'ready' && prevStatus !== 'ready' && launchedRoomRef.current !== data.roomCode) {
-        startCountdownFlow(data);
+      if (data.status === 'ready' && launchedRoomRef.current !== data.roomCode) {
+        // Only start countdown if we aren't already in a countdown or have already launched
+        if (!countdownTimerRef.current) {
+          startCountdownFlow(data);
+        }
       }
 
       // Invitee transition: wait for gameId to be written by creator

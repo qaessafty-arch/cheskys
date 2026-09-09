@@ -777,7 +777,7 @@ export default function App() {
                           </motion.div>
                         ) : (
                           <motion.div key="tab-chat" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="h-full">
-                            <InGameChatPanel messages={localMessages} onSendMessage={handleSendLocalMessage} myUid="local_white" opponentName={activeMode === 'ai' ? currentBot.name : 'Black'} isMuted={!settings.sound} onToggleMute={() => setSettings(s => ({ ...s, sound: !settings.soundy })} />
+                            <InGameChatPanel messages={localMessages} onSendMessage={handleSendLocalMessage} myUid="local_white" opponentName={activeMode === 'ai' ? currentBot.name : 'Black'} isMuted={!settings.sound} onToggleMute={() => setSettings(s => ({ ...s, sound: !s.sound }))} />
                           </motion.div>
                         )}
                       </AnimatePresence>
