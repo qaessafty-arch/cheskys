@@ -314,7 +314,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
   const handleQuickInvite = async (friend: any) => {
     if (invitedUids.has(friend.uid)) return;
     try {
-      await inviteFriend(friend.uid, friend.displayName, friend.photoURL);
+      await inviteFriend(friend.uid, friend.displayName);
       setInvitedUids((prev) => new Set(prev).add(friend.uid));
     } catch (e) {
       console.error(e);
