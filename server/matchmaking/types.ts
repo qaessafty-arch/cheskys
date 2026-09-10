@@ -73,4 +73,5 @@ export interface MatchSession {
   blurCountBlack: number;
   drawOfferedBy?: string | null;
   takebackOfferedBy?: string | null;
+  rematchOfferedBy?: string | null;
 }

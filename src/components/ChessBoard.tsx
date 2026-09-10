@@ -24,6 +24,7 @@ interface ChessBoardProps {
   showWeather?: boolean;
   showTerritory?: boolean;
   is3dPerspective?: boolean;
+  showGameOverOverlay?: boolean;
 }
 
 const PIECE_NAMES: Record<PieceType, string> = {
@@ -340,14 +341,15 @@ const ChessBoardInner: React.FC<ChessBoardProps> = React.memo(({
   evalScore,
   showWeather = false,
   showTerritory = false,
-  is3dPerspective = false
+  is3dPerspective = false,
+  showGameOverOverlay = true
 }) => {
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [draggingSquare, setDraggingSquare] = useState<Square | null>(null);
 
-  // Checkmate celebration confetti
+  // Checkmate celebration confetti (only if moves were actually played in this game)
   useEffect(() => {
-    if (game.isCheckmate()) {
+    if (showGameOverOverlay && game.isCheckmate() && game.history().length > 0) {
       try {
         confetti({
           particleCount: 75,
@@ -357,7 +359,7 @@ const ChessBoardInner: React.FC<ChessBoardProps> = React.memo(({
         });
       } catch {}
     }
-  }, [game.isGameOver()]);
+  }, [game.isGameOver(), showGameOverOverlay]);
 
   const boardRef = useRef<HTMLDivElement>(null);
   const dragPieceRef = useRef<HTMLDivElement>(null);
@@ -1082,7 +1084,7 @@ const ChessBoardInner: React.FC<ChessBoardProps> = React.memo(({
 
         {/* Checkmate / Draw Overlays */}
         <AnimatePresence>
-          {game.isGameOver() && (
+          {showGameOverOverlay && game.isGameOver() && game.history().length > 0 && (
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}

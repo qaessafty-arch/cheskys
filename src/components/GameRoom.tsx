@@ -10,6 +10,8 @@ interface GameRoomProps {
   status: 'in_progress' | 'game_over' | 'disconnected';
   turn: 'white' | 'black';
   myColor: 'white' | 'black';
+  winner?: 'white' | 'black' | 'draw' | null;
+  reason?: string;
   whitePlayer: { name: string; elo: number; avatar?: string };
   blackPlayer: { name: string; elo: number; avatar?: string };
   clocks: { white: number; black: number; total: number };
@@ -23,6 +25,8 @@ export const GameRoom: React.FC<GameRoomProps> = ({
   status,
   turn,
   myColor,
+  winner,
+  reason,
   whitePlayer,
   blackPlayer,
   clocks,
@@ -115,7 +119,7 @@ export const GameRoom: React.FC<GameRoomProps> = ({
 
       {/* Game State Banner */}
       <AnimatePresence>
-        {status === 'game_over' && (
+        {status === 'game_over' && winner && (
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -123,8 +127,12 @@ export const GameRoom: React.FC<GameRoomProps> = ({
           >
             <GlassCard intensity="high" className="p-10 text-center space-y-4">
               <Trophy size={64} className="text-[#FFD700] mx-auto mb-4" />
-              <h2 className="text-4xl font-black uppercase text-white tracking-tighter">White Wins!</h2>
-              <p className="text-white/50 font-bold uppercase tracking-[0.3em]">Checkmate by Resignation</p>
+              <h2 className="text-4xl font-black uppercase text-white tracking-tighter">
+                {winner === 'draw' ? 'Game Drawn' : winner === 'white' ? 'White Wins!' : 'Black Wins!'}
+              </h2>
+              <p className="text-white/50 font-bold uppercase tracking-[0.3em]">
+                {reason || 'Match Concluded'}
+              </p>
               <div className="flex items-center justify-center gap-4 text-[#FFD700] font-mono text-sm pt-4">
                 <span>ELO +24</span>
                 <span className="w-1 h-1 bg-white/20 rounded-full" />

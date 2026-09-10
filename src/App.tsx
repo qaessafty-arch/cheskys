@@ -329,7 +329,30 @@ export default function App() {
     return game;
   }, [game, viewingMoveIndex, moveLogs]);
 
+  // Wrap game state initialization to ensure gameResult is explicitly nullified upon entering 'ai' or 'pass_and_play' modes
+  const prevModeRef = useRef<GameMode | null>(null);
+  useEffect(() => {
+    if (activeMode === 'ai' || activeMode === 'pass_and_play') {
+      // Explicitly nullify gameResult upon initial mount or switching into 'ai' or 'pass_and_play' modes
+      if (prevModeRef.current !== activeMode) {
+        setGameResult(null);
+        setPendingCheckmateResult(null);
+        setIsJudgmentModalOpen(false);
+      }
+      if (moveLogs.length === 0 && (game.isGameOver() || gameResult !== null)) {
+        setGame(new Chess());
+        setGameResult(null);
+        setPendingCheckmateResult(null);
+        setIsJudgmentModalOpen(false);
+      }
+    }
+    prevModeRef.current = activeMode;
+  }, [activeMode, moveLogs.length, game, gameResult]);
+
   const checkGameOver = useCallback((currentGame: Chess): GameResult | null => {
+    if (!currentGame || currentGame.history().length === 0) {
+      return null;
+    }
     if (currentGame.isCheckmate()) {
       const winner = currentGame.turn() === 'w' ? 'b' : 'w';
       return { winner, reason: `Checkmate! ${winner === 'w' ? 'White' : 'Black'} delivers tactical checkmate.` };
@@ -813,7 +836,22 @@ export default function App() {
         <CheckmateJudgmentModal onExecute={handleExecuteJudgment} onMercy={handleMercyJudgment} onClose={() => { setIsJudgmentModalOpen(false); if (pendingCheckmateResult) setGameResult(pendingCheckmateResult); }} opponentName={activeMode === 'ai' ? currentBot.name : 'Opponent'} />
       )}
       {gameResult && !isJudgmentModalOpen && (activeMode === 'ai' || activeMode === 'pass_and_play') && (
-        <GameOverModal result={gameResult} pgn={game.pgn()} onRematch={() => { handleStartGame({ mode: activeMode, bot: currentBot, playerColor: playerColor, timeControl: timeControl }); }} onNewGame={() => { setGameResult(null); setIsNewGameModalOpen(true); }} onPracticePuzzles={() => { setGameResult(null); setActiveMode("puzzle_practice"); }} onAnalyze={() => { setGameResult(null); setActiveMode('analysis'); }} onClose={() => setGameResult(null)} />
+        <GameOverModal
+          result={gameResult}
+          pgn={game.pgn()}
+          onRematch={() => {
+            handleStartGame({
+              mode: activeMode,
+              bot: currentBot,
+              playerColor: playerColor === 'w' ? 'b' : 'w',
+              timeControl: timeControl
+            });
+          }}
+          onNewGame={() => { setGameResult(null); setIsNewGameModalOpen(true); }}
+          onPracticePuzzles={() => { setGameResult(null); setActiveMode("puzzle_practice"); }}
+          onAnalyze={() => { setGameResult(null); setActiveMode('analysis'); }}
+          onClose={() => setGameResult(null)}
+        />
       )}
       {isNewGameModalOpen && (
         <NewGameModal isOpen={isNewGameModalOpen} onClose={() => setIsNewGameModalOpen(false)} onStartGame={handleStartGame} onOpenWorldwideMatch={() => { setIsWorldwideMatchModalOpen(true); }} onOpenDailyPuzzle={() => { setActiveMode('daily_puzzle'); }} />

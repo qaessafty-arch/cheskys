@@ -1,6 +1,7 @@
 import { doc, getDoc, collection, query, where, limit, getDocs } from 'firebase/firestore';
 import { db, safeSetDoc } from './firebase';
 import { PrivateRoom, UserInvite } from '../context/RoomContext';
+import { getLocalPlayerUid } from './identity';
 
 export interface ResolvedRoomResult {
   room: PrivateRoom;
@@ -28,7 +29,7 @@ export function getHydratedProfile(profile?: any, user?: any) {
     };
   }
   return {
-    uid: `guest_${crypto.randomUUID ? crypto.randomUUID() : Date.now().toString()}`,
+    uid: getLocalPlayerUid(),
     displayName: 'Guest Challenger',
     photoURL: null,
     elo: 1200,

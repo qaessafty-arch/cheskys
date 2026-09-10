@@ -1332,6 +1332,8 @@ export const acceptRematchOnlineMatch = async (matchId: string, session: OnlineM
     rematchOfferFrom: deleteField(),
     whitePlayer: currentBlack,
     blackPlayer: currentWhite,
+    whiteId: currentBlack?.uid || session.blackId || null,
+    blackId: currentWhite?.uid || session.whiteId || null,
     fen: session.startFen || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
     pgn: '',
     moves: [],

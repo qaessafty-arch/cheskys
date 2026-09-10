@@ -91,7 +91,7 @@ export const createOnlineMatch = async (
     pgn: '',
     moves: [],
     turn: 'w',
-    status: 'active',
+    status: 'in_progress',
     winner: null,
     timeControl: {
       id: timeControl?.id || 'rapid_10',

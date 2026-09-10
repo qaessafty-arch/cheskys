@@ -1,3 +1,4 @@
+const TAB_UID_KEY = 'chess_tab_player_uid';
 const LOCAL_UID_KEY = 'chess_local_player_uid';
 
 const randomGuestUid = () => `guest_${Math.random().toString(36).slice(2, 10)}`;
@@ -8,10 +9,17 @@ const randomGuestUid = () => `guest_${Math.random().toString(36).slice(2, 10)}`;
  */
 export const getLocalPlayerUid = (): string => {
   try {
+    const tabExisting = sessionStorage.getItem(TAB_UID_KEY);
+    if (tabExisting) return tabExisting;
+
     const existing = localStorage.getItem(LOCAL_UID_KEY);
-    if (existing) return existing;
+    if (existing) {
+      sessionStorage.setItem(TAB_UID_KEY, existing);
+      return existing;
+    }
     const uid = randomGuestUid();
     localStorage.setItem(LOCAL_UID_KEY, uid);
+    sessionStorage.setItem(TAB_UID_KEY, uid);
     return uid;
   } catch {
     return randomGuestUid();

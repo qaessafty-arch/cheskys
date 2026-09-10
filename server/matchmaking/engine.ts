@@ -128,6 +128,13 @@ export class MatchmakingEngine {
     socket.on('declineDraw', (data) => this.handleDeclineDraw(socket, data));
     socket.on('decline_draw', (data) => this.handleDeclineDraw(socket, data));
 
+    socket.on('offerRematch', (data) => this.handleOfferRematch(socket, data));
+    socket.on('offer_rematch', (data) => this.handleOfferRematch(socket, data));
+    socket.on('acceptRematch', (data) => this.handleAcceptRematch(socket, data));
+    socket.on('accept_rematch', (data) => this.handleAcceptRematch(socket, data));
+    socket.on('declineRematch', (data) => this.handleDeclineRematch(socket, data));
+    socket.on('decline_rematch', (data) => this.handleDeclineRematch(socket, data));
+
     socket.on('getBoardState', (data, cb) =>
       this.handleGetBoardState(socket, data, cb),
     );
@@ -322,6 +329,19 @@ export class MatchmakingEngine {
       match = this.bootstrapMatch(id, { session, uid });
     }
 
+    if (session) {
+      const sWhiteUid = session.whiteId || session.whitePlayer?.uid;
+      const sBlackUid = session.blackId || session.blackPlayer?.uid;
+      if (sWhiteUid && sWhiteUid !== 'guest_white') {
+        match.whiteUid = sWhiteUid;
+        if (session.whitePlayer?.displayName) match.whiteName = session.whitePlayer.displayName;
+      }
+      if (sBlackUid && sBlackUid !== 'guest_black') {
+        match.blackUid = sBlackUid;
+        if (session.blackPlayer?.displayName) match.blackName = session.blackPlayer.displayName;
+      }
+    }
+
     socket.join(match.matchId);
     if (match.gameCode) socket.join(match.gameCode);
 
@@ -330,12 +350,22 @@ export class MatchmakingEngine {
         match.whiteSocketId = socket.id;
       } else if (uid === match.blackUid) {
         match.blackSocketId = socket.id;
-      } else if (!match.whiteUid) {
+      } else if (!match.whiteUid || match.whiteUid === 'guest_white') {
         match.whiteUid = uid;
         match.whiteSocketId = socket.id;
-      } else if (!match.blackUid) {
+      } else if (!match.blackUid || match.blackUid === 'guest_black') {
         match.blackUid = uid;
         match.blackSocketId = socket.id;
+      } else if (session) {
+        const sWhiteUid = session.whiteId || session.whitePlayer?.uid;
+        const sBlackUid = session.blackId || session.blackPlayer?.uid;
+        if (sWhiteUid === uid) {
+          match.whiteUid = uid;
+          match.whiteSocketId = socket.id;
+        } else if (sBlackUid === uid) {
+          match.blackUid = uid;
+          match.blackSocketId = socket.id;
+        }
       }
       this.userToMatch.set(uid, match.matchId);
     }
@@ -463,6 +493,108 @@ export class MatchmakingEngine {
     match.drawOfferedBy = null;
     socket.to(match.matchId).emit('drawDeclined');
     socket.to(match.matchId).emit('draw_declined');
+  }
+
+  // ---- Rematch Handling ----
+
+  private handleOfferRematch(socket: Socket, data: any): void {
+    const { gameId, matchId, uid } = data ?? {};
+    const match = this.getMatch(gameId ?? matchId);
+    if (!match) return;
+
+    match.rematchOfferedBy = uid ?? socket.id;
+    socket.to(match.matchId).emit('rematch_offered', {
+      uid: match.rematchOfferedBy,
+      offeredBy: match.rematchOfferedBy
+    });
+    socket.to(match.matchId).emit('rematchOffered', {
+      uid: match.rematchOfferedBy,
+      offeredBy: match.rematchOfferedBy
+    });
+  }
+
+  private handleAcceptRematch(socket: Socket, data: any): void {
+    const { gameId, matchId } = data ?? {};
+    const match = this.getMatch(gameId ?? matchId);
+    if (!match) return;
+
+    // Swap colors for both players
+    const prevWhiteUid = match.whiteUid;
+    const prevBlackUid = match.blackUid;
+    const prevWhiteName = match.whiteName;
+    const prevBlackName = match.blackName;
+    const prevWhiteRating = match.whiteRating;
+    const prevBlackRating = match.blackRating;
+    const prevWhiteSocket = match.whiteSocketId;
+    const prevBlackSocket = match.blackSocketId;
+
+    match.whiteUid = prevBlackUid;
+    match.blackUid = prevWhiteUid;
+    match.whiteName = prevBlackName;
+    match.blackName = prevWhiteName;
+    match.whiteRating = prevBlackRating;
+    match.blackRating = prevWhiteRating;
+    match.whiteSocketId = prevBlackSocket;
+    match.blackSocketId = prevWhiteSocket;
+
+    // Reset chess board & clocks
+    match.chess = new Chess();
+    match.status = 'active';
+    match.movesCount = 0;
+    match.movesList = [];
+    match.capturedByWhite = [];
+    match.capturedByBlack = [];
+    match.whiteSecondsRemaining = match.timeControl.initialSeconds;
+    match.blackSecondsRemaining = match.timeControl.initialSeconds;
+    match.lastMoveAt = Date.now();
+    match.rematchOfferedBy = null;
+    match.drawOfferedBy = null;
+
+    stopMatchTimers(match);
+    startMatchTimers(
+      match,
+      (payload) => this.io.to(match.matchId).emit('timerUpdate', payload),
+      (payload) => this.io.to(match.matchId).emit('clock_sync', payload)
+    );
+
+    const rematchPayload = {
+      matchId: match.matchId,
+      gameCode: match.gameCode,
+      whitePlayer: {
+        uid: match.whiteUid,
+        name: match.whiteName,
+        displayName: match.whiteName,
+        rating: match.whiteRating,
+        elo: match.whiteRating,
+      },
+      blackPlayer: {
+        uid: match.blackUid,
+        name: match.blackName,
+        displayName: match.blackName,
+        rating: match.blackRating,
+        elo: match.blackRating,
+      },
+      fen: match.chess.fen(),
+      turn: 'w',
+      whiteSecondsRemaining: match.whiteSecondsRemaining,
+      blackSecondsRemaining: match.blackSecondsRemaining,
+      status: 'active',
+      movesCount: 0
+    };
+
+    this.io.to(match.matchId).emit('rematch_started', rematchPayload);
+    this.io.to(match.matchId).emit('rematchStarted', rematchPayload);
+    this.io.to(match.matchId).emit('game_reset', rematchPayload);
+  }
+
+  private handleDeclineRematch(socket: Socket, data: any): void {
+    const { gameId, matchId } = data ?? {};
+    const match = this.getMatch(gameId ?? matchId);
+    if (!match) return;
+
+    match.rematchOfferedBy = null;
+    socket.to(match.matchId).emit('rematch_declined');
+    socket.to(match.matchId).emit('rematchDeclined');
   }
 
   // ---- Board state query ----
@@ -609,6 +741,13 @@ export class MatchmakingEngine {
     if (uid) {
       if (uid === match.whiteUid) match.whiteSocketId = socket.id;
       else if (uid === match.blackUid) match.blackSocketId = socket.id;
+      else if (!match.whiteUid || match.whiteUid === 'guest_white') {
+        match.whiteUid = uid;
+        match.whiteSocketId = socket.id;
+      } else if (!match.blackUid || match.blackUid === 'guest_black') {
+        match.blackUid = uid;
+        match.blackSocketId = socket.id;
+      }
       this.userToMatch.set(uid, match.matchId);
     }
 
@@ -637,13 +776,21 @@ export class MatchmakingEngine {
         : null;
 
     if (playerColor && playerColor !== activeTurn) {
-      const piece = match.chess.get(from as any);
-      if (piece && piece.color !== playerColor) {
-        const err = 'Not your turn.';
-        socket.emit('move_rejected', { error: err });
-        socket.emit('moveRejected', { error: err });
-        if (typeof cb === 'function') cb({ error: err });
-        return;
+      const isSolo =
+        !match.blackUid ||
+        match.blackUid === 'guest_black' ||
+        match.blackUid === '' ||
+        match.blackUid === match.whiteUid;
+
+      if (!isSolo) {
+        const piece = match.chess.get(from as any);
+        if (piece && piece.color !== playerColor) {
+          const err = 'Not your turn.';
+          socket.emit('move_rejected', { error: err });
+          socket.emit('moveRejected', { error: err });
+          if (typeof cb === 'function') cb({ error: err });
+          return;
+        }
       }
     }
 
@@ -755,12 +902,16 @@ export class MatchmakingEngine {
 
     this.io.to(match.matchId).emit('moveMade', movePayload);
     this.io.to(match.matchId).emit('move_made', movePayload);
+    this.io.to(match.matchId).emit('opponent_move', movePayload);
+    this.io.to(match.matchId).emit('opponentMove', movePayload);
     if (
       match.gameCode &&
       match.gameCode !== match.matchId
     ) {
       this.io.to(match.gameCode).emit('moveMade', movePayload);
       this.io.to(match.gameCode).emit('move_made', movePayload);
+      this.io.to(match.gameCode).emit('opponent_move', movePayload);
+      this.io.to(match.gameCode).emit('opponentMove', movePayload);
     }
     if (typeof cb === 'function')
       cb({ success: true, ...movePayload });
@@ -785,8 +936,13 @@ export class MatchmakingEngine {
     this.io.to(match.matchId).emit('gameOver', payload);
     this.io.to(match.matchId).emit('game_over', payload);
 
-    // Defer cleanup so clients have a moment to receive the payload.
-    setTimeout(() => this.cleanupMatch(match.matchId), 15000);
+    // Defer cleanup so clients have time to review, chat, and rematch
+    setTimeout(() => {
+      const current = this.activeMatches.get(match.matchId);
+      if (current && current.status !== 'active') {
+        this.cleanupMatch(match.matchId);
+      }
+    }, 10 * 60 * 1000);
   }
 
   private doAbort(match: MatchSession, triggeredByUid: string): void {
@@ -917,8 +1073,13 @@ export class MatchmakingEngine {
         : cleanId.slice(-6).toUpperCase());
 
     const whiteUid =
-      sessionData?.whitePlayer?.uid ?? (data?.uid ?? '');
-    const blackUid = sessionData?.blackPlayer?.uid ?? '';
+      sessionData?.whiteId ??
+      sessionData?.whitePlayer?.uid ??
+      (data?.uid ?? '');
+    const blackUid =
+      sessionData?.blackId ??
+      sessionData?.blackPlayer?.uid ??
+      '';
 
     const newMatch: MatchSession = {
       matchId: cleanId,
@@ -936,7 +1097,7 @@ export class MatchmakingEngine {
       pool: 'custom',
       rated: false,
       timeControl: tc,
-      status: 'active',
+      status: (sessionData?.status === 'in_progress' || sessionData?.status === 'active') ? sessionData.status : 'in_progress',
       createdAt: Date.now(),
       lastMoveAt: Date.now(),
       whiteSecondsRemaining:

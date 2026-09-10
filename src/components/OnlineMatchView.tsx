@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { GameOverModal } from "./GameOverModal";
 import { PanelContainer } from './PanelContainer';
 import { Chess, Square, Move } from 'chess.js';
@@ -51,7 +51,6 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { motion, AnimatePresence } from 'motion/react';
-import { GameRoom } from './GameRoom';
 import { ConnectionStatus } from './multiplayer/ConnectionStatus';
 import { InGameChatPanel } from './InGameChatPanel';
 import { ModernFloatingControls } from './multiplayer/ModernFloatingControls';
@@ -80,25 +79,36 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
   const [session, setSession] = useState<OnlineMatchSession | null>(null);
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'missing'>('loading');
   const loadStateRef = useRef(loadState);
-
-  const isGameOver = useCallback(() => {
-    if (!session?.status) return false;
-    const isNotActive = !['in_progress', 'waiting', 'active', 'ready', 'aborted'].includes(session.status);
-    const isNotFreshAbandon = !(session.status === 'abandoned' && (!session.moves || session.moves.length === 0));
-    const hasPlayOrResigned = (session.moves && session.moves.length > 0) || session.status === 'resigned';
-    const isFinalState = ['checkmate', 'resigned', 'draw', 'timeout', 'completed', 'abandoned'].includes(session.status);
-    const hasFen = Boolean(session?.fen && session.fen.trim().length > 0);
-    return isNotActive && isNotFreshAbandon && hasPlayOrResigned && isFinalState && hasFen;
-  }, [session]);
-
-  useEffect(() => {
-    loadStateRef.current = loadState;
-  }, [loadState]);
-
   const [game, setGame] = useState<Chess>(() => new Chess());
   const [lastMove, setLastMove] = useState<{ from: string; to: string | null }>(null);
   const [copiedLink, setCopiedLink] = useState(false);
   const [pendingDraw, setPendingDraw] = useState(false);
+
+  const hasMovesPlayed = Boolean(
+    (session?.moves && session.moves.length > 0) ||
+    (session?.moveCount && session.moveCount > 0) ||
+    (session?.pgn && session.pgn.trim().length > 0) ||
+    (game && game.history().length > 0)
+  );
+
+  const isGameOver = useCallback(() => {
+    if (!session?.status) return false;
+    if (session.status === 'awaiting_fate') return false;
+    if (['in_progress', 'waiting', 'active', 'ready'].includes(session.status)) return false;
+    if (session.status === 'aborted') return false;
+    if (session.status === 'abandoned') {
+      return hasMovesPlayed;
+    }
+    const finalStatuses = ['checkmate', 'resigned', 'draw', 'timeout', 'completed'];
+    if (!finalStatuses.includes(session.status)) return false;
+    // Without moves played, a match cannot be checkmate, timeout, draw, or completed unless someone resigned
+    if (!hasMovesPlayed && session.status !== 'resigned') return false;
+    return true;
+  }, [session, hasMovesPlayed]);
+
+  useEffect(() => {
+    loadStateRef.current = loadState;
+  }, [loadState]);
 
   const [activeTab, setActiveTab] = useState<'moves' | 'chat'>('moves');
   const [isMuted, setIsMuted] = useState(false);
@@ -127,14 +137,62 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
   const sessionWhiteId = session?.whiteId || session?.whitePlayer?.uid;
   const sessionBlackId = session?.blackId || session?.blackPlayer?.uid;
 
-  const isWhitePlayer =
-    sessionWhiteId === myUid ||
-    (!sessionBlackId && session?.hostId === myUid) ||
-    (session?.whitePlayer?.uid === myUid);
+  const isWhitePlayer = useMemo(() => {
+    // 1. Direct match with white player identifiers
+    if (sessionWhiteId && sessionWhiteId === myUid) return true;
+    if (session?.whitePlayer?.uid && session.whitePlayer.uid === myUid) return true;
+
+    // 2. Direct match with black player identifiers
+    if (sessionBlackId && sessionBlackId === myUid) return false;
+    if (session?.blackPlayer?.uid && session.blackPlayer.uid === myUid) return false;
+
+    // 3. Host resolution: if current user is host, check whether host is white or black
+    if (session?.hostId && session.hostId === myUid) {
+      if (sessionBlackId === session.hostId || session?.blackPlayer?.uid === session.hostId) {
+        return false;
+      }
+      return true;
+    }
+
+    // 4. Guest resolution: if current user is guest/opponent in a room with a known host
+    if (session?.hostId) {
+      if (sessionWhiteId === session.hostId || session?.whitePlayer?.uid === session.hostId) {
+        return false;
+      }
+      if (sessionBlackId === session.hostId || session?.blackPlayer?.uid === session.hostId) {
+        return true;
+      }
+    }
+
+    // 5. Placeholder fallback: if blackId is placeholder and white is not, this user may be black
+    if (sessionBlackId === 'guest_black' && sessionWhiteId !== myUid) {
+      return false;
+    }
+
+    // 6. Default to white
+    return true;
+  }, [sessionWhiteId, sessionBlackId, session?.whitePlayer?.uid, session?.blackPlayer?.uid, session?.hostId, myUid]);
 
   const myColor: PieceColor = isWhitePlayer ? 'w' : 'b';
-  const isGameLive = session?.status === 'in_progress' || session?.status === 'active';
-  const isMyTurn = isGameLive && session?.turn === myColor;
+  const isGameLive = Boolean(
+    session &&
+      (session.status === 'in_progress' ||
+        session.status === 'active' ||
+        session.status === 'ready' ||
+        session.status === 'waiting')
+  );
+  // Source of truth for active turn must reflect the live board state
+  const currentTurn = game.turn();
+
+  // If host is testing in a private room alone without an opponent yet, allow moving for either side
+  const isSoloTest = Boolean(
+    session?.hostId === myUid &&
+    (!session?.guestId || session?.guestId === myUid) &&
+    (!session?.blackPlayer?.uid || session?.blackPlayer?.uid === 'guest_black' || session?.blackPlayer?.uid === myUid) &&
+    (!session?.whitePlayer?.uid || session?.whitePlayer?.uid === 'guest_white' || session?.whitePlayer?.uid === myUid)
+  );
+
+  const isMyTurn = isGameLive && (isSoloTest || currentTurn === myColor);
   const capturedMaterial = getCapturedMaterial(game);
 
   const opponent = isWhitePlayer ? session?.blackPlayer : session?.whitePlayer;
@@ -158,6 +216,35 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
       }
       setSession(newSession);
       setLoadState('ready');
+
+      // Synchronize game board if the session FEN differs from current game FEN
+      try {
+        setGame(prevGame => {
+          if (prevGame.fen() !== newSession.fen) {
+            const nextGame = new Chess(newSession.fen);
+            setMoveHistory(nextGame.history());
+            setMoveIndex(nextGame.history().length);
+            setEvalScore(evaluateBoard(nextGame));
+            setIsPendingMove(false);
+            return nextGame;
+          }
+          return prevGame;
+        });
+      } catch (err) {
+        console.error('Error syncing FEN from session:', err);
+      }
+
+      if (newSession.whiteSecondsRemaining !== undefined) {
+        setWhiteTime(newSession.whiteSecondsRemaining);
+      }
+      if (newSession.blackSecondsRemaining !== undefined) {
+        setBlackTime(newSession.blackSecondsRemaining);
+      }
+      if (isGameLive && (!newSession.moves || newSession.moves.length === 0) && (!newSession.pgn || newSession.pgn.trim() === '')) {
+        setLastMove(null);
+        setPendingPromotion(null);
+      }
+
       socketService.getSocket()?.emit('join_match', { matchId, uid: myUid, session: newSession });
     });
 
@@ -193,55 +280,124 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
     const onMatchJoined = (data: any) => {
       if (data.success) {
         setLoadState(prev => prev === 'loading' ? 'ready' : prev);
-        setSession({
+        setSession(prev => ({
+          ...prev,
           id: data.matchId,
-          hostId: data.whitePlayer?.uid || '',
+          hostId: data.whitePlayer?.uid || prev?.hostId || '',
           whitePlayer: { uid: data.whitePlayer?.uid || '', displayName: data.whitePlayer?.name || 'Player 1', elo: data.whitePlayer?.rating || 1200 },
           blackPlayer: { uid: data.blackPlayer?.uid || '', displayName: data.blackPlayer?.name || 'Player 2', elo: data.blackPlayer?.rating || 1200 },
           fen: data.fen,
-          pgn: '',
+          pgn: prev?.pgn || '',
           turn: data.turn,
           status: data.status,
-          winner: null,
-          timeControl: { name: 'Rapid', initialSeconds: data.whiteSecondsRemaining, incrementSeconds: 0 },
+          winner: prev?.winner || null,
+          timeControl: prev?.timeControl || { name: 'Rapid', initialSeconds: data.whiteSecondsRemaining, incrementSeconds: 0 },
           whiteSecondsRemaining: data.whiteSecondsRemaining,
           blackSecondsRemaining: data.blackSecondsRemaining,
-          moves: [],
+          moves: prev?.moves || [],
           moveCount: data.movesCount || 0
-        } as any);
+        } as any));
       }
     };
+
     const onMoveMade = (data: any) => {
       setIsPendingMove(false);
+      if (!data) return;
+      const fen = data.fen || data.currentFen || data.boardFen;
+      if (!fen) return;
       try {
-        const updatedGame = new Chess(data.fen);
+        const updatedGame = new Chess(fen);
         setGame(updatedGame);
         setMoveHistory(updatedGame.history());
         setEvalScore(evaluateBoard(updatedGame));
-        setLastMove({ from: data.from, to: data.to });
-        setWhiteTime(data.whiteSecondsRemaining);
-        setBlackTime(data.blackSecondsRemaining);
-        setMoveIndex(data.moveIndex);
+        const moveFrom = data.from || data.lastMove?.from || data.move?.from;
+        const moveTo = data.to || data.lastMove?.to || data.move?.to;
+        if (moveFrom && moveTo) {
+          setLastMove({ from: moveFrom, to: moveTo });
+        }
+        if (data.whiteSecondsRemaining !== undefined) setWhiteTime(data.whiteSecondsRemaining);
+        if (data.blackSecondsRemaining !== undefined) setBlackTime(data.blackSecondsRemaining);
+        if (data.moveIndex !== undefined) setMoveIndex(data.moveIndex);
+        else setMoveIndex(updatedGame.history().length);
+
+        // Keep session synchronized so turn and status remain accurate
+        setSession(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            fen,
+            pgn: data.pgn || updatedGame.pgn() || prev.pgn,
+            turn: data.turn || updatedGame.turn(),
+            moveCount: data.moveIndex ?? updatedGame.history().length,
+            whiteSecondsRemaining: data.whiteSecondsRemaining ?? prev.whiteSecondsRemaining,
+            blackSecondsRemaining: data.blackSecondsRemaining ?? prev.blackSecondsRemaining,
+            status: (data.checkmate || updatedGame.isCheckmate())
+              ? 'checkmate'
+              : (data.stalemate || data.isDraw || updatedGame.isDraw())
+              ? 'draw'
+              : prev.status,
+            winner: (data.checkmate || updatedGame.isCheckmate())
+              ? (updatedGame.turn() === 'w' ? 'b' : 'w')
+              : prev.winner,
+          };
+        });
+
         if (updatedGame.isCheckmate()) soundManager.playVictory();
         else if (updatedGame.inCheck()) soundManager.playCheck();
-        else if (data.san.includes('x')) soundManager.playCapture('p', 'w');
+        else if (data.san && typeof data.san === 'string' && data.san.includes('x')) soundManager.playCapture('p', 'w');
         else soundManager.playMove('p', 'w');
       } catch (e) {
         console.error('Error processing socket move:', e);
       }
     };
-    const onClockSync = (data: { white: number, black: number }) => {
-      setWhiteTime(data.white);
-      setBlackTime(data.black);
+
+    const onBoardState = (data: any) => {
+      if (!data || !data.fen) return;
+      try {
+        const updatedGame = new Chess(data.fen);
+        setGame(updatedGame);
+        setMoveHistory(updatedGame.history());
+        setEvalScore(evaluateBoard(updatedGame));
+        if (data.lastMove?.from && data.lastMove?.to) {
+          setLastMove({ from: data.lastMove.from, to: data.lastMove.to });
+        }
+        if (data.whiteSecondsRemaining !== undefined) setWhiteTime(data.whiteSecondsRemaining);
+        if (data.blackSecondsRemaining !== undefined) setBlackTime(data.blackSecondsRemaining);
+        setSession(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            fen: data.fen,
+            pgn: data.pgn || prev.pgn,
+            turn: data.turn || updatedGame.turn(),
+            status: data.status || prev.status,
+            whiteSecondsRemaining: data.whiteSecondsRemaining ?? prev.whiteSecondsRemaining,
+            blackSecondsRemaining: data.blackSecondsRemaining ?? prev.blackSecondsRemaining,
+          };
+        });
+      } catch (e) {
+        console.error('Error handling boardState:', e);
+      }
     };
+
+    const onClockSync = (data: any) => {
+      if (!data) return;
+      const w = data.white ?? data.whiteTime;
+      const b = data.black ?? data.blackTime;
+      if (typeof w === 'number') setWhiteTime(Math.round(w));
+      if (typeof b === 'number') setBlackTime(Math.round(b));
+    };
+
     const onGameOver = (data: { reason: string, winner: string, result?: string }) => {
       if (data.result === 'aborted' || !data.winner || data.winner === 'draw') return;
       if (data.winner === myColor) soundManager.playVictory();
       else soundManager.playDefeat();
     };
+
     const onMatchAborted = (data: { reason: string }) => {
       setSession(prev => prev ? { ...prev, status: 'aborted', reason: data.reason || 'Match was aborted.' } : prev);
     };
+
     const onReconnectSuccess = (data: any) => {
       const g = new Chess(data.fen);
       setGame(g);
@@ -250,52 +406,190 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
       setBlackTime(data.blackSecondsRemaining);
       setMoveIndex(g.history().length);
     };
+
     const onMoveRejected = (data: any) => {
       setIsPendingMove(false);
       if (data?.error && data.error.includes('not found')) {
         socket.emit('join_match', { matchId, uid: myUid });
       }
-      if (data?.currentFen) {
-        setGame(new Chess(data.currentFen));
+      if (data?.currentFen || data?.fen) {
+        setGame(new Chess(data.currentFen || data.fen));
       }
     };
+
     const onOpponentDisconnected = () => setIsOpponentPresent(false);
     const onOpponentReconnected = () => setIsOpponentPresent(true);
 
+    const onDrawOffered = (data: any) => {
+      setSession(prev => prev ? { ...prev, drawOfferFrom: data?.uid || 'opponent' } : prev);
+    };
+
+    const onDrawAccepted = () => {
+      setSession(prev => prev ? { ...prev, status: 'draw', winner: 'draw', reason: 'Draw agreed by both players.' } : prev);
+      setPendingDraw(false);
+    };
+
+    const onDrawDeclined = () => {
+      setSession(prev => prev ? { ...prev, drawOfferFrom: undefined } : prev);
+      setPendingDraw(false);
+    };
+
+    const onRematchOffered = (data: any) => {
+      setSession(prev => prev ? { ...prev, rematchOfferFrom: data?.uid || data?.offeredBy } : prev);
+    };
+    const onRematchDeclined = () => {
+      setSession(prev => prev ? { ...prev, rematchOfferFrom: undefined } : prev);
+    };
+    const onRematchStarted = (data: any) => {
+      const fen = data?.fen || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+      const newG = new Chess(fen);
+      setGame(newG);
+      setMoveHistory([]);
+      setMoveIndex(0);
+      setLastMove(null);
+      setPendingPromotion(null);
+      setEvalScore(0);
+      const wSec = data?.whiteSecondsRemaining || session?.timeControl?.initialSeconds || 600;
+      const bSec = data?.blackSecondsRemaining || session?.timeControl?.initialSeconds || 600;
+      setWhiteTime(wSec);
+      setBlackTime(bSec);
+      setSession(prev => {
+        if (!prev) return prev;
+        const newWhitePlayer = data?.whitePlayer ? { ...prev.whitePlayer, ...data.whitePlayer } : prev.blackPlayer;
+        const newBlackPlayer = data?.blackPlayer ? { ...prev.blackPlayer, ...data.blackPlayer } : prev.whitePlayer;
+        return {
+          ...prev,
+          status: 'in_progress',
+          winner: null,
+          reason: undefined,
+          rematchOfferFrom: undefined,
+          fen,
+          pgn: '',
+          moves: [],
+          moveCount: 0,
+          turn: 'w',
+          whitePlayer: newWhitePlayer,
+          blackPlayer: newBlackPlayer,
+          whiteId: newWhitePlayer?.uid,
+          blackId: newBlackPlayer?.uid,
+          whiteSecondsRemaining: wSec,
+          blackSecondsRemaining: bSec,
+        };
+      });
+    };
+
     socket.on('match_joined', onMatchJoined);
+    socket.on('roomJoined', onMatchJoined);
+    socket.on('room_joined', onMatchJoined);
+    socket.on('gameJoined', onMatchJoined);
+    socket.on('game_joined', onMatchJoined);
+
     socket.on('move_made', onMoveMade);
     socket.on('moveMade', onMoveMade);
+    socket.on('opponent_move', onMoveMade);
+    socket.on('opponentMove', onMoveMade);
+    socket.on('player_moved', onMoveMade);
+    socket.on('playerMoved', onMoveMade);
+    socket.on('move', onMoveMade);
+
+    socket.on('boardState', onBoardState);
+    socket.on('gameState', onBoardState);
+    socket.on('gameStateUpdate', onBoardState);
+    socket.on('state_update', onBoardState);
+
     socket.on('move_rejected', onMoveRejected);
     socket.on('moveRejected', onMoveRejected);
+
     socket.on('clock_sync', onClockSync);
+    socket.on('clockSync', onClockSync);
+    socket.on('timerUpdate', onClockSync);
+    socket.on('timer_update', onClockSync);
+
+    socket.on('draw_offered', onDrawOffered);
+    socket.on('drawOffered', onDrawOffered);
+    socket.on('draw_accepted', onDrawAccepted);
+    socket.on('drawAccepted', onDrawAccepted);
+    socket.on('draw_declined', onDrawDeclined);
+    socket.on('drawDeclined', onDrawDeclined);
+
     socket.on('game_over', onGameOver);
+    socket.on('gameOver', onGameOver);
     socket.on('match_aborted', onMatchAborted);
+    socket.on('matchAborted', onMatchAborted);
     socket.on('reconnect_success', onReconnectSuccess);
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
     socket.on('connect_error', onConnectError);
     socket.on('opponentDisconnected', onOpponentDisconnected);
+    socket.on('playerDisconnected', onOpponentDisconnected);
     socket.on('playerReconnected', onOpponentReconnected);
-    socket.emit('join_match', { matchId, uid: myUid });
+    socket.on('opponentReconnected', onOpponentReconnected);
+    socket.on('rematch_offered', onRematchOffered);
+    socket.on('rematchOffered', onRematchOffered);
+    socket.on('rematch_declined', onRematchDeclined);
+    socket.on('rematchDeclined', onRematchDeclined);
+    socket.on('rematch_started', onRematchStarted);
+    socket.on('rematchStarted', onRematchStarted);
+    socket.on('game_reset', onRematchStarted);
+    socket.emit('join_match', { matchId, uid: myUid, session });
 
     return () => {
       clearTimeout(timeoutId);
       clearTimeout(fallbackTimer);
       if (unsub) unsub();
       socket.off('match_joined', onMatchJoined);
+      socket.off('roomJoined', onMatchJoined);
+      socket.off('room_joined', onMatchJoined);
+      socket.off('gameJoined', onMatchJoined);
+      socket.off('game_joined', onMatchJoined);
+
       socket.off('move_made', onMoveMade);
       socket.off('moveMade', onMoveMade);
+      socket.off('opponent_move', onMoveMade);
+      socket.off('opponentMove', onMoveMade);
+      socket.off('player_moved', onMoveMade);
+      socket.off('playerMoved', onMoveMade);
+      socket.off('move', onMoveMade);
+
+      socket.off('boardState', onBoardState);
+      socket.off('gameState', onBoardState);
+      socket.off('gameStateUpdate', onBoardState);
+      socket.off('state_update', onBoardState);
+
       socket.off('move_rejected', onMoveRejected);
       socket.off('moveRejected', onMoveRejected);
+
       socket.off('clock_sync', onClockSync);
+      socket.off('clockSync', onClockSync);
+      socket.off('timerUpdate', onClockSync);
+      socket.off('timer_update', onClockSync);
+
+      socket.off('draw_offered', onDrawOffered);
+      socket.off('drawOffered', onDrawOffered);
+      socket.off('draw_accepted', onDrawAccepted);
+      socket.off('drawAccepted', onDrawAccepted);
+      socket.off('draw_declined', onDrawDeclined);
+      socket.off('drawDeclined', onDrawDeclined);
+
       socket.off('game_over', onGameOver);
+      socket.off('gameOver', onGameOver);
       socket.off('match_aborted', onMatchAborted);
+      socket.off('matchAborted', onMatchAborted);
       socket.off('reconnect_success', onReconnectSuccess);
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
       socket.off('connect_error', onConnectError);
       socket.off('opponentDisconnected', onOpponentDisconnected);
+      socket.off('playerDisconnected', onOpponentDisconnected);
       socket.off('playerReconnected', onOpponentReconnected);
+      socket.off('opponentReconnected', onOpponentReconnected);
+      socket.off('rematch_offered', onRematchOffered);
+      socket.off('rematchOffered', onRematchOffered);
+      socket.off('rematch_declined', onRematchDeclined);
+      socket.off('rematchDeclined', onRematchDeclined);
+      socket.off('rematch_started', onRematchStarted);
+      socket.off('rematchStarted', onRematchStarted);
+      socket.off('game_reset', onRematchStarted);
     };
   }, [matchId, myUid]);
 
@@ -341,20 +635,20 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
   const unreadChatCount = Math.max(0, chatMessages.length - seenChatCount);
 
   useEffect(() => {
-    if (session?.status !== 'in_progress') return;
-    const isDisconnectedBeforeFirstMove = (!session.moves || session.moves.length === 0) && (!isOpponentPresent || socketStatus !== 'connected');
+    if (!isGameLive) return;
+    const isDisconnectedBeforeFirstMove = (!session?.moves || session.moves.length === 0) && (!isOpponentPresent || socketStatus !== 'connected');
     if (isDisconnectedBeforeFirstMove) return;
-    if (!session.moves || session.moves.length === 0) return;
+    if (!session?.moves || session.moves.length === 0) return;
 
     const interval = setInterval(() => {
-      if (session.turn === 'w') setWhiteTime(prev => Math.max(0, prev - 1));
+      if (session?.turn === 'w') setWhiteTime(prev => Math.max(0, prev - 1));
       else setBlackTime(prev => Math.max(0, prev - 1));
     }, 1000);
     return () => clearInterval(interval);
-  }, [session?.status, session?.turn, isOpponentPresent, socketStatus]);
+  }, [isGameLive, session?.turn, isOpponentPresent, socketStatus]);
 
   useEffect(() => {
-    if (!session || session.status !== 'in_progress') return;
+    if (!session || !isGameLive) return;
     if (isMyTurn) return;
 
     const opp = isWhitePlayer ? session.blackPlayer : session.whitePlayer;
@@ -420,7 +714,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
   }, [session, isMyTurn, isWhitePlayer, myColor, whiteTime, blackTime, matchId]);
 
   const handleMakeMove = useCallback((from: string, to: string) => {
-      if (!isMyTurn || session?.status !== 'in_progress' || isPendingMove) return;
+      if (!isMyTurn || !isGameLive || isPendingMove) return;
       const piece = game.get(from as Square);
       const isPawn = piece?.type === 'p';
       const isPromotion = isPawn && ((piece?.color === 'w' && to[1] === '8') || (piece?.color === 'b' && to[1] === '1'));
@@ -433,6 +727,17 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
       if (!moveResult) return;
       setIsPendingMove(true);
       setLastMove({ from, to });
+      // Optimistically update board state for instantaneous feel
+      setGame(tempGame);
+      setMoveHistory(tempGame.history());
+      setMoveIndex(tempGame.history().length);
+      setEvalScore(evaluateBoard(tempGame));
+
+      if (tempGame.isCheckmate()) soundManager.playVictory();
+      else if (tempGame.inCheck()) soundManager.playCheck();
+      else if (moveResult.captured) soundManager.playCapture(moveResult.piece, moveResult.color);
+      else soundManager.playMove(moveResult.piece, moveResult.color);
+
       const newFen = tempGame.fen();
       const newPgn = tempGame.pgn();
       const nextTurn = tempGame.turn();
@@ -441,18 +746,37 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
       let nextStatus: 'in_progress' | 'checkmate' | 'draw' = 'in_progress';
       let nextWinner: 'w' | 'b' | 'draw' | null = null;
       let nextReason: string | undefined = undefined;
+      const moveColor = piece?.color || myColor;
       if (isCheckmate) {
         nextStatus = 'checkmate';
-        nextWinner = myColor;
+        nextWinner = moveColor;
         nextReason = `Checkmate! ${me?.displayName || 'Player'} wins the match.`;
       } else if (isDraw) {
         nextStatus = 'draw';
         nextWinner = 'draw';
         nextReason = 'Game drawn.';
       }
-      const inc = session.timeControl?.incrementSeconds || 0;
-      const newWhiteTime = myColor === 'w' ? whiteTime + inc : whiteTime;
-      const newBlackTime = myColor === 'b' ? blackTime + inc : blackTime;
+      const inc = session?.timeControl?.incrementSeconds || 0;
+      const newWhiteTime = moveColor === 'w' ? whiteTime + inc : whiteTime;
+      const newBlackTime = moveColor === 'b' ? blackTime + inc : blackTime;
+
+      // Keep session in React state synchronized
+      setSession(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          fen: newFen,
+          pgn: newPgn,
+          turn: nextTurn,
+          moves: [...(prev.moves || []), moveResult.san],
+          moveCount: (prev.moveCount || 0) + 1,
+          whiteSecondsRemaining: newWhiteTime,
+          blackSecondsRemaining: newBlackTime,
+          status: nextStatus,
+          winner: nextWinner,
+        };
+      });
+
       sendOnlineMove(
         matchId,
         newFen,
@@ -466,28 +790,36 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
         nextWinner,
         nextReason
       ).catch(err => console.error('Error updating move in Firestore:', err));
+
+      // Automatic fallback to release pending move state
+      setTimeout(() => setIsPendingMove(false), 800);
+
       const socket = socketService.getSocket();
       if (socket) {
-        socket.emit('make_move', {
+        const movePayload = {
           matchId,
           gameId: matchId,
+          gameCode: matchId,
           uid: myUid,
           from,
           to,
           promotion: 'q',
           moveIndex,
-          fen: game.fen(),
+          fen: newFen,
           session: {
             ...session,
             fen: newFen,
             pgn: newPgn,
             turn: nextTurn,
+            status: nextStatus,
             whiteSecondsRemaining: newWhiteTime,
             blackSecondsRemaining: newBlackTime
           }
-        });
+        };
+        socket.emit('make_move', movePayload);
+        socket.emit('makeMove', movePayload);
       }
-    }, [isMyTurn, session, myUid, matchId, moveIndex, isPendingMove, game, myColor, me, whiteTime, blackTime]);
+    }, [isMyTurn, isGameLive, session, myUid, matchId, moveIndex, isPendingMove, game, myColor, me, whiteTime, blackTime]);
 
   const handleConfirmPromotion = (promoPiece: 'q' | 'r' | 'b' | 'n') => {
     if (!pendingPromotion || !session) return;
@@ -498,6 +830,17 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
     if (!moveResult) return;
     setIsPendingMove(true);
     setLastMove({ from: from as string, to: to as string | null });
+    // Optimistically update board state for instantaneous feel
+    setGame(tempGame);
+    setMoveHistory(tempGame.history());
+    setMoveIndex(tempGame.history().length);
+    setEvalScore(evaluateBoard(tempGame));
+
+    if (tempGame.isCheckmate()) soundManager.playVictory();
+    else if (tempGame.inCheck()) soundManager.playCheck();
+    else if (moveResult.captured) soundManager.playCapture(moveResult.piece, moveResult.color);
+    else soundManager.playMove(moveResult.piece, moveResult.color);
+
     const newFen = tempGame.fen();
     const newPgn = tempGame.pgn();
     const nextTurn = tempGame.turn();
@@ -518,6 +861,23 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
     const inc = session.timeControl?.incrementSeconds || 0;
     const newWhiteTime = myColor === 'w' ? whiteTime + inc : whiteTime;
     const newBlackTime = myColor === 'b' ? blackTime + inc : blackTime;
+
+    setSession(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        fen: newFen,
+        pgn: newPgn,
+        turn: nextTurn,
+        moves: [...(prev.moves || []), moveResult.san],
+        moveCount: (prev.moveCount || 0) + 1,
+        whiteSecondsRemaining: newWhiteTime,
+        blackSecondsRemaining: newBlackTime,
+        status: nextStatus,
+        winner: nextWinner,
+      };
+    });
+
     sendOnlineMove(
       matchId,
       newFen,
@@ -531,30 +891,37 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
       nextWinner,
       nextReason
     ).catch(err => console.error('Error updating move in Firestore:', err));
+
+    setTimeout(() => setIsPendingMove(false), 800);
+
     const socket = socketService.getSocket();
     if (socket) {
-      socket.emit('make_move', {
+      const movePayload = {
         matchId,
         gameId: matchId,
+        gameCode: matchId,
         uid: myUid,
         from: from as string,
         to: to as string,
         promotion: promoPiece,
         moveIndex,
-        fen: game.fen(),
+        fen: newFen,
         session: {
           ...session,
           fen: newFen,
           pgn: newPgn,
           turn: nextTurn,
+          status: nextStatus,
           whiteSecondsRemaining: newWhiteTime,
           blackSecondsRemaining: newBlackTime
         }
-      });
+      };
+      socket.emit('make_move', movePayload);
+      socket.emit('makeMove', movePayload);
     }
   };
 
-  const canClaimDraw = session?.status === 'in_progress' && (game.isThreefoldRepetition() || game.isDraw());
+  const canClaimDraw = isGameLive && (game.isThreefoldRepetition() || game.isDraw());
 
   const handleClaimDraw = async () => {
     if (!session || !canClaimDraw) return;
@@ -569,19 +936,34 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
 
     await offerRematchOnlineMatch(matchId, myUid);
 
+    const socket = socketService.getSocket();
+    if (socket) {
+      socket.emit('offer_rematch', { matchId, gameId: matchId, uid: myUid });
+      socket.emit('offerRematch', { matchId, gameId: matchId, uid: myUid });
+    }
+
     if (isBot) {
       // Bots accept rematches instantly
       await acceptRematchOnlineMatch(matchId, session);
+      if (socket) {
+        socket.emit('accept_rematch', { matchId, gameId: matchId, uid: opp?.uid || 'bot' });
+        socket.emit('acceptRematch', { matchId, gameId: matchId, uid: opp?.uid || 'bot' });
+      }
     }
   };
 
   const handleAcceptRematch = async () => {
     if (!session) return;
     await acceptRematchOnlineMatch(matchId, session);
+    const socket = socketService.getSocket();
+    if (socket) {
+      socket.emit('accept_rematch', { matchId, gameId: matchId, uid: myUid });
+      socket.emit('acceptRematch', { matchId, gameId: matchId, uid: myUid });
+    }
   };
 
   const handleResign = async () => {
-    if (!session || session.status !== 'in_progress') return;
+    if (!session || !isGameLive) return;
     if (window.confirm('Are you sure you want to resign the online match?')) {
       const socket = socketService.getSocket();
       if (socket) socket.emit('resign', { matchId, uid: myUid });
@@ -596,11 +978,20 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
   const handleOfferDraw = async () => {
     if (!session) return;
     const currentUid = profile?.uid || user?.uid;
+    const socket = socketService.getSocket();
     if (session.drawOfferFrom && session.drawOfferFrom !== currentUid) {
       await acceptDrawOnlineMatch(matchId);
+      if (socket) {
+        socket.emit('accept_draw', { matchId, gameId: matchId });
+        socket.emit('acceptDraw', { matchId, gameId: matchId });
+      }
     } else if (currentUid) {
       await offerDrawOnlineMatch(matchId, currentUid);
       setPendingDraw(true);
+      if (socket) {
+        socket.emit('offer_draw', { matchId, gameId: matchId, uid: currentUid });
+        socket.emit('offerDraw', { matchId, gameId: matchId, uid: currentUid });
+      }
     }
   };
 
@@ -675,30 +1066,6 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
       </div>
 
       <div className="relative z-10 w-full max-w-7xl mx-auto px-4 py-8 space-y-8">
-        <GameRoom
-          status={session.status === 'in_progress' ? 'in_progress' : 'game_over'}
-          turn={session.turn === 'w' ? 'white' : 'black'}
-          myColor={isWhitePlayer ? 'white' : 'black'}
-          whitePlayer={{
-            name: session.whitePlayer?.displayName || 'White',
-            elo: session.whitePlayer?.elo || 1200,
-            avatar: session.whitePlayer?.photoURL
-          }}
-          blackPlayer={{
-            name: session.blackPlayer?.displayName || 'Black',
-            elo: session.blackPlayer?.elo || 1200,
-            avatar: session.blackPlayer?.photoURL
-          }}
-          clocks={{
-            white: whiteTime,
-            black: blackTime,
-            total: session.timeControl?.initialSeconds || 600
-          }}
-          onResign={handleResign}
-          onOfferDraw={handleOfferDraw}
-          isReconnecting={socketStatus === 'reconnecting'}
-        />
-
         <div className="glass-panel p-3.5 sm:p-4 rounded-3xl border border-[#F5C453]/30 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xl">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-2xl bg-gradient-to-tr from-[#8C2425] via-[#52673A] to-[#F5C453] text-[#F5C453] border border-[#F5C453]/40 shadow-md">
@@ -773,7 +1140,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
               <ChessClock
                 timeSeconds={isWhitePlayer ? blackTime : whiteTime}
                 totalTimeSeconds={session?.timeControl?.initialSeconds || 600}
-                isActive={session?.turn !== myColor && session?.status === 'in_progress'}
+                isActive={session?.turn !== myColor && isGameLive}
                 isWhite={!isWhitePlayer}
                 playerName={opponent?.displayName || 'Opponent'}
                 playerTitle={opponent?.honorRank}
@@ -925,19 +1292,20 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                 showLegalMoves={settings.showLegalMoves}
                 lastMove={lastMove}
                 onMove={handleMakeMove}
-                disabled={!isMyTurn || session?.status !== 'in_progress'}
+                disabled={!isMyTurn || !isGameLive}
                 evalScore={evalScore}
                 showWeather={showWeather}
                 showTerritory={showTerritory}
                 is3dPerspective={is3dPerspective}
+                showGameOverOverlay={false}
               />
 
               <div className="mt-2.5 px-4 py-2 rounded-2xl bg-black/80 backdrop-blur-md border border-[#F5C453]/30 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs">
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="w-2.5 h-2.5 rounded-full bg-[#F5C453] animate-ping shrink-0" />
                   <span className="font-bold text-white truncate">
-                    {session?.status !== 'in_progress'
-                      ? `Match ${session?.status?.toUpperCase()}`
+                    {!isGameLive
+                      ? `Match ${session?.status?.toUpperCase() || 'CONNECTING'}`
                       : isMyTurn
                         ? 'Your Turn — Choose your move'
                         : `${opponent?.displayName || 'Opponent'} is thinking...`}
@@ -958,7 +1326,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                 is3dPerspective={is3dPerspective}
                 onToggle3dPerspective={() => setIs3dPerspective(!is3dPerspective)}
                 onFlipBoard={() => setManualFlipped(prev => prev === null ? isWhitePlayer : !prev)}
-                disabled={session?.status !== 'in_progress'}
+                disabled={!isGameLive}
               />
             </div>
 
@@ -982,7 +1350,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
               <ChessClock
                 timeSeconds={isWhitePlayer ? whiteTime : blackTime}
                 totalTimeSeconds={session?.timeControl?.initialSeconds || 600}
-                isActive={isMyTurn && session?.status === 'in_progress'}
+                isActive={isMyTurn && isGameLive}
                 isWhite={isWhitePlayer}
                 playerName={profile?.displayName || 'You'}
                 playerTitle={profile?.honorRank}
@@ -1121,10 +1489,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
 
             {Boolean(
               session?.status === 'aborted' ||
-              (session?.status === 'abandoned' && (!session.moves || session.moves.length === 0)) ||
-              (!['in_progress', 'waiting', 'active', 'ready'].includes(session?.status || '') &&
-                (!session?.moves || session.moves.length === 0) &&
-                session?.status !== 'resigned')
+              (session?.status === 'abandoned' && !hasMovesPlayed)
             ) && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
                 <motion.div
@@ -1161,10 +1526,21 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
             {isGameOver() && (
               <GameOverModal
                 result={{
-                  winner: session.winner || 'draw',
+                  winner:
+                    session.winner === 'w' || session.winner === 'b' || session.winner === 'draw'
+                      ? session.winner
+                      : session.winner === 'white'
+                      ? 'w'
+                      : session.winner === 'black'
+                      ? 'b'
+                      : Boolean(session.winner) && (session.winner === session.whitePlayer?.uid || session.winner === session.whiteId)
+                      ? 'w'
+                      : Boolean(session.winner) && (session.winner === session.blackPlayer?.uid || session.winner === session.blackId)
+                      ? 'b'
+                      : 'draw',
                   reason: session.reason || 'Match Concluded'
                 }}
-                pgn={session.pgn || ''}
+                pgn={session.pgn || game.pgn() || ''}
                 rematchState={
                   session.rematchOfferFrom
                     ? session.rematchOfferFrom === myUid
@@ -1174,7 +1550,10 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                 }
                 onRematch={handleRematch}
                 onAcceptRematch={handleAcceptRematch}
-                onNewGame={() => window.location.reload()}
+                onNewGame={() => {
+                  if (onClose) onClose();
+                  else window.location.reload();
+                }}
                 onAnalyze={onClose}
                 onClose={onClose}
               />
@@ -1199,7 +1578,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
               <VoiceMoveDictator
                 game={game}
                 onVoiceMove={handleMakeMove}
-                disabled={!isMyTurn || session?.status !== 'in_progress'}
+                disabled={!isMyTurn || !isGameLive}
               />
               <LiveHypeMeter matchId={matchId} />
               <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/10">
@@ -1226,7 +1605,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                 <button
                   type="button"
                   onClick={handleOfferDraw}
-                  disabled={session?.status !== 'in_progress'}
+                  disabled={!isGameLive}
                   className="py-2.5 px-3 rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-40 text-white font-bold text-xs flex items-center justify-center gap-1.5 border border-white/10 transition-colors cursor-pointer"
                 >
                   <Handshake className="w-4 h-4 text-amber-400" />
@@ -1235,7 +1614,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                 <button
                   type="button"
                   onClick={handleResign}
-                  disabled={session?.status !== 'in_progress'}
+                  disabled={!isGameLive}
                   className="py-2.5 px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 disabled:opacity-40 text-rose-300 font-bold text-xs flex items-center justify-center gap-1.5 border border-rose-500/30 transition-colors cursor-pointer"
                 >
                   <Flag className="w-4 h-4 text-rose-400" />
