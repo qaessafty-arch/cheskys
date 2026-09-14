@@ -8,6 +8,7 @@ import {
   TimeControl,
 } from './types.js';
 import { computeEloDelta, EloResult } from './elo.js';
+import { PrecisionMatchClock } from './preciseClock.js';
 
 /** Terminal statuses that stop the game. */
 const TERMINAL_STATUSES = new Set([
@@ -40,73 +41,103 @@ export function startMatchTimers(
       blackTime: number;
       white?: number;
       black?: number;
+      whiteMs?: number;
+      blackMs?: number;
     },
   ) => void,
-  emitClockSync: (payload: { white: number; black: number }) => void,
+  emitClockSync: (payload: {
+    white: number;
+    black: number;
+    whiteMs?: number;
+    blackMs?: number;
+    activeColor?: string;
+  }) => void,
 ): NodeJS.Timeout {
   if (match.gameInterval) clearInterval(match.gameInterval);
+  if (match.precisionClock) match.precisionClock.destroy();
 
-  match.lastTimerTick = Date.now();
+  const tc = match.timeControl ?? { initialSeconds: 600, incrementSeconds: 0 };
+  const initialSec = tc.initialSeconds ?? 600;
+  const incSec = tc.incrementSeconds ?? 0;
 
-  const interval = setInterval(() => {
-    if (!isTerminal(match.status)) {
-      // still live — the interval itself is cleaned up on game over
-    }
-    // Always compute and emit so reconnecting clients get current time.
-    const now = Date.now();
-    const elapsed = Math.max(
-      0,
-      (now - (match.lastTimerTick ?? now)) / 1000,
-    );
-    match.lastTimerTick = now;
-
-    const turn = match.chess.turn();
-    if (turn === 'w') {
-      match.whiteSecondsRemaining = Math.max(
-        0,
-        match.whiteSecondsRemaining - elapsed,
-      );
-    } else {
-      match.blackSecondsRemaining = Math.max(
-        0,
-        match.blackSecondsRemaining - elapsed,
-      );
-    }
-
-    // Timeout check
-    if (
-      match.whiteSecondsRemaining <= 0 ||
-      match.blackSecondsRemaining <= 0
-    ) {
-      const loser = match.whiteSecondsRemaining <= 0 ? 'w' : 'b';
+  // Initialize PrecisionMatchClock with callback for authoritative flag drop
+  const precisionClock = new PrecisionMatchClock(
+    initialSec,
+    incSec,
+    (flaggedColor) => {
       match.status = 'timeout';
-      match.chess = match.chess; // no state change; outcome determined by time
-      // Emit final timer update then stop
+      stopMatchTimers(match);
       emitTimerUpdate({
         whiteTime: Math.round(match.whiteSecondsRemaining),
         blackTime: Math.round(match.blackSecondsRemaining),
+        white: Math.round(match.whiteSecondsRemaining),
+        black: Math.round(match.blackSecondsRemaining),
       });
       emitClockSync({
         white: Math.round(match.whiteSecondsRemaining),
         black: Math.round(match.blackSecondsRemaining),
       });
+    }
+  );
+
+  // Sync remaining time if already partway into game
+  if (match.whiteSecondsRemaining !== undefined && match.blackSecondsRemaining !== undefined) {
+    (precisionClock as any).white.remainingMs = Math.max(0, match.whiteSecondsRemaining * 1000);
+    (precisionClock as any).black.remainingMs = Math.max(0, match.blackSecondsRemaining * 1000);
+  }
+  if (match.chess && match.chess.turn()) {
+    (precisionClock as any).activeColor = match.chess.turn();
+  }
+
+  precisionClock.start();
+  match.precisionClock = precisionClock;
+
+  // Heartbeat interval emitting every 500ms
+  const interval = setInterval(() => {
+    if (isTerminal(match.status)) {
       clearInterval(interval);
       match.gameInterval = undefined;
       return;
     }
 
+    const snap = precisionClock.getSnapshot();
+    match.whiteSecondsRemaining = snap.whiteSecondsRemaining;
+    match.blackSecondsRemaining = snap.blackSecondsRemaining;
+
+    // Timeout check
+    if (match.whiteSecondsRemaining <= 0 || match.blackSecondsRemaining <= 0) {
+      match.status = 'timeout';
+      stopMatchTimers(match);
+      emitTimerUpdate({
+        whiteTime: 0,
+        blackTime: 0,
+        white: 0,
+        black: 0,
+      });
+      emitClockSync({
+        white: 0,
+        black: 0,
+      });
+      return;
+    }
+
     emitTimerUpdate({
-      whiteTime: Math.round(match.whiteSecondsRemaining),
-      blackTime: Math.round(match.blackSecondsRemaining),
-      white: Math.round(match.whiteSecondsRemaining),
-      black: Math.round(match.blackSecondsRemaining),
+      whiteTime: snap.whiteSecondsRemaining,
+      blackTime: snap.blackSecondsRemaining,
+      white: snap.whiteSecondsRemaining,
+      black: snap.blackSecondsRemaining,
+      whiteMs: snap.whiteMs,
+      blackMs: snap.blackMs,
     });
 
-    // Periodic sync pulse (every-other-second alignment).
+    // Periodic sync pulse
     if (Math.floor(Date.now() / 1000) % 2 === 0) {
       emitClockSync({
-        white: Math.round(match.whiteSecondsRemaining),
-        black: Math.round(match.blackSecondsRemaining),
+        white: snap.whiteSecondsRemaining,
+        black: snap.blackSecondsRemaining,
+        whiteMs: snap.whiteMs,
+        blackMs: snap.blackMs,
+        activeColor: snap.activeColor,
       });
     }
   }, 500);
@@ -117,6 +148,10 @@ export function startMatchTimers(
 
 /** Stop all timers associated with a match. Safe to call multiple times. */
 export function stopMatchTimers(match: MatchSession): void {
+  if (match.precisionClock) {
+    match.precisionClock.destroy();
+    match.precisionClock = undefined;
+  }
   if (match.gameInterval) {
     clearInterval(match.gameInterval);
     match.gameInterval = undefined;

@@ -21,7 +21,7 @@ interface ChessClockProps {
   isVerified?: boolean;
 }
 
-const ChessClockInner: React.FC<ChessClockProps> = ({
+const ChessClockInner = React.memo<ChessClockProps>(({
   timeSeconds,
   totalTimeSeconds,
   isActive,
@@ -223,7 +223,7 @@ const ChessClockInner: React.FC<ChessClockProps> = ({
       )}
     </div>
   );
-};
+});
 
 export const ChessClock: React.FC<ChessClockProps> = (props) => {
   return (

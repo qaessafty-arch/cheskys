@@ -74,4 +74,6 @@ export interface MatchSession {
   drawOfferedBy?: string | null;
   takebackOfferedBy?: string | null;
   rematchOfferedBy?: string | null;
+  precisionClock?: import('./preciseClock.js').PrecisionMatchClock;
+  moveSeq?: number;
 }

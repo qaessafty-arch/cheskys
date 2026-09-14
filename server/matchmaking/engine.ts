@@ -22,6 +22,9 @@ import {
   newChessFromFen,
   buildInitialTimeControl,
 } from './matchState.js';
+import { moveRateLimiter, chatRateLimiter, actionRateLimiter } from '../security/rateLimiter.js';
+import { generateReconnectTicket, verifyReconnectTicket } from '../security/reconnectToken.js';
+import { MovePayloadSchema } from '../schemas/moveSchema.js';
 
 /** Set of statuses that are still "live" for disconnect / reconnect
  *  handling. */
@@ -117,8 +120,27 @@ export class MatchmakingEngine {
       this.handleJoinMatchRoom(socket, data, cb),
     );
 
-    socket.on('makeMove', (data, cb) => this.handleMakeMove(socket, data, cb));
-    socket.on('make_move', (data, cb) => this.handleMakeMove(socket, data, cb));
+    socket.on('makeMove', async (data, cb) => {
+      try {
+        await moveRateLimiter.consume(socket.id);
+        this.handleMakeMove(socket, data, cb);
+      } catch {
+        socket.emit('error_notice', { message: 'Move rate limit exceeded (max 5/sec).' });
+        if (typeof cb === 'function') cb({ error: 'Move rate limit exceeded' });
+      }
+    });
+    socket.on('make_move', async (data, cb) => {
+      try {
+        await moveRateLimiter.consume(socket.id);
+        this.handleMakeMove(socket, data, cb);
+      } catch {
+        socket.emit('error_notice', { message: 'Move rate limit exceeded (max 5/sec).' });
+        if (typeof cb === 'function') cb({ error: 'Move rate limit exceeded' });
+      }
+    });
+
+    socket.on('resume_match', (data, cb) => this.handleResumeMatch(socket, data, cb));
+    socket.on('resumeMatch', (data, cb) => this.handleResumeMatch(socket, data, cb));
 
     socket.on('resign', (data) => this.handleResign(socket, data));
     socket.on('offerDraw', (data) => this.handleOfferDraw(socket, data));
@@ -190,7 +212,77 @@ export class MatchmakingEngine {
       white: match.whiteUid,
       black: match.blackUid,
       status: match.status,
+      ticket: generateReconnectTicket(
+        matchId,
+        uid,
+        uid === match.whiteUid ? 'w' : 'b',
+        match.movesCount
+      ),
     });
+  }
+
+  private handleResumeMatch(socket: Socket, data: any, cb?: (res: any) => void): void {
+    const { ticket, lastKnownSeq } = data ?? {};
+    if (!ticket) {
+      const err = { success: false, reason: 'Missing reconnect ticket' };
+      socket.emit('reconnect_failed', err);
+      if (typeof cb === 'function') cb(err);
+      return;
+    }
+
+    const payload = verifyReconnectTicket(ticket);
+    if (!payload) {
+      const err = { success: false, reason: 'Ticket expired or invalid signature' };
+      socket.emit('reconnect_failed', err);
+      if (typeof cb === 'function') cb(err);
+      return;
+    }
+
+    const match = this.activeMatches.get(payload.matchId);
+    if (!match || !LIVE_STATUSES.includes(match.status)) {
+      const err = { success: false, reason: 'Match terminated or not found' };
+      socket.emit('reconnect_failed', err);
+      if (typeof cb === 'function') cb(err);
+      return;
+    }
+
+    // Reattach socket to match
+    socket.join(match.matchId);
+    if (match.gameCode) socket.join(match.gameCode);
+
+    if (payload.color === 'w') match.whiteSocketId = socket.id;
+    else match.blackSocketId = socket.id;
+
+    if (match.reconnectTimeout) {
+      clearTimeout(match.reconnectTimeout);
+      match.reconnectTimeout = undefined;
+    }
+
+    const missedMoves = (match.movesList || []).slice(lastKnownSeq || 0);
+
+    const newTicket = generateReconnectTicket(
+      match.matchId,
+      payload.uid,
+      payload.color,
+      match.movesCount
+    );
+
+    const res = {
+      success: true,
+      matchId: match.matchId,
+      fen: match.chess.fen(),
+      pgn: match.chess.pgn(),
+      turn: match.chess.turn(),
+      missedMoves,
+      whiteSecondsRemaining: Math.round(match.whiteSecondsRemaining),
+      blackSecondsRemaining: Math.round(match.blackSecondsRemaining),
+      status: match.status,
+      ticket: newTicket,
+    };
+
+    socket.emit('reconnect_success', res);
+    socket.to(match.matchId).emit('playerReconnected', { uid: payload.uid, color: payload.color });
+    if (typeof cb === 'function') cb(res);
   }
 
   // ---- Create / join / cancel ----
@@ -424,14 +516,30 @@ export class MatchmakingEngine {
     const previousLock =
       this.moveLocks.get(match.matchId) ?? Promise.resolve();
     const currentOperation = previousLock
-      .then(() =>
-        this.processMove(
+      .then(() => {
+        // Validate with Zod schema for SEC-01 server-authoritative move ingestion
+        const parsed = MovePayloadSchema.safeParse(data);
+        if (!parsed.success) {
+          const err = 'Invalid move format coordinates.';
+          socket.emit('move_rejected', { error: err });
+          if (typeof cb === 'function') cb({ error: err });
+          return;
+        }
+        return this.processMove(
           socket,
           match,
-          { from, to, promotionPiece, promotion, uid, fen },
+          {
+            from: parsed.data.from,
+            to: parsed.data.to,
+            promotionPiece: parsed.data.promotionPiece ?? parsed.data.promotion,
+            promotion: parsed.data.promotion ?? parsed.data.promotionPiece,
+            uid: parsed.data.uid ?? uid,
+            fen: parsed.data.fen,
+            clientTimestamp: parsed.data.clientTimestamp,
+          },
           cb,
-        ),
-      )
+        );
+      })
       .catch((err) => {
         socket.emit('move_rejected', {
           error: err.message ?? 'Move execution error',
@@ -730,10 +838,11 @@ export class MatchmakingEngine {
       promotion?: string;
       uid?: string;
       fen?: string;
+      clientTimestamp?: number;
     },
     cb?: any,
   ): Promise<void> {
-    const { from, to, promotionPiece, promotion, uid, fen } = data;
+    const { from, to, promotionPiece, promotion, uid, fen, clientTimestamp } = data;
 
     socket.join(match.matchId);
     if (match.gameCode) socket.join(match.gameCode);
@@ -841,8 +950,17 @@ export class MatchmakingEngine {
       timestamp: now,
     });
 
-    // Update clocks with increment (only after the first move).
-    if (match.movesCount > 0) {
+    // Update clocks with precision engine & NTP lag compensation
+    let rttMs = 0;
+    if (clientTimestamp && clientTimestamp <= now) {
+      rttMs = Math.max(0, (now - clientTimestamp) * 2);
+    }
+
+    if (match.precisionClock) {
+      const snap = match.precisionClock.switchTurn(rttMs);
+      match.whiteSecondsRemaining = snap.whiteSecondsRemaining;
+      match.blackSecondsRemaining = snap.blackSecondsRemaining;
+    } else if (match.movesCount > 0) {
       const inc = match.timeControl?.incrementSeconds ?? 0;
       if (activeTurn === 'w') {
         match.whiteSecondsRemaining = Math.max(
