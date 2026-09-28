@@ -318,6 +318,13 @@ const AotBoardWatermark: React.FC = () => {
   );
 };
 
+const STATIC_RAIN_DROPS = Array.from({ length: 12 }, (_, i) => ({
+  id: i,
+  left: `${((i * 17 + 7) % 95) + 2.5}%`,
+  duration: `${0.35 + (i % 4) * 0.05}s`,
+  delay: `${(i % 5) * 0.1}s`
+}));
+
 interface ActivePiece {
   id: string;
   type: PieceType;
@@ -1130,26 +1137,21 @@ const ChessBoardInner: React.FC<ChessBoardProps> = React.memo(({
                     x: `${colIdx * 100}%`,
                     y: `${rankIdx * 100}%`,
                     opacity: isHiddenByDrag ? 0 : 1,
-                    scale: isHiddenByDrag ? 0.9 : (isKingInCheck ? [1, 1.15, 0.95, 1.08, 1] : 1),
-                    rotate: isKingInCheck ? [-5, 5, -4, 4, 0] : 0
+                    scale: isHiddenByDrag ? 0.9 : 1,
                   }}
                   exit={{
                     opacity: 0,
-                    scale: 0.15,
-                    y: -35,
-                    rotate: 35,
-                    transition: { duration: 0.35, ease: 'easeOut' }
+                    scale: 0.2,
+                    transition: { duration: 0.2, ease: 'easeOut' }
                   }}
                   transition={
                     isRotating
                       ? { duration: 0 }
-                      : isKingInCheck
-                      ? { duration: 0.5, repeat: Infinity, repeatDelay: 1 }
                       : {
                           type: 'spring',
-                          stiffness: 480,
-                          damping: 26,
-                          mass: 0.5
+                          stiffness: 500,
+                          damping: 28,
+                          mass: 0.4
                         }
                   }
                   style={{
@@ -1161,7 +1163,6 @@ const ChessBoardInner: React.FC<ChessBoardProps> = React.memo(({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    willChange: 'transform'
                   }}
                 >
                   <div
@@ -1206,8 +1207,16 @@ const ChessBoardInner: React.FC<ChessBoardProps> = React.memo(({
               <div className="w-full h-full absolute inset-0 animate-[flash_3s_ease-out_infinite] bg-white/20 opacity-0" />
               {/* Rain lines */}
               <div className="w-full h-full relative overflow-hidden">
-                {[...Array(12)].map((_, i) => (
-                  <div key={i} className="absolute w-[1px] h-12 bg-white/40 animate-rain" style={{ left: `${Math.random() * 100}%`, animationDuration: `${0.3 + Math.random() * 0.2}s`, animationDelay: `${Math.random() * 0.5}s` }} />
+                {STATIC_RAIN_DROPS.map((drop) => (
+                  <div
+                    key={drop.id}
+                    className="absolute w-[1px] h-12 bg-white/40 animate-rain"
+                    style={{
+                      left: drop.left,
+                      animationDuration: drop.duration,
+                      animationDelay: drop.delay
+                    }}
+                  />
                 ))}
               </div>
             </div>
@@ -1222,14 +1231,14 @@ const ChessBoardInner: React.FC<ChessBoardProps> = React.memo(({
       {draggingSquare && (
         <div
           ref={dragPieceRef}
-          className="fixed pointer-events-none z-50 w-16 h-16 scale-110 top-0 left-0 chess-drag-piece chess-board-piece"
-          data-piece-color={game.get(draggingSquare)?.color}
+          className="fixed pointer-events-none z-50 w-16 h-16 scale-110 top-0 left-0 chess-drag-piece chess-board-piece will-change-transform"
+          data-piece-color={boardPiecesMap.get(draggingSquare)?.color}
           style={{
             transform: `translate3d(${dragPosRef.current.x - 32}px, ${dragPosRef.current.y - 32}px, 0px)`
           }}
         >
           {(() => {
-            const p = game.get(draggingSquare);
+            const p = boardPiecesMap.get(draggingSquare);
             if (!p) return null;
             return (
               <ChessPiece

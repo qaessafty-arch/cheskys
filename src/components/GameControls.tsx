@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { RotateCw, Undo2, Redo2, Flag, Volume2, VolumeX, Sparkles, PlusCircle, Compass } from 'lucide-react';
+import { RotateCw, Undo2, Redo2, Flag, Volume2, VolumeX, Sparkles, PlusCircle, Compass, Keyboard } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { GlassButton } from './GlassButton';
 
@@ -17,6 +17,7 @@ interface GameControlsProps {
   canRedo?: boolean;
   isAiMode: boolean;
   onOpenAnalysis?: () => void;
+  onOpenShortcuts?: () => void;
 }
 
 export const GameControls: React.FC<GameControlsProps> = ({
@@ -31,7 +32,8 @@ export const GameControls: React.FC<GameControlsProps> = ({
   canUndo,
   canRedo = false,
   isAiMode,
-  onOpenAnalysis
+  onOpenAnalysis,
+  onOpenShortcuts
 }) => {
   const { t } = useTranslation();
 
@@ -57,7 +59,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
       initial="hidden"
       animate="visible"
       variants={containerVariants}
-      className="grid grid-cols-4 sm:grid-cols-7 gap-2 p-3 bg-[var(--glass-panel)] backdrop-blur-xl rounded-[2rem] border border-[var(--glass-border)] shadow-2xl"
+      className={`grid ${onOpenShortcuts ? 'grid-cols-4 sm:grid-cols-8' : 'grid-cols-4 sm:grid-cols-7'} gap-2 p-3 bg-[var(--glass-panel)] backdrop-blur-xl rounded-[2rem] border border-[var(--glass-border)] shadow-2xl`}
     >
       <motion.div variants={itemVariants} className="h-full">
         <GlassButton
@@ -66,6 +68,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
           variant="primary"
           className="flex-col w-full h-full !rounded-2xl !p-3 shadow-[0_0_20px_rgba(245,158,11,0.2)]"
           ariaLabel="Start a new chess match"
+          title="New Game (Hotkey: N)"
         >
           <PlusCircle className="w-4 h-4" />
           <span className="text-[10px] font-black uppercase tracking-tighter">New</span>
@@ -79,6 +82,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
           variant="default"
           className="flex-col w-full h-full !rounded-2xl !p-3"
           ariaLabel="Flip board orientation"
+          title="Flip Board Orientation (Hotkey: F)"
         >
           <RotateCw className="w-4 h-4" />
           <span className="text-[10px] font-black uppercase tracking-tighter">Flip</span>
@@ -93,6 +97,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
           variant="default"
           className="flex-col w-full h-full !rounded-2xl !p-3"
           ariaLabel="Take back last move"
+          title="Undo Move (Hotkey: U or Ctrl+Z)"
         >
           <Undo2 className="w-4 h-4" />
           <span className="text-[10px] font-black uppercase tracking-tighter">Undo</span>
@@ -107,6 +112,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
           variant="default"
           className="flex-col w-full h-full !rounded-2xl !p-3"
           ariaLabel="Redo move"
+          title="Redo Move (Hotkey: Y or Ctrl+Y)"
         >
           <Redo2 className="w-4 h-4" />
           <span className="text-[10px] font-black uppercase tracking-tighter">Redo</span>
@@ -120,6 +126,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
           variant="secondary"
           className="flex-col w-full h-full !rounded-2xl !p-3 shadow-lg"
           ariaLabel="Request engine tactical hint"
+          title="Tactical Hint (Hotkey: H)"
         >
           <Sparkles className="w-4 h-4" />
           <span className="text-[10px] font-black uppercase tracking-tighter">Hint</span>
@@ -133,6 +140,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
           variant={soundEnabled ? "secondary" : "default"}
           className="flex-col w-full h-full !rounded-2xl !p-3"
           ariaLabel={soundEnabled ? 'Mute audio' : 'Enable audio'}
+          title="Toggle Sound (Hotkey: S or M)"
         >
           {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 opacity-40" />}
           <span className="text-[10px] font-black uppercase tracking-tighter">{soundEnabled ? 'On' : 'Off'}</span>
@@ -146,11 +154,28 @@ export const GameControls: React.FC<GameControlsProps> = ({
           variant="red"
           className="flex-col w-full h-full !rounded-2xl !p-3"
           ariaLabel="Resign current match"
+          title="Resign Match (Hotkey: Shift + R)"
         >
           <Flag className="w-4 h-4" />
           <span className="text-[10px] font-black uppercase tracking-tighter">Resign</span>
         </GlassButton>
       </motion.div>
+
+      {onOpenShortcuts && (
+        <motion.div variants={itemVariants} className="h-full">
+          <GlassButton
+            id="btn-shortcuts-dialog"
+            onClick={onOpenShortcuts}
+            variant="default"
+            className="flex-col w-full h-full !rounded-2xl !p-3"
+            ariaLabel="View keyboard shortcuts guide"
+            title="Keyboard Shortcuts (Hotkey: ?)"
+          >
+            <Keyboard className="w-4 h-4" />
+            <span className="text-[10px] font-black uppercase tracking-tighter">Keys</span>
+          </GlassButton>
+        </motion.div>
+      )}
     </motion.div>
   );
 };

@@ -11,6 +11,7 @@ interface GlassButtonProps {
   type?: 'button' | 'submit' | 'reset';
   id?: string;
   ariaLabel?: string;
+  title?: string;
 }
 
 export const GlassButton: React.FC<GlassButtonProps> = ({ 
@@ -22,7 +23,8 @@ export const GlassButton: React.FC<GlassButtonProps> = ({
   size = 'md',
   type = 'button',
   id,
-  ariaLabel
+  ariaLabel,
+  title
 }) => {
   const variants = {
     primary: 'border-[var(--secondary-accent)]/30 hover:border-[var(--secondary-accent)]/60 hover:bg-[var(--secondary-accent)]/10 text-[var(--secondary-accent)]',
@@ -43,6 +45,7 @@ export const GlassButton: React.FC<GlassButtonProps> = ({
       id={id}
       type={type}
       aria-label={ariaLabel}
+      title={title}
       whileHover={!disabled ? { 
         scale: 1.02, 
         translateY: -2,

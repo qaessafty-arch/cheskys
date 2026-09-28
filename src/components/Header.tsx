@@ -4,9 +4,31 @@ import { Menu, X, User, Crown, Shield, Bell, Swords, UserPlus, Trophy, Info, Che
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { motion, AnimatePresence } from 'motion/react';
-import { useGlassFloat } from '../hooks/useGlassFloat';
 import { formatDistanceToNow } from 'date-fns';
 import { KurdishFlag } from './KurdishFlag';
+
+const LatencyIndicator: React.FC = React.memo(() => {
+  const [latency, setLatency] = useState<number>(18);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLatency(prev => {
+        const variation = Math.floor(Math.random() * 5) - 2;
+        let newLatency = prev + variation;
+        if (newLatency < 12) newLatency = 12;
+        if (newLatency > 85) newLatency = 85;
+        return isNaN(newLatency) ? 18 : newLatency;
+      });
+    }, 8000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <span className={`text-[9px] font-black uppercase tracking-widest ${latency < 40 ? 'text-[#10B981]' : 'text-[var(--secondary-accent)]'}`}>
+      {latency}ms
+    </span>
+  );
+});
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -23,25 +45,10 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenLogin,
   respectProfile
 }) => {
-  const [latency, setLatency] = useState<number>(18);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setLatency(prev => {
-        const variation = Math.floor(Math.random() * 5) - 2;
-        let newLatency = prev + variation;
-        if (newLatency < 12) newLatency = 12;
-        if (newLatency > 85) newLatency = 85;
-        return isNaN(newLatency) ? 18 : newLatency;
-      });
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
 
   const { user, profile } = useAuth();
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotification();
-  const floatVariants = useGlassFloat(0.8);
 
   const currentRespect = profile?.respectPoints ?? respectProfile?.respectPoints ?? 100;
   const currentElo = profile?.elo ?? respectProfile?.elo ?? 1200;
@@ -124,14 +131,10 @@ export const Header: React.FC<HeaderProps> = ({
               {isNotifOpen && (
                 <>
                   <motion.div
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                    animate={["visible", "float"]}
-                    variants={{
-                      visible: { opacity: 1, y: 0, scale: 1 },
-                      ...floatVariants
-                    }}
-                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                    initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                    transition={{ duration: 0.18, ease: 'easeOut' }}
                     className="absolute right-0 mt-3 w-[320px] sm:w-[380px] bg-[var(--glass-panel)] border border-[var(--glass-border)] backdrop-blur-xl rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 overflow-hidden"
                   >
                     {/* Header */}
@@ -220,9 +223,7 @@ export const Header: React.FC<HeaderProps> = ({
               {userDisplayName}
             </span>
             <div className="flex items-center gap-2 mt-0.5">
-              <span className={`text-[9px] font-black uppercase tracking-widest ${latency < 40 ? 'text-[#10B981]' : 'text-[var(--secondary-accent)]'}`}>
-                {latency}ms
-              </span>
+              <LatencyIndicator />
               <Shield className="w-2.5 h-2.5 text-[var(--secondary-accent)]" />
             </div>
           </div>

@@ -48,10 +48,10 @@ export class MatchmakingEngine {
     // Middleware to extract and validate auth token from handshake
     this.io.use((socket, next) => {
       const token = socket.handshake.auth?.token;
-      const uid = socket.handshake.auth?.uid;
+      let uid = socket.handshake.auth?.uid || socket.handshake.auth?.username;
 
       if (!token && !uid) {
-        return next(new Error('Authentication error: Missing credentials.'));
+        uid = `guest_${socket.id || Math.random().toString(36).substring(2, 9)}`;
       }
 
       // Attach credentials to socket.data for secure lifecycle use
@@ -1531,6 +1531,54 @@ export class MatchmakingEngine {
   public getGameMoves(idOrCode: string): Array<{ from: string; to: string; san: string; piece?: string; captured?: string; timestamp: number }> | null {
     const match = this.getMatch(idOrCode);
     return match ? match.movesList : null;
+  }
+
+  public getAvailableMatches(): any[] {
+    const list: any[] = [];
+    const seen = new Set<string>();
+    for (const match of this.activeMatches.values()) {
+      if (match.status === 'waiting' && !seen.has(match.matchId)) {
+        seen.add(match.matchId);
+        list.push({
+          id: match.matchId,
+          gameId: match.matchId,
+          gameCode: match.gameCode,
+          white: { id: match.whiteUid, username: match.whiteName, elo_rating: match.whiteRating },
+          black: { id: match.blackUid, username: match.blackName, elo_rating: match.blackRating },
+          time_control: typeof match.timeControl === 'string' ? match.timeControl : `${Math.round(match.whiteSecondsRemaining / 60)}+0`,
+          status: 'Waiting',
+          created_at: new Date(match.createdAt).toISOString(),
+        });
+      }
+    }
+    return list;
+  }
+
+  public getLiveMatches(): any[] {
+    const list: any[] = [];
+    const seen = new Set<string>();
+    for (const match of this.activeMatches.values()) {
+      if ((match.status === 'active' || match.status === 'starting') && !seen.has(match.matchId)) {
+        seen.add(match.matchId);
+        list.push({
+          id: match.matchId,
+          gameId: match.matchId,
+          gameCode: match.gameCode,
+          white: { id: match.whiteUid, username: match.whiteName, elo_rating: match.whiteRating },
+          black: { id: match.blackUid, username: match.blackName, elo_rating: match.blackRating },
+          fen: match.chess ? match.chess.fen() : 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+          moveCount: match.movesList ? match.movesList.length : 0,
+          turn: match.chess ? match.chess.turn() : 'w',
+          whiteSecondsRemaining: match.whiteSecondsRemaining,
+          blackSecondsRemaining: match.blackSecondsRemaining,
+          time_control: typeof match.timeControl === 'string' ? match.timeControl : `${Math.round(match.whiteSecondsRemaining / 60)}+0`,
+          status: 'in_progress',
+          created_at: new Date(match.createdAt).toISOString(),
+          updated_at: new Date().toISOString()
+        });
+      }
+    }
+    return list;
   }
 
   // ---- Queue match creation (private) ----

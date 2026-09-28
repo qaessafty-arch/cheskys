@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { TimeControl, OnlineMatchPlayer } from '../types/chess';
 import { TIME_CONTROLS } from '../utils/chessEngine';
-import { joinWorldwideMatchmaking, MatchmakingMode } from '../services/onlineMatchService';
+import { joinWorldwideMatchmaking, MatchmakingMode, listenToWorldwideQueueCount } from '../services/onlineMatchService';
 import { useAuth } from '../context/AuthContext';
 import { 
   Globe, 
@@ -18,7 +18,10 @@ import {
   CheckCircle2,
   Trophy,
   UserCheck,
-  Flame
+  Flame,
+  Share2,
+  Copy,
+  Check
 } from 'lucide-react';
 
 interface WorldwideMatchModalProps {
@@ -34,14 +37,34 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
 }) => {
   const { user, profile } = useAuth();
   const [selectedTimeControl, setSelectedTimeControl] = useState<TimeControl>(TIME_CONTROLS[5]); // Default Rapid 10 min
-  const [matchmakingMode, setMatchmakingMode] = useState<MatchmakingMode>('human_first');
+  const matchmakingMode: MatchmakingMode = 'human_strict';
   const [isSearching, setIsSearching] = useState(false);
   const [searchSeconds, setSearchSeconds] = useState(0);
   const [searchStatus, setSearchStatus] = useState('Initializing search...');
   const [matchedOpponent, setMatchedOpponent] = useState<{ player: OnlineMatchPlayer; isBot: boolean } | null>(null);
+  const [liveQueueCount, setLiveQueueCount] = useState<number>(0);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   const cancelRef = useRef<(() => void) | null>(null);
-  const pairWithBotRef = useRef<(() => void) | null>(null);
+
+  // Subscribe to real-time live queue counter
+  useEffect(() => {
+    if (!isOpen) return;
+    const unsub = listenToWorldwideQueueCount(count => {
+      setLiveQueueCount(count);
+    });
+    return () => {
+      unsub();
+    };
+  }, [isOpen]);
+
+  const handleCopyInviteLink = () => {
+    const origin = window.location.origin;
+    const inviteUrl = `${origin}?worldwide=true`;
+    navigator.clipboard.writeText(inviteUrl);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2500);
+  };
 
   // Quick match formats presets
   const MATCHMAKING_PRESETS = [
@@ -116,11 +139,7 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
     const tc = presetTimeControl || selectedTimeControl;
     setSelectedTimeControl(tc);
     setIsSearching(true);
-    setSearchStatus(
-      matchmakingMode === 'instant_bot'
-        ? 'Connecting to Worldwide Grandmaster AI...'
-        : 'Searching the worldwide queue for live opponents…'
-    );
+    setSearchStatus('Searching the worldwide queue for real live opponents…');
     setMatchedOpponent(null);
 
     const myPlayer: OnlineMatchPlayer = {
@@ -134,16 +153,12 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
       avatar: profile?.photoURL || user?.photoURL || `https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${encodeURIComponent(profile?.uid || 'guest')}&backgroundColor=1b2416`
     };
 
-    const { cancel, pairWithBotNow } = await joinWorldwideMatchmaking(
+    const { cancel } = await joinWorldwideMatchmaking(
       myPlayer,
       tc,
       (matchId, opponent, isBot) => {
         setMatchedOpponent({ player: opponent, isBot });
-        setSearchStatus(
-          isBot
-            ? `Paired with Worldwide Challenger ${opponent.displayName} (AI)!`
-            : `Live Human Opponent Found: ${opponent.displayName}!`
-        );
+        setSearchStatus(`Real Live Opponent Found: ${opponent.displayName}!`);
         setTimeout(() => {
           setIsSearching(false);
           onMatchFound(matchId);
@@ -153,12 +168,10 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
       statusText => {
         setSearchStatus(statusText);
       },
-      matchmakingMode,
-      20 // 20s search before bot fallback if in human_first mode
+      'human_strict'
     );
 
     cancelRef.current = cancel;
-    pairWithBotRef.current = pairWithBotNow;
   };
 
   const handleCancelSearch = () => {
@@ -168,12 +181,6 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
     }
     setIsSearching(false);
     setMatchedOpponent(null);
-  };
-
-  const handleForcePlayBot = () => {
-    if (pairWithBotRef.current) {
-      pairWithBotRef.current();
-    }
   };
 
   const formatSearchTime = (totalSecs: number) => {
@@ -203,33 +210,50 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
 
         {/* Header Title */}
         <div className="flex items-center gap-4 mb-6 pb-6 border-b border-[#1F293D]">
-          <div className="w-12 h-12 rounded-2xl bg-[#0B0F19] border border-[#F59E0B] flex items-center justify-center text-[#F59E0B] shadow-2xl">
-            <Globe className={`w-6 h-6 ${isSearching ? 'animate-spin [animation-duration:3s]' : ''}`} />
+          <div className="w-12 h-12 rounded-2xl bg-[#0B0F19] border border-[#10B981] flex items-center justify-center text-[#10B981] shadow-2xl">
+            <Globe className={`w-6 h-6 ${isSearching ? 'animate-spin [animation-duration:3s]' : 'text-emerald-400'}`} />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight uppercase">
-                Worldwide Matchmaking
+                Worldwide Live Arena
               </h2>
-              <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/30 animate-pulse">
-                ● LIVE GRID
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/40 animate-pulse flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+                REAL PLAYERS ONLY
               </span>
             </div>
             <p className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.2em] opacity-60">
-              Global Battlefield Entry
+              Live Human vs Human Battlefield • No Bots
             </p>
+          </div>
+        </div>
+
+        {/* Live Queue Pulse Banner */}
+        <div className="mb-4 p-3 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+            </span>
+            <span className="font-black text-emerald-300">Worldwide Live Queue</span>
+          </div>
+          <div className="text-[11px] font-mono text-emerald-200/90">
+            {liveQueueCount > 0
+              ? `${liveQueueCount} player${liveQueueCount === 1 ? '' : 's'} waiting in queue`
+              : 'Queue active • Searching for live players'}
           </div>
         </div>
 
         {/* SEARCHING RADAR SCREEN */}
         {isSearching ? (
-          <div className="my-6 p-6 rounded-3xl bg-[#161c12]/90 border border-[#F5C453]/40 flex flex-col items-center justify-center text-center relative overflow-hidden shadow-inner">
+          <div className="my-6 p-6 rounded-3xl bg-[#161c12]/90 border border-emerald-500/40 flex flex-col items-center justify-center text-center relative overflow-hidden shadow-inner">
             {/* Animated Radar Pulse Rings */}
             <div className="relative w-32 h-32 my-3 flex items-center justify-center">
-              <div className="absolute inset-0 rounded-full border border-[#F5C453]/20 animate-ping opacity-75" />
-              <div className="absolute inset-3 rounded-full border-2 border-emerald-500/30 animate-pulse" />
-              <div className="absolute inset-7 rounded-full bg-gradient-to-tr from-[#52673A]/40 to-[#8C2425]/40 border border-[#F5C453]/40 flex items-center justify-center">
-                <Globe className="w-9 h-9 text-[#F5C453] animate-spin [animation-duration:8s]" />
+              <div className="absolute inset-0 rounded-full border border-emerald-400/30 animate-ping opacity-75" />
+              <div className="absolute inset-3 rounded-full border-2 border-emerald-500/40 animate-pulse" />
+              <div className="absolute inset-7 rounded-full bg-gradient-to-tr from-[#52673A]/40 to-[#8C2425]/40 border border-emerald-400/40 flex items-center justify-center">
+                <Globe className="w-9 h-9 text-emerald-400 animate-spin [animation-duration:8s]" />
               </div>
               <div className="absolute -top-1 right-2">
                 <Radio className="w-4 h-4 text-emerald-400 animate-bounce" />
@@ -249,15 +273,9 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
                     <div className="text-sm font-bold text-white flex items-center gap-1.5">
                       <span>{matchedOpponent.player.displayName}</span>
                       <span>{matchedOpponent.player.flag}</span>
-                      {matchedOpponent.isBot ? (
-                        <span className="text-[10px] bg-amber-500/30 text-amber-300 px-1.5 py-0.2 rounded border border-amber-500/40">
-                          ENGINE BOT
-                        </span>
-                      ) : (
-                        <span className="text-[10px] bg-emerald-500/30 text-emerald-300 px-1.5 py-0.2 rounded border border-emerald-500/40">
-                          REAL HUMAN
-                        </span>
-                      )}
+                      <span className="text-[10px] bg-emerald-500/30 text-emerald-300 px-1.5 py-0.2 rounded border border-emerald-500/40 font-black">
+                        REAL LIVE HUMAN
+                      </span>
                     </div>
                     <div className="text-xs text-emerald-300/80 font-mono">
                       {matchedOpponent.player.elo} Elo • {matchedOpponent.player.honorRank}
@@ -284,107 +302,54 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
                     {selectedTimeControl.name}
                   </span>
                   <span>•</span>
-                  <span className="text-sky-300">
-                    {matchmakingMode === 'human_strict' ? 'Human Only' : matchmakingMode === 'instant_bot' ? 'Bot Duel' : 'Human Priority'}
+                  <span className="text-sky-300 font-black">
+                    Live Real Players
                   </span>
                 </div>
 
-                {/* Real-time human search info */}
-                {matchmakingMode === 'human_first' && searchSeconds < 20 && (
-                  <p className="text-[11px] text-[#DFD0B0]/60 max-w-xs mt-1">
-                    Searching for live players… if nobody joins within {Math.max(0, 20 - searchSeconds)}s you will be paired with a rated engine challenger.
-                  </p>
-                )}
+                <p className="text-[11px] text-emerald-300/70 max-w-xs mt-1">
+                  Searching for a live human opponent globally… Bots are strictly forbidden in this mode.
+                </p>
               </div>
             )}
 
             {/* Action Buttons while searching */}
-            <div className="mt-4 w-full flex items-center justify-center gap-3">
+            <div className="mt-4 w-full flex items-center justify-center gap-3 flex-wrap">
               <button
                 onClick={handleCancelSearch}
-                className="px-5 py-2 rounded-xl bg-red-950/60 hover:bg-red-900/80 border border-red-500/40 text-red-200 text-xs font-black transition-all hover:scale-105 cursor-pointer shadow-md"
+                className="px-5 py-2.5 rounded-xl bg-red-950/60 hover:bg-red-900/80 border border-red-500/40 text-red-200 text-xs font-black transition-all hover:scale-105 cursor-pointer shadow-md"
               >
                 Cancel Search
               </button>
 
-              {matchmakingMode !== 'instant_bot' && !matchedOpponent && (
-                <button
-                  onClick={handleForcePlayBot}
-                  className="px-5 py-2 rounded-xl bg-[#52673A]/60 hover:bg-[#52673A] border border-[#F5C453]/40 text-[#F5C453] text-xs font-bold transition-all hover:scale-105 cursor-pointer shadow-md flex items-center gap-1.5"
-                  title="Skip the queue and play a rated engine challenger now"
-                >
-                  <Bot className="w-3.5 h-3.5" />
-                  <span>Play Bot Now</span>
-                </button>
-              )}
+              <button
+                onClick={handleCopyInviteLink}
+                className="px-4 py-2.5 rounded-xl bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-500/40 text-emerald-200 text-xs font-bold transition-all hover:scale-105 cursor-pointer shadow-md flex items-center gap-1.5"
+                title="Copy direct invite link to send to a friend or live opponent"
+              >
+                {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-emerald-400" />}
+                <span>{copiedLink ? 'Invite Link Copied!' : 'Share Live Match Link'}</span>
+              </button>
             </div>
           </div>
         ) : (
           /* MATCHMAKING PREFERENCE & FORMAT SELECTION */
           <div className="space-y-4 my-3">
-            {/* Matchmaking Mode Switcher */}
-            <div>
-              <label className="text-xs font-bold text-[#DFD0B0]/80 uppercase tracking-wider block font-ui mb-1.5">
-                1. Opponent Match Preference
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  onClick={() => setMatchmakingMode('human_first')}
-                  className={`p-2.5 rounded-2xl border transition-all text-center cursor-pointer ${
-                    matchmakingMode === 'human_first'
-                      ? 'bg-[#52673A]/60 border-[#F5C453] text-white shadow-md shadow-[#F5C453]/20 ring-1 ring-[#F5C453]/60'
-                      : 'bg-[#1a2315]/50 border-white/10 text-[#DFD0B0]/70 hover:bg-[#1a2315]'
-                  }`}
-                >
-                  <div className="flex items-center justify-center gap-1.5 text-xs font-black mb-0.5">
-                    <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Humans first</span>
-                  </div>
-                  <div className="text-[10px] text-[#DFD0B0]/60 leading-tight">
-                    Human queue (bot fallback after 20s)
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => setMatchmakingMode('human_strict')}
-                  className={`p-2.5 rounded-2xl border transition-all text-center cursor-pointer ${
-                    matchmakingMode === 'human_strict'
-                      ? 'bg-[#52673A]/60 border-[#F5C453] text-white shadow-md shadow-[#F5C453]/20 ring-1 ring-[#F5C453]/60'
-                      : 'bg-[#1a2315]/50 border-white/10 text-[#DFD0B0]/70 hover:bg-[#1a2315]'
-                  }`}
-                >
-                  <div className="flex items-center justify-center gap-1.5 text-xs font-black mb-0.5">
-                    <Users className="w-3.5 h-3.5 text-sky-400" />
-                    <span>Humans Only</span>
-                  </div>
-                  <div className="text-[10px] text-[#DFD0B0]/60 leading-tight">
-                    Humans only — never pair with an engine
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => setMatchmakingMode('instant_bot')}
-                  className={`p-2.5 rounded-2xl border transition-all text-center cursor-pointer ${
-                    matchmakingMode === 'instant_bot'
-                      ? 'bg-[#52673A]/60 border-[#F5C453] text-white shadow-md shadow-[#F5C453]/20 ring-1 ring-[#F5C453]/60'
-                      : 'bg-[#1a2315]/50 border-white/10 text-[#DFD0B0]/70 hover:bg-[#1a2315]'
-                  }`}
-                >
-                  <div className="flex items-center justify-center gap-1.5 text-xs font-black mb-0.5">
-                    <Bot className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Grandmaster AI</span>
-                  </div>
-                  <div className="text-[10px] text-[#DFD0B0]/60 leading-tight">
-                    Instant battle with worldwide bot
-                  </div>
-                </button>
+            {/* Real Live Players Guarantee Banner */}
+            <div className="p-3.5 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 shadow-lg">
+              <div className="flex items-center gap-2 text-xs font-black text-emerald-300 uppercase tracking-wide mb-1">
+                <Shield className="w-4 h-4 text-emerald-400" />
+                <span>Worldwide Mode: 100% Real Live Players Only</span>
               </div>
+              <p className="text-[11px] text-emerald-200/80 leading-relaxed">
+                Connect and play live chess against verified human opponents from across the globe in real time. AI bots, engine fallback, and simulated players are strictly prohibited.
+              </p>
             </div>
 
             {/* Time Control Format */}
             <div>
               <label className="text-xs font-bold text-[#DFD0B0]/80 uppercase tracking-wider block font-ui mb-1.5">
-                2. Choose Time Control Format
+                Choose Time Control Format
               </label>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -430,9 +395,7 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
               >
                 <Globe className="w-5 h-5 text-[#F5C453] animate-pulse" />
                 <span>
-                  {matchmakingMode === 'instant_bot'
-                    ? `Play engine challenger (${selectedTimeControl.name})`
-                    : `Find live opponent (${selectedTimeControl.name})`}
+                  Find Real Live Opponent ({selectedTimeControl.name})
                 </span>
               </button>
             </div>

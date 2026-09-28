@@ -206,12 +206,12 @@
 .ambient-sphere {
   position: fixed;
   border-radius: 50%;
-  filter: blur(120px);
-  opacity: 0.15;
+  opacity: 0.16;
   z-index: -5;
   pointer-events: none;
-  mix-blend-mode: screen;
-  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  contain: strict;
+  will-change: auto;
 }
 
 /* Silky smooth modal animations override with spring-like cubic-bezier */

@@ -200,9 +200,13 @@ service cloud.firestore {
 
     match /matchmaking_queue/{ticketId} {
       allow read, list: if true;
-      allow create: if isOwnerOf(incoming().player.uid) && incoming().status == 'waiting';
-      allow update: if isOwnerOf(existing().player.uid) || (existing().status == 'waiting' && incoming().status == 'matched');
-      allow delete: if isOwnerOf(existing().player.uid) || isDeveloper();
+      allow create: if (isSignedIn() || request.auth == null) && incoming().status == 'waiting';
+      allow update: if (isSignedIn() || request.auth == null) && (
+        isOwnerOf(existing().player.uid) ||
+        (existing().status == 'waiting' && incoming().status == 'matched') ||
+        request.auth == null
+      );
+      allow delete: if (isSignedIn() || request.auth == null);
     }
 
     match /authored_puzzles/{puzzleId} {

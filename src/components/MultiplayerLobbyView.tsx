@@ -18,6 +18,7 @@ import {
   generateGameRoomCode,
   listenToUserCreatedRooms,
   cancelUserCreatedRoom,
+  listenToActiveLiveMatches,
   UserCreatedRoomItem
 } from '../services/onlineMatchService';
 import { 
@@ -49,7 +50,11 @@ import {
   DoorOpen,
   Trash2,
   ExternalLink,
-  X
+  X,
+  Eye,
+  Radio,
+  Flame,
+  Activity
 } from 'lucide-react';
 import { Tournament, TournamentPlayer } from '../types/chess';
 import { ModernWaitingRoom } from './multiplayer/ModernWaitingRoom';
@@ -58,17 +63,43 @@ import { ModernGameCreationModal } from './multiplayer/ModernGameCreationModal';
 interface MultiplayerLobbyViewProps {
   settings: AppSettings;
   onStartMatch: (matchId: string) => void;
+  onSpectateMatch?: (matchId: string) => void;
   onOpenWorldwideModal?: () => void;
 }
 
 export const MultiplayerLobbyView: React.FC<MultiplayerLobbyViewProps> = ({
   settings,
   onStartMatch,
+  onSpectateMatch,
   onOpenWorldwideModal
 }) => {
   const { profile, user } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'quick' | 'create' | 'join' | 'my_rooms' | 'open_challenges' | 'tournaments'>('quick');
+  const [activeTab, setActiveTab] = useState<'quick' | 'create' | 'join' | 'my_rooms' | 'open_challenges' | 'spectate' | 'tournaments'>('quick');
+
+  // Spectate Active Matches state
+  const [activeLiveMatches, setActiveLiveMatches] = useState<OnlineMatchSession[]>([]);
+  const [spectateSearchQuery, setSpectateSearchQuery] = useState('');
+  const [spectateCategoryFilter, setSpectateCategoryFilter] = useState<'all' | 'rapid' | 'blitz' | 'gm'>('all');
+  const [isRefreshingSpectate, setIsRefreshingSpectate] = useState(false);
+
+  useEffect(() => {
+    const unsub = listenToActiveLiveMatches(matches => {
+      setActiveLiveMatches(matches);
+    });
+    return () => {
+      if (unsub) unsub();
+    };
+  }, []);
+
+  const handleSpectate = useCallback((matchId: string) => {
+    soundManager.playCapture();
+    if (onSpectateMatch) {
+      onSpectateMatch(matchId);
+    } else {
+      onStartMatch(matchId);
+    }
+  }, [onSpectateMatch, onStartMatch]);
 
   // Quick matchmaking
   const [isSearching, setIsSearching] = useState(false);
@@ -341,8 +372,7 @@ export const MultiplayerLobbyView: React.FC<MultiplayerLobbyViewProps> = ({
           onStartMatch(matchId);
         },
         setSearchStatus,
-        'human_first',
-        20
+        'human_strict'
       );
       cancelSearchRef.current = cancel;
       pairWithBotRef.current = pairWithBotNow;
@@ -580,6 +610,28 @@ export const MultiplayerLobbyView: React.FC<MultiplayerLobbyViewProps> = ({
           >
             <Globe className="w-3.5 h-3.5 text-[#F5C453]" />
             <span>Open Astral Planes ({openMatches.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('spectate')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'spectate'
+                ? 'bg-emerald-600/90 text-white shadow-md border border-emerald-400/50'
+                : 'text-[#DFD0B0]/70 hover:text-white'
+            }`}
+          >
+            <div className="relative flex items-center justify-center">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping absolute" />
+              <Eye className="w-3.5 h-3.5 text-emerald-300 relative" />
+            </div>
+            <span>Spectate Live</span>
+            {activeLiveMatches.length > 0 && (
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
+                activeTab === 'spectate' ? 'bg-emerald-400 text-black' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+              }`}>
+                {activeLiveMatches.length}
+              </span>
+            )}
           </button>
           
           <button

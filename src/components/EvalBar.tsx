@@ -5,7 +5,7 @@ interface EvalBarProps {
   isFlipped: boolean;
 }
 
-export const EvalBar: React.FC<EvalBarProps> = ({ score, isFlipped }) => {
+export const EvalBar: React.FC<EvalBarProps> = React.memo(({ score, isFlipped }) => {
   // Convert evaluation score to percentage using a smooth sigmoid compression
   // A score of +5 pawns is ~85% white, +10 pawns is ~96% white
   const isMate = Math.abs(score) > 900;
@@ -63,4 +63,4 @@ export const EvalBar: React.FC<EvalBarProps> = ({ score, isFlipped }) => {
       <div className="absolute top-1/2 left-0 right-0 h-[2px] bg-gradient-to-r from-[#FFD700] to-[#D32F2F] transform -translate-y-1/2 pointer-events-none z-10 opacity-100 shadow-[0_0_10px_rgba(255,215,0,0.5)]" />
     </div>
   );
-};
+});

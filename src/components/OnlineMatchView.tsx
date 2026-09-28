@@ -38,6 +38,9 @@ import {
   Flag,
   Handshake,
   RotateCcw,
+  RotateCw,
+  LogOut,
+  Eye,
   X,
   Copy,
   Check,
@@ -67,13 +70,15 @@ interface OnlineMatchViewProps {
   settings: AppSettings;
   onClose: () => void;
   onOpenChatWithOpponent?: (opponentUid: string) => void;
+  isSpectatorMode?: boolean;
 }
 
 export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
   matchId,
   settings,
   onClose,
-  onOpenChatWithOpponent
+  onOpenChatWithOpponent,
+  isSpectatorMode = false
 }) => {
   const { profile, user, updateRespectMetrics } = useAuth();
   const [session, setSession] = useState<OnlineMatchSession | null>(null);
@@ -192,11 +197,27 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
     (!session?.whitePlayer?.uid || session?.whitePlayer?.uid === 'guest_white' || session?.whitePlayer?.uid === myUid)
   );
 
-  const isMyTurn = isGameLive && (isSoloTest || currentTurn === myColor);
+  // Check if current user is an actual playing participant in this match
+  const isParticipant = Boolean(
+    (sessionWhiteId && sessionWhiteId === myUid) ||
+    (session?.whitePlayer?.uid && session.whitePlayer.uid === myUid) ||
+    (sessionBlackId && sessionBlackId === myUid) ||
+    (session?.blackPlayer?.uid && session.blackPlayer.uid === myUid) ||
+    (session?.hostId && session.hostId === myUid) ||
+    (session?.guestId && session.guestId === myUid)
+  );
+
+  const isSpectator = Boolean(isSpectatorMode || (!isParticipant && !isSoloTest));
+
+  const isMyTurn = !isSpectator && isGameLive && (isSoloTest || currentTurn === myColor);
   const capturedMaterial = getCapturedMaterial(game);
 
-  const opponent = isWhitePlayer ? session?.blackPlayer : session?.whitePlayer;
-  const me = isWhitePlayer ? session?.whitePlayer : session?.blackPlayer;
+  const opponent = isSpectator
+    ? (manualFlipped ? session?.whitePlayer : session?.blackPlayer)
+    : (isWhitePlayer ? session?.blackPlayer : session?.whitePlayer);
+  const me = isSpectator
+    ? (manualFlipped ? session?.blackPlayer : session?.whitePlayer)
+    : (isWhitePlayer ? session?.whitePlayer : session?.blackPlayer);
 
   useEffect(() => {
     if (!matchId) return;
@@ -637,15 +658,15 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
   useEffect(() => {
     if (!isGameLive) return;
     const isDisconnectedBeforeFirstMove = (!session?.moves || session.moves.length === 0) && (!isOpponentPresent || socketStatus !== 'connected');
-    if (isDisconnectedBeforeFirstMove) return;
-    if (!session?.moves || session.moves.length === 0) return;
+    if (!isSpectator && isDisconnectedBeforeFirstMove) return;
+    if (!isSpectator && (!session?.moves || session.moves.length === 0)) return;
 
     const interval = setInterval(() => {
       if (session?.turn === 'w') setWhiteTime(prev => Math.max(0, prev - 1));
       else setBlackTime(prev => Math.max(0, prev - 1));
     }, 1000);
     return () => clearInterval(interval);
-  }, [isGameLive, session?.turn, isOpponentPresent, socketStatus]);
+  }, [isGameLive, session?.turn, isOpponentPresent, socketStatus, isSpectator]);
 
   useEffect(() => {
     if (!session || !isGameLive) return;
@@ -714,7 +735,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
   }, [session, isMyTurn, isWhitePlayer, myColor, whiteTime, blackTime, matchId]);
 
   const handleMakeMove = useCallback((from: string, to: string) => {
-      if (!isMyTurn || !isGameLive || isPendingMove) return;
+      if (isSpectator || !isMyTurn || !isGameLive || isPendingMove) return;
       const piece = game.get(from as Square);
       const isPawn = piece?.type === 'p';
       const isPromotion = isPawn && ((piece?.color === 'w' && to[1] === '8') || (piece?.color === 'b' && to[1] === '1'));
@@ -1074,19 +1095,44 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base sm:text-lg font-black text-white tracking-tight">
-                  Live Online Match
+                  {isSpectator ? 'Spectating Live Match' : 'Worldwide Live Match'}
                 </h2>
                 <span className="px-2 py-0.5 rounded-md bg-[#8C2425]/40 text-[#F5C453] text-[10px] font-black border border-[#F5C453]/40 uppercase">
                   {session?.timeControl?.name || 'Rapid'}
                 </span>
+                {isSpectator ? (
+                  <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-[10px] font-black border border-emerald-500/40 uppercase flex items-center gap-1 shadow-sm">
+                    <Eye className="w-3 h-3 text-emerald-400 animate-pulse" />
+                    Live Spectator
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-[10px] font-black border border-emerald-500/40 uppercase flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Real Live Player
+                  </span>
+                )}
               </div>
               <p className="text-xs text-[#DFD0B0]/70">
-                Battle for Peshmerga Grandmaster Honor & Respect Points
+                {isSpectator
+                  ? `${session?.whitePlayer?.displayName || 'White'} vs ${session?.blackPlayer?.displayName || 'Black'} • Live observer feed (read-only)`
+                  : 'Battle for Peshmerga Grandmaster Honor & Respect Points'}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
+            {isSpectator && (
+              <button
+                type="button"
+                onClick={() => setManualFlipped(prev => prev === null ? (isWhitePlayer ? true : false) : !prev)}
+                className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold flex items-center gap-1.5 border border-white/10 transition-colors cursor-pointer"
+                title="Flip Board Perspective"
+              >
+                <RotateCw className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="hidden sm:inline">Flip View</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={() => setActiveTab(activeTab === 'moves' ? 'chat' : 'moves')}
@@ -1121,8 +1167,8 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
               onClick={onClose}
               className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
             >
-              <X className="w-4 h-4" />
-              <span>Leave</span>
+              {isSpectator ? <LogOut className="w-4 h-4 text-rose-400" /> : <X className="w-4 h-4" />}
+              <span>{isSpectator ? 'Exit' : 'Leave'}</span>
             </button>
           </div>
         </div>
@@ -1138,14 +1184,38 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
 
             <div className="w-full max-w-[560px] mb-2 flex flex-col gap-1.5 relative">
               <ChessClock
-                timeSeconds={isWhitePlayer ? blackTime : whiteTime}
+                timeSeconds={
+                  isSpectator
+                    ? (manualFlipped ? whiteTime : blackTime)
+                    : (isWhitePlayer ? blackTime : whiteTime)
+                }
                 totalTimeSeconds={session?.timeControl?.initialSeconds || 600}
-                isActive={session?.turn !== myColor && isGameLive}
-                isWhite={!isWhitePlayer}
-                playerName={opponent?.displayName || 'Opponent'}
-                playerTitle={opponent?.honorRank}
-                avatar={opponent?.avatar || opponent?.photoURL || (isWhitePlayer ? '♚' : '♔')}
-                elo={opponent?.elo || 1200}
+                isActive={
+                  isSpectator
+                    ? (isGameLive && session?.turn === (manualFlipped ? 'w' : 'b'))
+                    : (session?.turn !== myColor && isGameLive)
+                }
+                isWhite={isSpectator ? Boolean(manualFlipped) : !isWhitePlayer}
+                playerName={
+                  isSpectator
+                    ? (manualFlipped ? session?.whitePlayer?.displayName || 'White' : session?.blackPlayer?.displayName || 'Black')
+                    : (opponent?.displayName || 'Opponent')
+                }
+                playerTitle={
+                  isSpectator
+                    ? (manualFlipped ? session?.whitePlayer?.honorRank : session?.blackPlayer?.honorRank)
+                    : opponent?.honorRank
+                }
+                avatar={
+                  isSpectator
+                    ? (manualFlipped ? session?.whitePlayer?.avatar || '♔' : session?.blackPlayer?.avatar || '♚')
+                    : (opponent?.avatar || opponent?.photoURL || (isWhitePlayer ? '♚' : '♔'))
+                }
+                elo={
+                  isSpectator
+                    ? (manualFlipped ? session?.whitePlayer?.elo || 1200 : session?.blackPlayer?.elo || 1200)
+                    : (opponent?.elo || 1200)
+                }
               />
               <div className="absolute top-0 left-12 z-20">
                 <AnimatePresence>
@@ -1292,7 +1362,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                 showLegalMoves={settings.showLegalMoves}
                 lastMove={lastMove}
                 onMove={handleMakeMove}
-                disabled={!isMyTurn || !isGameLive}
+                disabled={isSpectator || !isMyTurn || !isGameLive}
                 evalScore={evalScore}
                 showWeather={showWeather}
                 showTerritory={showTerritory}
@@ -1302,60 +1372,137 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
 
               <div className="mt-2.5 px-4 py-2 rounded-2xl bg-black/80 backdrop-blur-md border border-[#F5C453]/30 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs">
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#F5C453] animate-ping shrink-0" />
+                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${isSpectator ? 'bg-emerald-400 animate-ping' : 'bg-[#F5C453] animate-ping'}`} />
                   <span className="font-bold text-white truncate">
-                    {!isGameLive
-                      ? `Match ${session?.status?.toUpperCase() || 'CONNECTING'}`
-                      : isMyTurn
-                        ? 'Your Turn — Choose your move'
-                        : `${opponent?.displayName || 'Opponent'} is thinking...`}
+                    {isSpectator
+                      ? (!isGameLive
+                          ? `Match ${session?.status?.toUpperCase() || 'ENDED'}`
+                          : session?.turn === 'w'
+                            ? `${session?.whitePlayer?.displayName || 'White'} to Move`
+                            : `${session?.blackPlayer?.displayName || 'Black'} to Move`)
+                      : (!isGameLive
+                          ? `Match ${session?.status?.toUpperCase() || 'CONNECTING'}`
+                          : isMyTurn
+                            ? 'Your Turn — Choose your move'
+                            : `${opponent?.displayName || 'Opponent'} is thinking...`)}
                   </span>
                 </div>
                 <span className="text-[#DFD0B0]/70 font-mono text-[11px] whitespace-nowrap">
-                  You play as {isWhitePlayer ? 'White ⚪' : 'Black ⚫'}
+                  {isSpectator
+                    ? '👁️ Live Spectator (Read Only)'
+                    : `You play as ${isWhitePlayer ? 'White ⚪' : 'Black ⚫'}`}
                 </span>
               </div>
             </div>
 
-            <div className="w-full max-w-[560px] my-2">
-              <ModernFloatingControls
-                onResign={handleResign}
-                onOfferDraw={handleOfferDraw}
-                onClaimDraw={handleClaimDraw}
-                canClaimDraw={canClaimDraw}
-                is3dPerspective={is3dPerspective}
-                onToggle3dPerspective={() => setIs3dPerspective(!is3dPerspective)}
-                onFlipBoard={() => setManualFlipped(prev => prev === null ? isWhitePlayer : !prev)}
-                disabled={!isGameLive}
-              />
-            </div>
+            {isSpectator ? (
+              <div className="w-full max-w-[560px] my-2 p-3 rounded-2xl bg-white/[0.04] border border-emerald-500/30 flex items-center justify-between gap-2 shadow-lg backdrop-blur-md flex-wrap">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/40">
+                    <Eye className="w-4 h-4 animate-pulse" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-black text-emerald-300 flex items-center gap-1.5">
+                      <span>Spectator Mode Active</span>
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/30 border border-emerald-500/40 font-mono font-bold text-emerald-200">
+                        READ ONLY
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-[#DFD0B0]/70">
+                      Real-time live board sync • Moves cannot be made
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 ml-auto">
+                  <button
+                    onClick={() => setManualFlipped(prev => prev === null ? (isWhitePlayer ? true : false) : !prev)}
+                    className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold flex items-center gap-1.5 border border-white/10 transition-colors cursor-pointer"
+                    title="Flip Board Orientation"
+                  >
+                    <RotateCw className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Flip View</span>
+                  </button>
+                  <button
+                    onClick={onClose}
+                    className="px-3 py-1.5 rounded-xl bg-red-950/60 hover:bg-red-900/80 text-red-200 border border-red-500/40 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    title="Leave Spectator Mode"
+                  >
+                    <LogOut className="w-3.5 h-3.5 text-red-400" />
+                    <span>Exit</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="w-full max-w-[560px] my-2">
+                <ModernFloatingControls
+                  onResign={handleResign}
+                  onOfferDraw={handleOfferDraw}
+                  onClaimDraw={handleClaimDraw}
+                  canClaimDraw={canClaimDraw}
+                  is3dPerspective={is3dPerspective}
+                  onToggle3dPerspective={() => setIs3dPerspective(!is3dPerspective)}
+                  onFlipBoard={() => setManualFlipped(prev => prev === null ? isWhitePlayer : !prev)}
+                  disabled={!isGameLive}
+                />
+              </div>
+            )}
 
             <div className="w-full max-w-[560px] mt-2 flex flex-col gap-1.5 relative">
               <div className="px-2 flex items-center justify-between">
                 <CapturedPieces
-                  pieces={isWhitePlayer ? capturedMaterial.capturedByWhite : capturedMaterial.capturedByBlack}
+                  pieces={
+                    isSpectator
+                      ? (manualFlipped ? capturedMaterial.capturedByBlack : capturedMaterial.capturedByWhite)
+                      : (isWhitePlayer ? capturedMaterial.capturedByWhite : capturedMaterial.capturedByBlack)
+                  }
                   pieceTheme={settings.pieceTheme}
-                  colorOfCapturedPieces={isWhitePlayer ? 'b' : 'w'}
+                  colorOfCapturedPieces={isSpectator ? (manualFlipped ? 'w' : 'b') : (isWhitePlayer ? 'b' : 'w')}
                   materialAdvantage={
-                    isWhitePlayer
-                      ? capturedMaterial.materialDifference > 0
-                        ? capturedMaterial.materialDifference
-                        : 0
-                      : capturedMaterial.materialDifference < 0
-                        ? Math.abs(capturedMaterial.materialDifference)
-                        : 0
+                    isSpectator
+                      ? (capturedMaterial.materialDifference > 0 ? capturedMaterial.materialDifference : 0)
+                      : (isWhitePlayer
+                          ? capturedMaterial.materialDifference > 0
+                            ? capturedMaterial.materialDifference
+                            : 0
+                          : capturedMaterial.materialDifference < 0
+                            ? Math.abs(capturedMaterial.materialDifference)
+                            : 0)
                   }
                 />
               </div>
               <ChessClock
-                timeSeconds={isWhitePlayer ? whiteTime : blackTime}
+                timeSeconds={
+                  isSpectator
+                    ? (manualFlipped ? blackTime : whiteTime)
+                    : (isWhitePlayer ? whiteTime : blackTime)
+                }
                 totalTimeSeconds={session?.timeControl?.initialSeconds || 600}
-                isActive={isMyTurn && isGameLive}
-                isWhite={isWhitePlayer}
-                playerName={profile?.displayName || 'You'}
-                playerTitle={profile?.honorRank}
-                avatar={profile?.photoURL || (isWhitePlayer ? '♔' : '♚')}
-                elo={Number(profile?.elo) || 1200}
+                isActive={
+                  isSpectator
+                    ? (isGameLive && session?.turn === (manualFlipped ? 'b' : 'w'))
+                    : (isMyTurn && isGameLive)
+                }
+                isWhite={isSpectator ? !Boolean(manualFlipped) : isWhitePlayer}
+                playerName={
+                  isSpectator
+                    ? (manualFlipped ? session?.blackPlayer?.displayName || 'Black' : session?.whitePlayer?.displayName || 'White')
+                    : (profile?.displayName || 'You')
+                }
+                playerTitle={
+                  isSpectator
+                    ? (manualFlipped ? session?.blackPlayer?.honorRank : session?.whitePlayer?.honorRank)
+                    : profile?.honorRank
+                }
+                avatar={
+                  isSpectator
+                    ? (manualFlipped ? session?.blackPlayer?.avatar || '♚' : session?.whitePlayer?.avatar || '♔')
+                    : (profile?.photoURL || (isWhitePlayer ? '♔' : '♚'))
+                }
+                elo={
+                  isSpectator
+                    ? (manualFlipped ? session?.blackPlayer?.elo || 1200 : session?.whitePlayer?.elo || 1200)
+                    : (Number(profile?.elo) || 1200)
+                }
               />
               <div className="absolute bottom-16 left-12 z-20">
                 <AnimatePresence>

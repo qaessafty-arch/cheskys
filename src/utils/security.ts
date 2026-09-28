@@ -134,7 +134,7 @@ export class AntiCheatEngine {
       this.isInitialized = true;
       this.blurListener = () => {
         this.tabBlurCount++;
-        if (this.tabBlurCount > 3) {
+        if (this.tabBlurCount === 4) {
           console.warn('[Anti-Cheat] Suspicious Activity: Frequent tab switching detected.');
           this.reportSuspiciousActivity('FREQUENT_BLUR');
         }

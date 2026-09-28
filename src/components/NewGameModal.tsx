@@ -119,10 +119,10 @@ export const NewGameModal: React.FC<NewGameModalProps> = ({
               </div>
               <div>
                 <div className="text-xs font-black text-white flex items-center gap-1.5">
-                  <span>Worldwide Quick Match</span>
-                  <span className="text-[10px] font-bold px-1.5 py-0.2 bg-emerald-500/30 text-emerald-300 rounded-md">Live</span>
+                  <span>Worldwide Live Arena</span>
+                  <span className="text-[10px] font-black px-1.5 py-0.2 bg-emerald-500/30 text-emerald-300 rounded-md border border-emerald-500/40">Real Players</span>
                 </div>
-                <div className="text-[11px] text-[#DFD0B0]/70">Pair instantly with players across the globe</div>
+                <div className="text-[11px] text-[#DFD0B0]/70">Battle live against real players worldwide • No bots</div>
               </div>
             </div>
             <button

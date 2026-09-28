@@ -517,6 +517,26 @@ async function startServer() {
   // 7. REST API ENDPOINTS FOR CHESS GAMES
   // ==========================================
 
+  // GET /api/games/available → List waiting games in public lobby
+  app.get('/api/games/available', (req, res) => {
+    try {
+      const games = matchmaking.getAvailableMatches();
+      res.json(games);
+    } catch (e: any) {
+      res.json([]);
+    }
+  });
+
+  // GET /api/games/live → List active ongoing games in real-time for spectating
+  app.get('/api/games/live', (req, res) => {
+    try {
+      const liveGames = matchmaking.getLiveMatches();
+      res.json(liveGames);
+    } catch (e: any) {
+      res.json([]);
+    }
+  });
+
   // POST /api/games → Create game with unique 6-character code
   app.post('/api/games', (req, res) => {
     try {

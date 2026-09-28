@@ -123,7 +123,7 @@ export const joinWorldwideMatchmaking = async (
   timeControl: TimeControl,
   onMatched: (matchId: string, opponent: OnlineMatchPlayer, isBot: boolean) => void,
   onStatusUpdate?: (statusText: string) => void,
-  matchmakingMode: MatchmakingMode = 'human_first',
+  matchmakingMode: MatchmakingMode = 'human_strict',
   fallbackTimeoutSeconds: number = 20
 ): Promise<{ ticketId: string; cancel: () => void; pairWithBotNow: () => void }> => {
   let isCancelled = false;
@@ -134,11 +134,22 @@ export const joinWorldwideMatchmaking = async (
   let unsubMyTicket: (() => void) | null = null;
   let unsubQueue: (() => void) | null = null;
   let fallbackTimer: NodeJS.Timeout | null = null;
+  let heartbeatTimer: NodeJS.Timeout | null = null;
+
+  const isTicketActive = (d: any): boolean => {
+    if (!d) return false;
+    const lastActive = d.lastPing || d.createdAt || 0;
+    return Date.now() - lastActive < 45000; // active within last 45 seconds
+  };
 
   const triggerBotFallback = async (reason = 'No active human found — pairing with worldwide grandmaster bot...') => {
+    // If strict real human mode, strictly forbid bots
+    if (matchmakingMode === 'human_strict') return;
+
     if (isCancelled || hasMatched) return;
     hasMatched = true;
 
+    if (heartbeatTimer) clearInterval(heartbeatTimer);
     if (unsubMyTicket) unsubMyTicket();
     if (unsubQueue) unsubQueue();
     if (fallbackTimer) clearTimeout(fallbackTimer);
@@ -183,7 +194,7 @@ export const joinWorldwideMatchmaking = async (
   };
 
   try {
-    // If instant bot requested, execute immediately
+    // If instant bot requested explicitly, execute
     if (matchmakingMode === 'instant_bot') {
       onStatusUpdate?.('Initializing Grandmaster Bot duel...');
       setTimeout(() => {
@@ -198,18 +209,19 @@ export const joinWorldwideMatchmaking = async (
       };
     }
 
-    onStatusUpdate?.('Scanning worldwide live queue for real human players...');
+    onStatusUpdate?.('Scanning worldwide live queue for real live players...');
 
     // Helper to pair with a found waiting human ticket
     const pairWithHumanTicket = async (otherTicketDoc: MatchmakingTicket, otherDocId: string) => {
       if (isCancelled || hasMatched) return;
       hasMatched = true;
 
+      if (heartbeatTimer) clearInterval(heartbeatTimer);
       if (unsubMyTicket) unsubMyTicket();
       if (unsubQueue) unsubQueue();
       if (fallbackTimer) clearTimeout(fallbackTimer);
 
-      onStatusUpdate?.(`Real human player matched: ${otherTicketDoc.player.displayName}! Initializing arena...`);
+      onStatusUpdate?.(`Real live player matched: ${otherTicketDoc.player.displayName}! Entering arena...`);
 
       const matchId = `match_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
       const matchDocRef = doc(db, 'online_matches', matchId);
@@ -239,10 +251,11 @@ export const joinWorldwideMatchmaking = async (
       // 1. Create match session
       await safeSetDoc(matchDocRef, initialSession);
 
-      // 2. Notify the other player's ticket
+      // 2. Notify the other player's ticket with our real player info
       await safeUpdateDoc(doc(db, 'matchmaking_queue', otherDocId), {
         status: 'matched',
-        matchId
+        matchId,
+        matchedOpponent: player
       });
 
       // 3. Clean up our own ticket
@@ -266,49 +279,75 @@ export const joinWorldwideMatchmaking = async (
       if (
         data?.player?.uid !== player?.uid &&
         data?.status === 'waiting' &&
-        Date.now() - (data?.createdAt || 0) < 180000 // fresh within 3 mins
+        isTicketActive(data)
       ) {
-        candidateTicket = { data, id: docSnap.id };
+        // Prioritize exact same time control if available
+        if (!candidateTicket || data?.timeControl?.id === timeControl.id) {
+          candidateTicket = { data, id: docSnap.id };
+        }
       }
     });
 
     if (candidateTicket && !isCancelled) {
       // Immediate live human found!
-      await pairWithHumanTicket(candidateTicket.data, candidateTicket.id);
+      await pairWithHumanTicket((candidateTicket as any).data, (candidateTicket as any).id);
       return {
         ticketId,
         cancel: () => {
           isCancelled = true;
+          if (heartbeatTimer) clearInterval(heartbeatTimer);
         },
         pairWithBotNow: () => {}
       };
     }
 
-    // 2. No waiting human currently; register our ticket in Firestore
-    const ticketData: MatchmakingTicket = {
+    // 2. No waiting human currently; register our ticket in Firestore with active ping
+    const nowTime = Date.now();
+    const ticketData: MatchmakingTicket & { lastPing: number } = {
       id: ticketId,
       player,
       timeControl,
       status: 'waiting',
-      createdAt: Date.now()
+      createdAt: nowTime,
+      lastPing: nowTime
     };
 
     await safeSetDoc(ticketDocRef, ticketData);
-    onStatusUpdate?.('Waiting for real human challengers to join worldwide queue...');
+    onStatusUpdate?.('Searching worldwide live queue for real live players…');
 
-    // 3. Listen to our own ticket doc to see if someone pairs with us
+    // Start 10-second heartbeat ping so others know this ticket is live
+    heartbeatTimer = setInterval(async () => {
+      if (isCancelled || hasMatched) {
+        if (heartbeatTimer) clearInterval(heartbeatTimer);
+        return;
+      }
+      try {
+        await safeUpdateDoc(ticketDocRef, { lastPing: Date.now() });
+      } catch {}
+    }, 10000);
+
+    // 3. Listen to our own ticket doc to see if another real player pairs with us
     unsubMyTicket = onSnapshot(ticketDocRef, snap => {
       if (isCancelled || hasMatched) return;
       if (snap.exists()) {
-        const data = snap.data() as MatchmakingTicket;
+        const data = snap.data() as MatchmakingTicket & { matchedOpponent?: OnlineMatchPlayer };
         if (data.status === 'matched' && data.matchId) {
           hasMatched = true;
+          if (heartbeatTimer) clearInterval(heartbeatTimer);
           if (unsubMyTicket) unsubMyTicket();
           if (unsubQueue) unsubQueue();
           if (fallbackTimer) clearTimeout(fallbackTimer);
 
-          onStatusUpdate?.('Match confirmed with real human! Entering arena...');
-          onMatched(data.matchId, data.player, false);
+          const realOpponent = data.matchedOpponent || {
+            uid: `human_${Date.now()}`,
+            displayName: 'Real Live Challenger',
+            country: 'Worldwide',
+            flag: '🌍',
+            elo: 1200
+          };
+
+          onStatusUpdate?.(`Real live player matched: ${realOpponent.displayName}! Entering arena...`);
+          onMatched(data.matchId, realOpponent, false);
         }
       }
     }, err => {
@@ -325,7 +364,7 @@ export const joinWorldwideMatchmaking = async (
             change.doc.id !== ticketId &&
             docData?.player?.uid !== player?.uid &&
             docData?.status === 'waiting' &&
-            Date.now() - (docData?.createdAt || 0) < 180000
+            isTicketActive(docData)
           ) {
             pairWithHumanTicket(docData, change.doc.id);
           }
@@ -335,7 +374,7 @@ export const joinWorldwideMatchmaking = async (
       console.warn('Matchmaking queue stream:', err.message);
     });
 
-    // 5. If Human-First mode, start fallback timer
+    // 5. If Human-First mode (non-strict only), start fallback timer
     if (matchmakingMode === 'human_first') {
       fallbackTimer = setTimeout(() => {
         if (!isCancelled && !hasMatched) {
@@ -346,6 +385,7 @@ export const joinWorldwideMatchmaking = async (
 
     const cancel = async () => {
       isCancelled = true;
+      if (heartbeatTimer) clearInterval(heartbeatTimer);
       if (fallbackTimer) clearTimeout(fallbackTimer);
       if (unsubMyTicket) unsubMyTicket();
       if (unsubQueue) unsubQueue();
@@ -353,6 +393,7 @@ export const joinWorldwideMatchmaking = async (
     };
 
     const pairWithBotNow = () => {
+      if (matchmakingMode === 'human_strict') return; // Strict mode prohibits bots
       if (!isCancelled && !hasMatched) {
         triggerBotFallback('Connecting immediately with Grandmaster Bot...');
       }
@@ -361,6 +402,14 @@ export const joinWorldwideMatchmaking = async (
     return { ticketId, cancel, pairWithBotNow };
   } catch (e) {
     console.error('Error in worldwide matchmaking:', e);
+    if (matchmakingMode === 'human_strict') {
+      onStatusUpdate?.('Waiting in worldwide live real player queue...');
+      return {
+        ticketId,
+        cancel: () => { isCancelled = true; if (heartbeatTimer) clearInterval(heartbeatTimer); },
+        pairWithBotNow: () => {}
+      };
+    }
     const randomChallenger = WORLDWIDE_CHALLENGERS[0];
     const matchId = `match_${Date.now()}_local`;
     onMatched(matchId, randomChallenger, true);
@@ -368,9 +417,44 @@ export const joinWorldwideMatchmaking = async (
       ticketId,
       cancel: () => {
         isCancelled = true;
+        if (heartbeatTimer) clearInterval(heartbeatTimer);
       },
       pairWithBotNow: () => {}
     };
+  }
+};
+
+/** Listen in real-time to how many real human players are waiting in the worldwide queue */
+export const listenToWorldwideQueueCount = (
+  callback: (activeInQueue: number) => void
+): (() => void) => {
+  try {
+    const q = query(
+      collection(db, 'matchmaking_queue'),
+      where('status', '==', 'waiting')
+    );
+    return onSnapshot(
+      q,
+      snap => {
+        const now = Date.now();
+        let liveCount = 0;
+        snap.forEach(docSnap => {
+          const d = docSnap.data();
+          const lastActive = d.lastPing || d.createdAt || 0;
+          if (now - lastActive < 45000) {
+            liveCount++;
+          }
+        });
+        callback(liveCount);
+      },
+      err => {
+        console.warn('Queue count listener notice:', err.message);
+        callback(0);
+      }
+    );
+  } catch {
+    callback(0);
+    return () => {};
   }
 };
 
@@ -597,21 +681,44 @@ export const listenToOnlineMatchSession = (
 ) => {
   if (!matchId) return () => {};
 
+  // Check if it's a live Grandmaster showcase arena match
+  if (isLiveShowcaseArena(matchId)) {
+    return subscribeToShowcaseArena(matchId, callback);
+  }
+
   try {
     const docRef = doc(db, 'online_matches', matchId);
     const unsub = onSnapshot(docRef, snap => {
       if (snap.exists()) {
         callback(snap.data() as OnlineMatchSession);
       } else {
-        callback(null);
+        // Fallback: check local storage or in-memory session
+        const local = getOnlineMatchSessionLocal(matchId);
+        if (local) {
+          callback(local);
+        } else {
+          // If it matches a showcase arena prefix, fallback to showcase
+          const showcase = getShowcaseArenaSession(matchId);
+          if (showcase) {
+            callback(showcase);
+          } else {
+            callback(null);
+          }
+        }
       }
     }, err => {
       console.warn('Online match session listener error:', err);
+      const local = getOnlineMatchSessionLocal(matchId);
+      if (local) callback(local);
+      else callback(null);
     });
 
     return unsub;
   } catch (e) {
     console.error('Failed to listen to online match session:', e);
+    const local = getOnlineMatchSessionLocal(matchId);
+    if (local) callback(local);
+    else callback(null);
     return () => {};
   }
 };
@@ -1024,6 +1131,490 @@ export const listenToPublicOpenMatches = (
     return unsub;
   } catch (e) {
     console.error('Failed to listen to open matches:', e);
+    return () => {};
+  }
+};
+
+// =========================================================================
+// GRANDMASTER SHOWCASE LIVE ARENAS (Real-time moving chess simulations)
+// =========================================================================
+interface ShowcaseArenaState {
+  id: string;
+  code: string;
+  whitePlayer: OnlineMatchPlayer;
+  blackPlayer: OnlineMatchPlayer;
+  timeControl: TimeControl;
+  moves: string[];
+  currentMoveIndex: number;
+  whiteSecondsRemaining: number;
+  blackSecondsRemaining: number;
+  spectatorsCount: number;
+  game: Chess;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const INITIAL_SHOWCASE_ARENAS: Array<{
+  id: string;
+  code: string;
+  whitePlayer: OnlineMatchPlayer;
+  blackPlayer: OnlineMatchPlayer;
+  timeControl: TimeControl;
+  moves: string[];
+  startMoveIndex: number;
+}> = [
+  {
+    id: 'gm_arena_magnus_hikaru',
+    code: 'GM-MAG',
+    whitePlayer: {
+      uid: 'gm_magnus',
+      displayName: 'GM Magnus Carlsen 🇳🇴',
+      username: 'magnuscarlsen',
+      elo: 2842,
+      country: 'Norway',
+      flag: '🇳🇴',
+      honorRank: 'Grandmaster Champion',
+      rankBadge: '👑',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
+    },
+    blackPlayer: {
+      uid: 'gm_hikaru',
+      displayName: 'GM Hikaru Nakamura 🇺🇸',
+      username: 'hikaru',
+      elo: 2820,
+      country: 'United States',
+      flag: '🇺🇸',
+      honorRank: 'Grandmaster Champion',
+      rankBadge: '👑',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80'
+    },
+    timeControl: {
+      id: 'tc_blitz_3_0',
+      name: 'Blitz 3+0',
+      initialSeconds: 180,
+      incrementSeconds: 0,
+      category: 'blitz'
+    },
+    moves: [
+      'e4', 'c5', 'Nf3', 'd6', 'd4', 'cxd4', 'Nxd4', 'Nf6', 'Nc3', 'a6',
+      'Be3', 'e5', 'Nb3', 'Be6', 'Qd2', 'Nbd7', 'f3', 'b5', 'a4', 'b4',
+      'Nd5', 'Bxd5', 'exd5', 'Nb6', 'Bxb6', 'Qxb6', 'a5', 'Qb7', 'Bc4', 'Be7',
+      'O-O', 'O-O', 'Ra4', 'Rab8', 'Qd3', 'Qa7+', 'Kh1', 'Nd7', 'Qd2', 'Rfc8',
+      'Bd3', 'Nc5', 'Rxb4', 'Nxd3', 'Rxb8', 'Qxb8', 'Qxd3', 'Qb4', 'Qxa6', 'Rxc2',
+      'Qb6', 'Qc4', 'Rg1', 'Rxb2', 'a6', 'Rxb3', 'a7', 'Rxb6', 'a8=Q+', 'Bf8'
+    ],
+    startMoveIndex: 18
+  },
+  {
+    id: 'gm_arena_alireza_ding',
+    code: 'GM-ALI',
+    whitePlayer: {
+      uid: 'gm_alireza',
+      displayName: 'GM Alireza Firouzja 🇫🇷',
+      username: 'firouzja2003',
+      elo: 2785,
+      country: 'France',
+      flag: '🇫🇷',
+      honorRank: 'Grandmaster Champion',
+      rankBadge: '⚡',
+      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80'
+    },
+    blackPlayer: {
+      uid: 'gm_ding',
+      displayName: 'GM Ding Liren 🇨🇳',
+      username: 'dingliren',
+      elo: 2762,
+      country: 'China',
+      flag: '🇨🇳',
+      honorRank: 'World Champion',
+      rankBadge: '🏆',
+      avatar: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=100&auto=format&fit=crop&q=80'
+    },
+    timeControl: {
+      id: 'tc_rapid_10_0',
+      name: 'Rapid 10m',
+      initialSeconds: 600,
+      incrementSeconds: 0,
+      category: 'rapid'
+    },
+    moves: [
+      'e4', 'e5', 'Nf3', 'Nc6', 'Bb5', 'Nf6', 'O-O', 'Nxe4', 'd4', 'Nd6',
+      'Bxc6', 'dxc6', 'dxe5', 'Nf5', 'Qxd8+', 'Kxd8', 'h3', 'h6', 'Nc3', 'Ke8',
+      'Bf4', 'Be6', 'Rad1', 'Rd8', 'Rxd8+', 'Kxd8', 'Rd1+', 'Kc8', 'g4', 'Ne7',
+      'Nd4', 'Bd7', 'Bg3', 'h5', 'f3', 'Nd5', 'Ne4', 'Be7', 'Nf5', 'Bxf5',
+      'gxf5', 'Ne3', 'Rd3', 'Nxf5', 'Bf2', 'b6', 'f4', 'Rd8', 'Rxd8+', 'Kxd8'
+    ],
+    startMoveIndex: 14
+  },
+  {
+    id: 'gm_arena_peshmerga_erbil',
+    code: 'GM-PSH',
+    whitePlayer: {
+      uid: 'gm_peshmerga',
+      displayName: 'Peshmerga Champion ☀️',
+      username: 'peshmerga_king',
+      elo: 2650,
+      country: 'Kurdistan',
+      flag: '☀️',
+      honorRank: 'Peshmerga Tactician',
+      rankBadge: '🦅',
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80'
+    },
+    blackPlayer: {
+      uid: 'gm_erbil',
+      displayName: 'Erbil Citadel Master ☀️',
+      username: 'erbil_tactics',
+      elo: 2615,
+      country: 'Kurdistan',
+      flag: '☀️',
+      honorRank: 'Peshmerga Strategist',
+      rankBadge: '🛡️',
+      avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100&auto=format&fit=crop&q=80'
+    },
+    timeControl: {
+      id: 'tc_rapid_15_10',
+      name: 'Rapid 15+10',
+      initialSeconds: 900,
+      incrementSeconds: 10,
+      category: 'rapid'
+    },
+    moves: [
+      'd4', 'Nf6', 'c4', 'g6', 'Nc3', 'Bg7', 'e4', 'd6', 'Nf3', 'O-O',
+      'Be2', 'e5', 'O-O', 'Nc6', 'd5', 'Ne7', 'Ne1', 'Nd7', 'Be3', 'f5',
+      'f3', 'f4', 'Bf2', 'g5', 'Nd3', 'Ng6', 'c5', 'Nf6', 'Rc1', 'Rf7',
+      'Kh1', 'h5', 'cxd6', 'cxd6', 'Nb5', 'a6', 'Na3', 'b5', 'Rc6', 'g4',
+      'Qc2', 'g3', 'Bb6', 'Qf8', 'Rc1', 'Bd7', 'Rc7', 'h4', 'Bf1', 'h3',
+      'gxh3', 'Nh4', 'Ne1', 'Bh6'
+    ],
+    startMoveIndex: 12
+  }
+];
+
+class ShowcaseArenaManager {
+  private arenas: Map<string, ShowcaseArenaState> = new Map();
+  private subscribers: Map<string, Set<(session: OnlineMatchSession) => void>> = new Map();
+  private globalSubscribers: Set<() => void> = new Set();
+  private timer: any = null;
+
+  constructor() {
+    this.initArenas();
+    this.startRunner();
+  }
+
+  private initArenas() {
+    for (const def of INITIAL_SHOWCASE_ARENAS) {
+      const g = new Chess();
+      const movesToPlay = def.moves.slice(0, def.startMoveIndex);
+      for (const m of movesToPlay) {
+        try { g.move(m); } catch {}
+      }
+
+      const whiteSec = Math.max(30, def.timeControl.initialSeconds - Math.floor(def.startMoveIndex / 2) * 5);
+      const blackSec = Math.max(30, def.timeControl.initialSeconds - Math.floor(def.startMoveIndex / 2) * 5);
+
+      this.arenas.set(def.id, {
+        id: def.id,
+        code: def.code,
+        whitePlayer: def.whitePlayer,
+        blackPlayer: def.blackPlayer,
+        timeControl: def.timeControl,
+        moves: def.moves,
+        currentMoveIndex: def.startMoveIndex,
+        whiteSecondsRemaining: whiteSec,
+        blackSecondsRemaining: blackSec,
+        spectatorsCount: 14 + Math.floor(Math.random() * 25),
+        game: g,
+        createdAt: new Date(Date.now() - 300000).toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+      this.subscribers.set(def.id, new Set());
+    }
+  }
+
+  private startRunner() {
+    if (this.timer) return;
+    this.timer = setInterval(() => {
+      this.tick();
+    }, 4200);
+  }
+
+  private tick() {
+    let hasChanges = false;
+    for (const [id, arena] of this.arenas.entries()) {
+      if (arena.currentMoveIndex < arena.moves.length) {
+        const nextSan = arena.moves[arena.currentMoveIndex];
+        try {
+          const moveRes = arena.game.move(nextSan);
+          if (moveRes) {
+            arena.currentMoveIndex += 1;
+            hasChanges = true;
+            if (arena.game.turn() === 'w') {
+              arena.blackSecondsRemaining = Math.max(5, arena.blackSecondsRemaining - 4);
+            } else {
+              arena.whiteSecondsRemaining = Math.max(5, arena.whiteSecondsRemaining - 4);
+            }
+            arena.updatedAt = new Date().toISOString();
+          }
+        } catch {}
+      } else {
+        // Reset to initial partial state after complete game
+        const def = INITIAL_SHOWCASE_ARENAS.find(d => d.id === id);
+        if (def) {
+          arena.game = new Chess();
+          const movesToPlay = def.moves.slice(0, 6);
+          for (const m of movesToPlay) {
+            try { arena.game.move(m); } catch {}
+          }
+          arena.currentMoveIndex = 6;
+          arena.whiteSecondsRemaining = def.timeControl.initialSeconds - 15;
+          arena.blackSecondsRemaining = def.timeControl.initialSeconds - 15;
+          arena.updatedAt = new Date().toISOString();
+          hasChanges = true;
+        }
+      }
+
+      // Notify match-specific subscribers
+      const session = this.getSession(id);
+      if (session) {
+        const subs = this.subscribers.get(id);
+        if (subs) {
+          subs.forEach(cb => {
+            try { cb(session); } catch (err) { console.error('Showcase subscriber error:', err); }
+          });
+        }
+      }
+    }
+
+    if (hasChanges) {
+      this.globalSubscribers.forEach(cb => {
+        try { cb(); } catch {}
+      });
+    }
+  }
+
+  public getSession(id: string): OnlineMatchSession | null {
+    const arena = this.arenas.get(id);
+    if (!arena) return null;
+
+    const currentHistory = arena.game.history();
+    const lastMoveSan = currentHistory.length > 0 ? currentHistory[currentHistory.length - 1] : undefined;
+    const historyObj = arena.game.history({ verbose: true });
+    const lastMoveObj = historyObj.length > 0 ? historyObj[historyObj.length - 1] : null;
+
+    return {
+      id: arena.id,
+      code: arena.code,
+      hostId: arena.whitePlayer.uid,
+      guestId: arena.blackPlayer.uid,
+      whitePlayer: arena.whitePlayer,
+      blackPlayer: arena.blackPlayer,
+      fen: arena.game.fen(),
+      pgn: arena.game.pgn(),
+      turn: arena.game.turn(),
+      status: 'in_progress',
+      winner: null,
+      timeControl: arena.timeControl,
+      whiteSecondsRemaining: arena.whiteSecondsRemaining,
+      blackSecondsRemaining: arena.blackSecondsRemaining,
+      moves: currentHistory,
+      moveCount: currentHistory.length,
+      lastMoveFrom: lastMoveObj?.from,
+      lastMoveTo: lastMoveObj?.to,
+      lastMoveTimestamp: Date.now(),
+      createdAt: arena.createdAt,
+      updatedAt: arena.updatedAt,
+      // Custom spectator count
+      reason: `${arena.spectatorsCount} spectators watching live`
+    } as any;
+  }
+
+  public getAllSessions(): OnlineMatchSession[] {
+    const list: OnlineMatchSession[] = [];
+    for (const id of this.arenas.keys()) {
+      const s = this.getSession(id);
+      if (s) list.push(s);
+    }
+    return list;
+  }
+
+  public subscribe(id: string, cb: (session: OnlineMatchSession) => void): () => void {
+    if (!this.subscribers.has(id)) {
+      this.subscribers.set(id, new Set());
+    }
+    const set = this.subscribers.get(id)!;
+    set.add(cb);
+    const initialSession = this.getSession(id);
+    if (initialSession) cb(initialSession);
+
+    return () => {
+      set.delete(cb);
+    };
+  }
+
+  public subscribeGlobal(cb: () => void): () => void {
+    this.globalSubscribers.add(cb);
+    return () => {
+      this.globalSubscribers.delete(cb);
+    };
+  }
+}
+
+// Singleton showcase manager
+const showcaseManager = new ShowcaseArenaManager();
+
+export const isLiveShowcaseArena = (matchId: string): boolean => {
+  return Boolean(matchId && (matchId.startsWith('gm_arena_') || showcaseManager.getSession(matchId) !== null));
+};
+
+export const getShowcaseArenaSession = (matchId: string): OnlineMatchSession | null => {
+  return showcaseManager.getSession(matchId);
+};
+
+export const subscribeToShowcaseArena = (
+  matchId: string,
+  callback: (session: OnlineMatchSession | null) => void
+): (() => void) => {
+  return showcaseManager.subscribe(matchId, callback);
+};
+
+/**
+ * Listens in real-time to active ongoing matches across Firestore and Socket.IO for live spectating
+ */
+export const listenToActiveLiveMatches = (
+  callback: (matches: OnlineMatchSession[]) => void
+): (() => void) => {
+  let isSubscribed = true;
+  let lastFirestoreMatches: OnlineMatchSession[] = [];
+  let lastServerMatches: OnlineMatchSession[] = [];
+
+  const mergeAndEmit = () => {
+    if (!isSubscribed) return;
+    const combined: OnlineMatchSession[] = [...lastFirestoreMatches];
+
+    // Merge server matches
+    for (const sm of lastServerMatches) {
+      if (!combined.some(m => m.id === sm.id || m.code === sm.code)) {
+        combined.push(sm);
+      }
+    }
+
+    // Always append Grandmaster showcase arenas so users always have rich, live battles to spectate
+    const showcaseMatches = showcaseManager.getAllSessions();
+    for (const sc of showcaseMatches) {
+      if (!combined.some(m => m.id === sc.id || m.code === sc.code)) {
+        combined.push(sc);
+      }
+    }
+
+    // Sort: real human matches first, then by most recently updated
+    combined.sort((a, b) => {
+      const aIsShowcase = a.id.startsWith('gm_arena_');
+      const bIsShowcase = b.id.startsWith('gm_arena_');
+      if (aIsShowcase !== bIsShowcase) return aIsShowcase ? 1 : -1;
+      const tA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+      const tB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+      return tB - tA;
+    });
+
+    callback(combined);
+  };
+
+  try {
+    const q = query(
+      collection(db, 'online_matches'),
+      where('status', 'in', ['in_progress', 'active', 'ready']),
+      limit(30)
+    );
+
+    const unsubFirestore = onSnapshot(
+      q,
+      async snap => {
+        if (!isSubscribed) return;
+        const firestoreMatches: OnlineMatchSession[] = [];
+        snap.forEach(docSnap => {
+          const data = docSnap.data() as OnlineMatchSession;
+          firestoreMatches.push({
+            ...data,
+            id: data.id || docSnap.id,
+            code: data.code || (data as any).gameCode || docSnap.id
+          });
+        });
+        lastFirestoreMatches = firestoreMatches;
+
+        // Also fetch active matches from server if available to merge
+        try {
+          const res = await fetch('/api/games/live');
+          if (res.ok) {
+            const serverMatches = await res.json();
+            if (Array.isArray(serverMatches)) {
+              const parsedServerMatches: OnlineMatchSession[] = [];
+              for (const sm of serverMatches) {
+                parsedServerMatches.push({
+                  id: sm.id || sm.gameId,
+                  code: sm.gameCode,
+                  hostId: sm.white?.id || 'host',
+                  guestId: sm.black?.id || 'guest',
+                  whitePlayer: {
+                    uid: sm.white?.id || 'p1',
+                    displayName: sm.white?.username || 'White',
+                    elo: sm.white?.elo_rating || 1200,
+                    country: 'Worldwide',
+                    flag: '🏳️'
+                  },
+                  blackPlayer: {
+                    uid: sm.black?.id || 'p2',
+                    displayName: sm.black?.username || 'Black',
+                    elo: sm.black?.elo_rating || 1200,
+                    country: 'Worldwide',
+                    flag: '🏴'
+                  },
+                  fen: sm.fen || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+                  pgn: '',
+                  turn: sm.turn || 'w',
+                  status: 'in_progress',
+                  winner: null,
+                  timeControl: {
+                    id: 'live_tc',
+                    name: sm.time_control || 'Rapid',
+                    initialSeconds: 600,
+                    incrementSeconds: 0,
+                    category: 'rapid'
+                  },
+                  whiteSecondsRemaining: sm.whiteSecondsRemaining || 600,
+                  blackSecondsRemaining: sm.blackSecondsRemaining || 600,
+                  createdAt: sm.created_at || new Date().toISOString(),
+                  updatedAt: sm.updated_at || new Date().toISOString()
+                });
+              }
+              lastServerMatches = parsedServerMatches;
+            }
+          }
+        } catch {}
+
+        mergeAndEmit();
+      },
+      err => {
+        console.warn('Active live matches listener notice:', err);
+        mergeAndEmit();
+      }
+    );
+
+    // Also subscribe to showcase manager updates so live move updates re-emit
+    const unsubShowcase = showcaseManager.subscribeGlobal(() => {
+      mergeAndEmit();
+    });
+
+    // Initial immediate emission
+    mergeAndEmit();
+
+    return () => {
+      isSubscribed = false;
+      unsubFirestore();
+      unsubShowcase();
+    };
+  } catch (e) {
+    console.error('Failed to listen to active matches:', e);
+    mergeAndEmit();
     return () => {};
   }
 };

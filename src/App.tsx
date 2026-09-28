@@ -27,6 +27,7 @@ import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
 
 import { MessageSquare, Layers } from 'lucide-react';
+import { toast } from 'sonner';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { AmbientBackground } from './components/AmbientBackground';
@@ -56,6 +57,7 @@ const lazyPreload = <P extends object>(load: () => Promise<{ default: React.Comp
 };
 
 const AboutUsModal = lazyPreload(() => import('./components/AboutUsModal').then(m => ({ default: m.AboutUsModal })));
+const KeyboardShortcutsModal = lazyPreload(() => import('./components/KeyboardShortcutsModal').then(m => ({ default: m.KeyboardShortcutsModal })));
 const ThemeSelectorModal = lazyPreload(() => import('./components/ThemeSelectorModal').then(m => ({ default: m.ThemeSelectorModal })));
 const GameOverModal = lazyPreload(() => import('./components/GameOverModal').then(m => ({ default: m.GameOverModal })));
 const NewGameModal = lazyPreload(() => import('./components/NewGameModal').then(m => ({ default: m.NewGameModal })));
@@ -111,6 +113,7 @@ export default function App() {
       GameOverModal.preload();
       SettingsModal.preload();
       ThemeSelectorModal.preload();
+      KeyboardShortcutsModal.preload();
     };
     const idle = window.requestIdleCallback;
     if (idle) {
@@ -138,6 +141,7 @@ export default function App() {
 
   const [activeMode, setActiveMode] = useState<GameMode>('ai');
   const [activeOnlineMatchId, setActiveOnlineMatchId] = useState<string | null>(null);
+  const [isSpectatingOnlineMatch, setIsSpectatingOnlineMatch] = useState<boolean>(false);
 
   // =========================================================================
   // CRITICAL FIX: GLOBAL EVENT LISTENERS FOR PRIVATE ROOMS
@@ -187,9 +191,10 @@ export default function App() {
 
     const handleNavigateToMatch = (e: Event) => {
       const customEvent = e as CustomEvent;
-      const { matchId } = customEvent.detail || {};
+      const { matchId, isSpectator } = customEvent.detail || {};
       if (matchId) {
         setActiveOnlineMatchId(matchId);
+        setIsSpectatingOnlineMatch(Boolean(isSpectator));
         setActiveMode('online_match');
       }
     };
@@ -249,6 +254,7 @@ export default function App() {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isFriendsModalOpen, setIsFriendsModalOpen] = useState(false);
   const [isWorldwideMatchModalOpen, setIsWorldwideMatchModalOpen] = useState(false);
+  const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
   const [isAboutUsModalOpen, setIsAboutUsModalOpen] = useState(false);
   const [activeChatFriend, setActiveChatFriend] = useState<FriendUser | null>(null);
   const [isJudgmentModalOpen, setIsJudgmentModalOpen] = useState(false);
@@ -564,23 +570,183 @@ export default function App() {
     soundManager.playMove();
   };
 
+  const handleGetHint = () => {
+    if (gameResult || isAiThinking) return;
+    try {
+      const isWhite = game.turn() === 'w';
+      const best = findBestMove(game, 12, isWhite, 700);
+      if (best.move) {
+        soundManager.playCheck();
+        setHintMessage(`💡 Engine Recommendation: Play ${best.move.san} (${best.move.from} to ${best.move.to})`);
+        setTimeout(() => setHintMessage(null), 5000);
+      }
+    } catch {}
+  };
+
   const handleUndoRef = useRef(handleUndo);
   const handleRedoRef = useRef(handleRedo);
-  useEffect(() => { handleUndoRef.current = handleUndo; handleRedoRef.current = handleRedo; }, [handleUndo, handleRedo]);
+  const handleResignRef = useRef(handleResign);
+  const handleGetHintRef = useRef(handleGetHint);
+  const settingsRef = useRef(settings);
+  const activeModeRef = useRef(activeMode);
+  const gameResultRef = useRef(gameResult);
+  const isJudgmentModalOpenRef = useRef(isJudgmentModalOpen);
+
+  useEffect(() => {
+    handleUndoRef.current = handleUndo;
+    handleRedoRef.current = handleRedo;
+    handleResignRef.current = handleResign;
+    handleGetHintRef.current = handleGetHint;
+    settingsRef.current = settings;
+    activeModeRef.current = activeMode;
+    gameResultRef.current = gameResult;
+    isJudgmentModalOpenRef.current = isJudgmentModalOpen;
+  }, [handleUndo, handleRedo, handleResign, handleGetHint, settings, activeMode, gameResult, isJudgmentModalOpen]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') {
-        if (e.shiftKey) { e.preventDefault(); handleRedoRef.current(); }
-        else { e.preventDefault(); handleUndoRef.current(); }
-      } else if ((e.ctrlKey || e.metaKey) && e.code === 'KeyY') {
-        e.preventDefault(); handleRedoRef.current();
+      // 1. Ignore if typing in text inputs, textareas, selects, or editable elements
+      const target = e.target as HTMLElement | null;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        target?.isContentEditable
+      ) {
+        return;
+      }
+
+      const key = e.key;
+      const code = e.code;
+      const isCtrlOrMeta = e.ctrlKey || e.metaKey;
+
+      // 2. Undo & Redo (Ctrl+Z, Ctrl+Shift+Z, Ctrl+Y)
+      if (isCtrlOrMeta && (code === 'KeyZ' || key.toLowerCase() === 'z')) {
+        e.preventDefault();
+        if (e.shiftKey) {
+          handleRedoRef.current();
+        } else {
+          handleUndoRef.current();
+        }
+        return;
+      }
+
+      if (isCtrlOrMeta && (code === 'KeyY' || key.toLowerCase() === 'y')) {
+        e.preventDefault();
+        handleRedoRef.current();
+        return;
+      }
+
+      // If other modifier keys like Ctrl or Cmd are active, do not trigger single-key hotkeys
+      if (isCtrlOrMeta) return;
+
+      // 3. Escape: dismiss open modals
+      if (code === 'Escape' || key === 'Escape') {
+        setIsShortcutsModalOpen(false);
+        setIsNewGameModalOpen(false);
+        setIsSettingsModalOpen(false);
+        setIsThemeModalOpen(false);
+        setIsAboutUsModalOpen(false);
+        setIsLeaderboardModalOpen(false);
+        setIsProfileModalOpen(false);
+        setIsFriendsModalOpen(false);
+        setIsWorldwideMatchModalOpen(false);
+        return;
+      }
+
+      // 4. Question Mark (?) or Slash (/): Toggle Keyboard Shortcuts Guide
+      if (key === '?' || (e.shiftKey && (code === 'Slash' || key === '/'))) {
+        e.preventDefault();
+        setIsShortcutsModalOpen(prev => !prev);
+        return;
+      }
+
+      // 5. Flip Board: 'F' or 'f'
+      if (code === 'KeyF' || key.toLowerCase() === 'f') {
+        e.preventDefault();
+        const nextFlip = !settingsRef.current.flipBoard;
+        setSettings(s => ({ ...s, flipBoard: nextFlip }));
+        toast.info(nextFlip ? 'Board perspective: Flipped (Black)' : 'Board perspective: Standard (White)', {
+          icon: '🔄',
+          duration: 1600
+        });
+        return;
+      }
+
+      // 6. Toggle Sound Effects: 'S' or 's' or 'M' or 'm'
+      if (code === 'KeyS' || key.toLowerCase() === 's' || code === 'KeyM' || key.toLowerCase() === 'm') {
+        e.preventDefault();
+        const nextSound = !settingsRef.current.sound;
+        setSettings(s => ({ ...s, sound: nextSound }));
+        if (nextSound) {
+          soundManager.playMove();
+          toast.success('Sound effects enabled 🔊', { duration: 1500 });
+        } else {
+          toast.info('Sound effects muted 🔇', { duration: 1500 });
+        }
+        return;
+      }
+
+      // 7. Resign Match: 'Shift + R' or 'Alt + R'
+      if ((e.shiftKey || e.altKey) && (code === 'KeyR' || key.toLowerCase() === 'r')) {
+        e.preventDefault();
+        if (['ai', 'pass_and_play'].includes(activeModeRef.current)) {
+          if (gameResultRef.current || isJudgmentModalOpenRef.current) return;
+          handleResignRef.current();
+          toast.error('Match resigned', { icon: '🏳️', duration: 2500 });
+        } else {
+          toast.info('Use the in-game forfeit button for multiplayer matches', { icon: '🏳️', duration: 2000 });
+        }
+        return;
+      }
+
+      // 7b. Safety prompt if user taps lowercase 'r' alone without shift during match
+      if (!e.shiftKey && !e.altKey && (code === 'KeyR' || key.toLowerCase() === 'r')) {
+        if (!gameResultRef.current && !isJudgmentModalOpenRef.current && ['ai', 'pass_and_play'].includes(activeModeRef.current)) {
+          e.preventDefault();
+          toast.warning('Press Shift + R to resign the match', {
+            icon: '🏳️',
+            duration: 2500
+          });
+          return;
+        }
+      }
+
+      // 8. Request Tactical Hint: 'H' or 'h'
+      if (code === 'KeyH' || key.toLowerCase() === 'h') {
+        e.preventDefault();
+        if (['ai', 'pass_and_play'].includes(activeModeRef.current)) {
+          handleGetHintRef.current();
+        }
+        return;
+      }
+
+      // 9. New Game: 'N' or 'n'
+      if (code === 'KeyN' || key.toLowerCase() === 'n') {
+        e.preventDefault();
+        setIsNewGameModalOpen(true);
+        toast.info('New game dialog', { icon: '♟️', duration: 1200 });
+        return;
+      }
+
+      // 10. Single-key 'U' for undo
+      if (code === 'KeyU' || key.toLowerCase() === 'u') {
+        e.preventDefault();
+        handleUndoRef.current();
+        return;
+      }
+
+      // 11. Single-key 'Y' for redo
+      if (code === 'KeyY' || key.toLowerCase() === 'y') {
+        e.preventDefault();
+        handleRedoRef.current();
+        return;
       }
     };
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [setSettings]);
 
   const handleExecuteJudgment = () => {
     setIsJudgmentModalOpen(false);
@@ -607,19 +773,6 @@ export default function App() {
       setEvalScore(evaluateBoard(newGame));
       soundManager.playVictory();
     }
-  };
-
-  const handleGetHint = () => {
-    if (gameResult || isAiThinking) return;
-    try {
-      const isWhite = game.turn() === 'w';
-      const best = findBestMove(game, 12, isWhite, 700);
-      if (best.move) {
-        soundManager.playCheck();
-        setHintMessage(`💡 Engine Recommendation: Play ${best.move.san} (${best.move.from} to ${best.move.to})`);
-        setTimeout(() => setHintMessage(null), 5000);
-      }
-    } catch {}
   };
 
   useEffect(() => {
@@ -687,11 +840,33 @@ export default function App() {
             </motion.div>
           ) : activeMode === 'online_match' && activeOnlineMatchId ? (
             <motion.div key="online-match-view" className="w-full h-full">
-              <OnlineMatchView matchId={activeOnlineMatchId} settings={settings} onClose={() => { setActiveOnlineMatchId(null); setActiveMode('ai'); }} />
+              <OnlineMatchView
+                matchId={activeOnlineMatchId}
+                settings={settings}
+                isSpectatorMode={isSpectatingOnlineMatch}
+                onClose={() => {
+                  setActiveOnlineMatchId(null);
+                  setIsSpectatingOnlineMatch(false);
+                  setActiveMode('multiplayer');
+                }}
+              />
             </motion.div>
           ) : (activeMode === 'multiplayer' || (activeMode === 'online_match' && !activeOnlineMatchId)) ? (
             <motion.div key="multiplayer-lobby" className="w-full h-full">
-              <MultiplayerLobbyView settings={settings} onStartMatch={matchId => { setActiveOnlineMatchId(matchId); setActiveMode('online_match'); }} onOpenWorldwideModal={() => setIsWorldwideMatchModalOpen(true)} />
+              <MultiplayerLobbyView
+                settings={settings}
+                onStartMatch={matchId => {
+                  setActiveOnlineMatchId(matchId);
+                  setIsSpectatingOnlineMatch(false);
+                  setActiveMode('online_match');
+                }}
+                onSpectateMatch={matchId => {
+                  setActiveOnlineMatchId(matchId);
+                  setIsSpectatingOnlineMatch(true);
+                  setActiveMode('online_match');
+                }}
+                onOpenWorldwideModal={() => setIsWorldwideMatchModalOpen(true)}
+              />
             </motion.div>
           ) : activeMode === 'private_room' ? (
             <motion.div key="private-room-view" className="w-full h-full">
@@ -734,7 +909,7 @@ export default function App() {
               <div className="lg:col-span-8 flex flex-col items-center justify-center relative">
                 <div className="w-full max-w-[644px] lg:max-w-[min(644px,calc(100svh-300px))] grid grid-cols-[auto_1fr] gap-x-2 sm:gap-x-4 gap-y-3 items-stretch">
                   <div className="col-start-2 flex flex-col gap-3 min-w-0">
-                    <GlassCard intensity="low" className="p-3 !rounded-2xl" animateFloat>
+                    <GlassCard intensity="low" className="p-3 !rounded-2xl">
                       <ChessClock timeSeconds={isBoardFlipped ? whiteTime : blackTime} totalTimeSeconds={timeControl.initialSeconds} isActive={isClockRunning && (isBoardFlipped ? game.turn() === 'w' : game.turn() === 'b')} isWhite={isBoardFlipped} playerName={activeMode === 'ai' ? (isBoardFlipped ? 'Player (You)' : `${currentBot.name}`) : (isBoardFlipped ? 'White Player' : 'Black Player')} playerTitle={activeMode === 'ai' && !isBoardFlipped ? currentBot.title : undefined} avatar={activeMode === 'ai' && !isBoardFlipped ? currentBot.avatar : isBoardFlipped ? '♔' : '♚'} elo={activeMode === 'ai' && !isBoardFlipped ? currentBot.elo : Number(respectProfile.elo)} isUnlimited={timeControl.category === 'unlimited'} />
                     </GlassCard>
                     <div className="px-1 flex items-center justify-between">
@@ -763,18 +938,18 @@ export default function App() {
                         <div className="flex items-center gap-2 text-[10px] text-[#FFD700] font-black uppercase tracking-widest animate-pulse px-3 py-1 rounded-full bg-white/5 border border-[#FFD700]/30 shadow-lg backdrop-blur-md"><span className="w-1.5 h-1.5 rounded-full bg-[#FFD700] animate-ping" /><span>Calculating Path...</span></div>
                       )}
                     </div>
-                    <GlassCard intensity="low" className="p-3 !rounded-2xl border-white/10" animateFloat>
+                    <GlassCard intensity="low" className="p-3 !rounded-2xl border-white/10">
                       <ChessClock timeSeconds={isBoardFlipped ? blackTime : whiteTime} totalTimeSeconds={timeControl.initialSeconds} isActive={isClockRunning && (isBoardFlipped ? game.turn() === 'b' : game.turn() === 'w')} isWhite={!isBoardFlipped} playerName={activeMode === 'ai' ? (isBoardFlipped ? `${currentBot.name}` : 'Player (You)') : (isBoardFlipped ? 'Black Player' : 'White Player')} playerTitle={activeMode === 'ai' && isBoardFlipped ? currentBot.title : undefined} avatar={activeMode === 'ai' && isBoardFlipped ? currentBot.avatar : isBoardFlipped ? '♔' : '♚'} elo={activeMode === 'ai' && isBoardFlipped ? currentBot.elo : Number(respectProfile.elo)} isUnlimited={timeControl.category === 'unlimited'} />
                     </GlassCard>
                   </div>
                 </div>
               </div>
               <div className="lg:col-span-4 flex flex-col gap-5 w-full max-w-[600px] mx-auto lg:max-w-none">
-                <GlassCard className="p-4 !rounded-[2rem] border-white/10 shadow-2xl" animateFloat>
-                  <GameControls onNewGame={() => setIsNewGameModalOpen(true)} onFlipBoard={() => setSettings(s => ({ ...s, flipBoard: !s.flipBoard }))} onUndo={handleUndo} onRedo={handleRedo} onResign={handleResign} onHint={handleGetHint} soundEnabled={settings.sound} onToggleSound={() => setSettings(s => ({ ...s, sound: !s.sound }))} canUndo={moveLogs.length > 0 && !gameResult && !isAiThinking && (activeMode as string) !== 'multiplayer' && (activeMode as string) !== 'puzzle' && (activeMode as string) !== 'online_match'} canRedo={redoStack.length > 0 && !gameResult && !isAiThinking && (activeMode as string) !== 'multiplayer' && (activeMode as string) !== 'puzzle' && (activeMode as string) !== 'online_match'} isAiMode={activeMode === 'ai'} />
+                <GlassCard className="p-4 !rounded-[2rem] border-white/10 shadow-2xl">
+                  <GameControls onNewGame={() => setIsNewGameModalOpen(true)} onFlipBoard={() => setSettings(s => ({ ...s, flipBoard: !s.flipBoard }))} onUndo={handleUndo} onRedo={handleRedo} onResign={handleResign} onHint={handleGetHint} soundEnabled={settings.sound} onToggleSound={() => setSettings(s => ({ ...s, sound: !s.sound }))} canUndo={moveLogs.length > 0 && !gameResult && !isAiThinking && (activeMode as string) !== 'multiplayer' && (activeMode as string) !== 'puzzle' && (activeMode as string) !== 'online_match'} canRedo={redoStack.length > 0 && !gameResult && !isAiThinking && (activeMode as string) !== 'multiplayer' && (activeMode as string) !== 'puzzle' && (activeMode as string) !== 'online_match'} isAiMode={activeMode === 'ai'} onOpenShortcuts={() => setIsShortcutsModalOpen(true)} />
                 </GlassCard>
                 <div className="flex flex-col gap-4 h-full">
-                  <GlassCard className="flex-1 !rounded-[2rem] border-white/10 shadow-2xl overflow-hidden flex flex-col" animateFloat>
+                  <GlassCard className="flex-1 !rounded-[2rem] border-white/10 shadow-2xl overflow-hidden flex flex-col">
                     <div className="flex items-center p-1.5 bg-white/5 border-b border-white/10 shrink-0">
                       <button onClick={() => setActiveTacticalTab('moves')} className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all relative ${activeTacticalTab === 'moves' ? 'text-black' : 'text-[#94A3B8] hover:text-white'}`}>
                         {activeTacticalTab === 'moves' && <motion.div layoutId="tactical-tab-bg" className="absolute inset-0 bg-[var(--secondary-accent)] rounded-2xl shadow-lg shadow-[var(--secondary-accent)]/20" transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }} />}
@@ -794,7 +969,7 @@ export default function App() {
                       <AnimatePresence mode="wait">
                         {activeTacticalTab === 'moves' ? (
                           <motion.div key="tab-moves" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="h-full flex flex-col">
-                            <div className="flex-1 overflow-y-auto custom-scrollbar p-1">
+                            <div className="flex-1 min-h-0 flex flex-col p-1">
                               <MoveHistory moveLogs={moveLogs} currentMoveIndex={viewingMoveIndex >= 0 ? viewingMoveIndex : moveLogs.length - 1} onSelectMoveIndex={idx => { if (idx === moveLogs.length - 1) setViewingMoveIndex(-1); else setViewingMoveIndex(idx); }} openingInfo={openingInfo} pgn={game.pgn()} fen={displayGame.fen()} />
                             </div>
                           </motion.div>
@@ -806,7 +981,7 @@ export default function App() {
                       </AnimatePresence>
                     </div>
                   </GlassCard>
-                  <GlassCard className="p-4 !rounded-[2rem] border-white/10 shadow-2xl" animateFloat>
+                  <GlassCard className="p-4 !rounded-[2rem] border-white/10 shadow-2xl">
                     <StrategicVisionPanel settings={settings} onUpdateSettings={updates => setSettings(s => ({ ...s, ...updates }))} />
                   </GlassCard>
                 </div>
@@ -876,6 +1051,9 @@ export default function App() {
       )}
       {activeChatFriend && (
         <FriendChatModal isOpen={!!activeChatFriend} onClose={() => setActiveChatFriend(null)} friend={activeChatFriend} onStartOnlineMatch={matchId => { setActiveChatFriend(null); setActiveOnlineMatchId(matchId); setActiveMode('online_match'); }} />
+      )}
+      {isShortcutsModalOpen && (
+        <KeyboardShortcutsModal isOpen={isShortcutsModalOpen} onClose={() => setIsShortcutsModalOpen(false)} />
       )}
       </Suspense>
       <Watermark onClick={() => setIsAboutUsModalOpen(true)} />

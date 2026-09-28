@@ -196,8 +196,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'worldwide',
-      label: t('sidebar.worldwide'),
-      icon: <Globe className="w-5 h-5 text-blue-400" />,
+      label: t('sidebar.worldwide') + ' Live',
+      badge: 'Real Players',
+      badgeClass: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1',
+      badgeDot: true,
+      icon: <Globe className="w-5 h-5 text-emerald-400" />,
       action: () => {
         onOpenWorldwideMatch();
         onClose();
