@@ -368,6 +368,8 @@ export interface AppSettings {
   showLegalMoves: boolean;
   autoQueen: boolean;
   flipBoard: boolean;
+  whiteBottom?: boolean;
+  premoveEnabled?: boolean;
   boardTheme: BoardThemeId;
   uiThemeId?: string;
   customBackground?: CustomBackgroundConfig;

@@ -30,7 +30,6 @@ export class AntiCheatEngine {
       };
 
       window.addEventListener('blur', this.blurListener);
-      console.log('[Anti-Cheat] Telemetry initialized.');
     }
 
     // Cleanup hook preventing duplicate event listeners on unmount/remount

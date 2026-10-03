@@ -21,13 +21,9 @@ class SocketService {
         transports: ['polling', 'websocket'],
       });
       
-      this.socket.on('connect', () => {
-        console.log('[Matchmaking] Connected to Real-time Engine:', this.socket?.id);
-      });
+      this.socket.on('connect', () => {});
 
-      this.socket.on('reconnect_success', (data) => {
-        console.log('[Reconnection] Authoritative state restored for match:', data.matchId);
-      });
+      this.socket.on('reconnect_success', () => {});
     }
     return this.socket;
   }

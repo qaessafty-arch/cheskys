@@ -141,7 +141,6 @@ export class AntiCheatEngine {
       };
 
       window.addEventListener('blur', this.blurListener);
-      console.log('[Anti-Cheat] Telemetry initialized.');
     }
 
     return () => {
