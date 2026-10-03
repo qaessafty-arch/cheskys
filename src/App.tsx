@@ -752,7 +752,7 @@ export default function App() {
     setIsJudgmentModalOpen(false);
     const updated = recordVictory(respectProfile);
     setRespectProfile(updated);
-    updateRespectMetrics({ respectPoints: 5, elo: 8, executions: 1, wins: 1, gamesPlayed: 1 });
+    updateRespectMetrics({ respectPoints: 0, elo: 15, executions: 1, wins: 1, gamesPlayed: 1 });
     if (pendingCheckmateResult) setGameResult(pendingCheckmateResult);
   };
 
@@ -760,7 +760,7 @@ export default function App() {
     setIsJudgmentModalOpen(false);
     const updated = recordMercy(respectProfile);
     setRespectProfile(updated);
-    updateRespectMetrics({ respectPoints: 10, elo: 12, merciesGranted: 1, gamesPlayed: 1 });
+    updateRespectMetrics({ respectPoints: 12, elo: 5, merciesGranted: 1, gamesPlayed: 1 });
     setPendingCheckmateResult(null);
     if (moveLogs.length > 0) {
       const remainingLogs = moveLogs.slice(0, moveLogs.length - 1);

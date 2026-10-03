@@ -17,9 +17,9 @@ interface Case {
 
 const TACTICS: Case[] = [
   { name: 'Mate in 1 (back rank)', fen: '6k1/5ppp/8/8/8/8/8/R5K1 w - - 0 1', best: ['a1a8'] },
-  { name: 'Mate in 2 (Morphy)', fen: 'r1b2k1r/ppp1bppp/8/1B1Q4/5q2/2P5/PPP2PPP/R3R1K1 w - - 1 1', best: ['d5d8'] },
+  { name: 'Mate in 2 (Morphy)', fen: 'r1b2k1r/ppp1bppp/8/1B1Q4/5q2/2P5/PPP2PPP/R3R1K1 w - - 1 1', best: ['d5d8'], timeMs: 1200 },
   { name: 'Smothered mate', fen: '6rk/6pp/8/6N1/8/8/8/6QK w - - 0 1', best: ['g1b6', 'g1a7', 'g5f7'] },
-  { name: 'WAC.009', fen: '3q1rk1/p4pp1/2pb3p/3p4/6Pr/1PNQ4/P1PB1PP1/4RRK1 b - - 0 1', best: ['d6h2'] },
+  { name: 'WAC.009', fen: '3q1rk1/p4pp1/2pb3p/3p4/6Pr/1PNQ4/P1PB1PP1/4RRK1 b - - 0 1', best: ['d6h2'], timeMs: 1200 },
   { name: 'WAC.001', fen: '2rr3k/pp3pp1/1nnqbN1p/3pN3/2pP4/2P3Q1/PPB4P/R4RK1 w - - 0 1', best: ['g3g6'] },
   // Deep pawn-race tactic — the engine needs a long search for this one; informational only.
   { name: 'WAC.002 (hard)', fen: '8/7p/5k2/5p2/p1p2P2/Pr1pPK2/1P1R3P/8 b - - 0 1', best: ['b3b2'], optional: true },

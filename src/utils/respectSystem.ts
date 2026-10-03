@@ -111,8 +111,9 @@ export function recordExecution(customProfile?: RespectProfile, eloGain = 8): Re
   const numElo = typeof current.elo === 'number' ? current.elo : 1200;
   const numExecutions = typeof current.executions === 'number' ? current.executions : 0;
 
-  const updatedRespect = isInfinite ? '∞' : numRespect + 5;
-  const updatedElo = isInfinite ? '∞' : numElo + eloGain;
+  // Execute: full rating gain, no honor gain (cold, decisive).
+  const updatedRespect = isInfinite ? '∞' : numRespect;
+  const updatedElo = isInfinite ? '∞' : numElo + 15;
   const rank = getHonorRank(updatedRespect);
 
   const updated: RespectProfile = {
@@ -138,9 +139,9 @@ export function recordMercy(customProfile?: RespectProfile): RespectProfile {
   const numElo = typeof current.elo === 'number' ? current.elo : 1200;
   const numMercies = typeof current.merciesGranted === 'number' ? current.merciesGranted : 0;
 
-  // Spare Mercy awards DOUBLE respect (+10) and +12 chivalric ELO
-  const updatedRespect = isInfinite ? '∞' : numRespect + 10;
-  const updatedElo = isInfinite ? '∞' : numElo + 12;
+  // Spare: honorific gain, modest rating.
+  const updatedRespect = isInfinite ? '∞' : numRespect + 12;
+  const updatedElo = isInfinite ? '∞' : numElo + 5;
   const rank = getHonorRank(updatedRespect);
 
   const updated: RespectProfile = {
