@@ -22,6 +22,7 @@ import {
 import { OnlineMatchSession, OnlineMatchPlayer, TimeControl } from '../types/chess';
 import { Chess } from 'chess.js';
 import { logCompletedGame } from './loggingService';
+import { getOnlineMatchSessionLocal } from './matchService';
 
 export interface MatchmakingTicket {
   id: string;
