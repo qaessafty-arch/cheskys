@@ -97,12 +97,12 @@ export const CheckmateJudgmentModal: React.FC<CheckmateJudgmentModalProps> = ({
                 Execute
               </h3>
               <p className="text-[10px] font-black text-[#94A3B8] mt-1 leading-normal uppercase opacity-60">
-                Lethal blow. Claim rating points immediately.
+                Cold, decisive. Full rating swing. No honor.
               </p>
             </div>
             <div className="w-full mt-4 pt-3 border-t border-[#1F293D] flex items-center justify-between text-[9px] font-black uppercase tracking-tighter">
               <span className="text-[#94A3B8]">Reward</span>
-              <span className="text-[#EF4444]">+8 ELO</span>
+              <span className="text-[#EF4444]">+15 ELO · +0 Honor</span>
             </div>
           </GlassButton>
 
@@ -125,12 +125,12 @@ export const CheckmateJudgmentModal: React.FC<CheckmateJudgmentModalProps> = ({
                 Show Mercy
               </h3>
               <p className="text-[10px] font-black text-[#94A3B8] mt-1 leading-normal uppercase opacity-60">
-                Spare opponent. Earn maximum respect.
+                Spare opponent. Modest rating, high honor.
               </p>
             </div>
             <div className="w-full mt-4 pt-3 border-t border-[#1F293D] flex items-center justify-between text-[9px] font-black uppercase tracking-tighter">
               <span className="text-[#94A3B8]">Bonus</span>
-              <span className="text-[#F59E0B]">+50 Respect</span>
+              <span className="text-[#F59E0B]">+5 ELO · +12 Honor</span>
             </div>
           </GlassButton>
         </div>

@@ -165,6 +165,7 @@ export interface OnlineMatchSession {
   code?: string;
   hostId: string;
   guestId?: string;
+  colorPreference?: 'white' | 'black' | 'random';
   whiteId?: string;
   blackId?: string;
   whitePlayer: OnlineMatchPlayer | null;

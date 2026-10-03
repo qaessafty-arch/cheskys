@@ -295,7 +295,6 @@ export const MultiplayerLobbyView: React.FC<MultiplayerLobbyViewProps> = ({
 
     const socket = socketService.getSocket();
     const handleRoomListUpdate = (data: any) => {
-      console.log('[MultiplayerLobbyView] Received roomListUpdate:', data);
       if (data?.action === 'create' && data?.room) {
         // Optimistically append to openMatches
         setOpenMatches(prev => {

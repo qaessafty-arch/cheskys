@@ -31,6 +31,7 @@ export interface MatchmakingTicket {
   status: 'waiting' | 'matched' | 'cancelled';
   matchId?: string;
   createdAt: number;
+  colorPreference?: 'white' | 'black' | 'random';
 }
 
 // Worldwide pool of Grandmaster challengers for instant matchmaking pairing
@@ -125,7 +126,8 @@ export const joinWorldwideMatchmaking = async (
   onMatched: (matchId: string, opponent: OnlineMatchPlayer, isBot: boolean) => void,
   onStatusUpdate?: (statusText: string) => void,
   matchmakingMode: MatchmakingMode = 'human_strict',
-  fallbackTimeoutSeconds: number = 20
+  fallbackTimeoutSeconds: number = 20,
+  colorPreference: 'white' | 'black' | 'random' = 'random'
 ): Promise<{ ticketId: string; cancel: () => void; pairWithBotNow: () => void }> => {
   let isCancelled = false;
   let hasMatched = false;
@@ -162,7 +164,7 @@ export const joinWorldwideMatchmaking = async (
     const matchId = `match_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const matchDocRef = doc(db, 'online_matches', matchId);
 
-    const isHostWhite = Math.random() < 0.5;
+    const isHostWhite = colorPreference === 'white' ? true : colorPreference === 'black' ? false : Math.random() < 0.5;
     const whitePlayer = isHostWhite ? player : randomChallenger;
     const blackPlayer = isHostWhite ? randomChallenger : player;
 
@@ -227,7 +229,7 @@ export const joinWorldwideMatchmaking = async (
       const matchId = `match_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
       const matchDocRef = doc(db, 'online_matches', matchId);
 
-      const isHostWhite = Math.random() < 0.5;
+      const isHostWhite = colorPreference === 'white' ? false : colorPreference === 'black' ? true : Math.random() < 0.5;
       const whitePlayer = isHostWhite ? otherTicketDoc.player : player;
       const blackPlayer = isHostWhite ? player : otherTicketDoc.player;
 
@@ -310,7 +312,8 @@ export const joinWorldwideMatchmaking = async (
       timeControl,
       status: 'waiting',
       createdAt: nowTime,
-      lastPing: nowTime
+      lastPing: nowTime,
+      colorPreference
     };
 
     await safeSetDoc(ticketDocRef, ticketData);

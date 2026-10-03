@@ -44,6 +44,7 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
   const [matchedOpponent, setMatchedOpponent] = useState<{ player: OnlineMatchPlayer; isBot: boolean } | null>(null);
   const [liveQueueCount, setLiveQueueCount] = useState<number>(0);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [colorPreference, setColorPreference] = useState<'white' | 'black' | 'random'>('random');
 
   const cancelRef = useRef<(() => void) | null>(null);
 
@@ -168,7 +169,9 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
       statusText => {
         setSearchStatus(statusText);
       },
-      'human_strict'
+      'human_strict',
+      20,
+      colorPreference
     );
 
     cancelRef.current = cancel;
@@ -344,6 +347,28 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
               <p className="text-[11px] text-emerald-200/80 leading-relaxed">
                 Connect and play live chess against verified human opponents from across the globe in real time. AI bots, engine fallback, and simulated players are strictly prohibited.
               </p>
+            </div>
+
+            {/* Color Preference */}
+            <div>
+              <label className="text-xs font-bold text-[#DFD0B0]/80 uppercase tracking-wider block font-ui mb-1.5">
+                Your Color
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {(['white', 'random', 'black'] as const).map(c => (
+                  <button
+                    key={c}
+                    onClick={() => setColorPreference(c)}
+                    className={`py-2 px-3 rounded-2xl border text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                      colorPreference === c
+                        ? 'bg-gradient-to-r from-[#52673A]/60 to-[#8C2425]/60 border-[#F5C453] text-white shadow-lg ring-1 ring-[#F5C453]/50'
+                        : 'bg-[#1a2315]/60 border-[#F5C453]/20 text-[#DFD0B0]/80 hover:bg-[#1a2315] hover:border-[#F5C453]/50'
+                    }`}
+                  >
+                    {c === 'white' ? '⬜ White' : c === 'black' ? '⬛ Black' : '🎲 Random'}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Time Control Format */}

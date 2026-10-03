@@ -160,7 +160,6 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
           setConnectionTimedOut(false);
           setIsProvisioning(false);
           setIsVerifyingMatch(false);
-          console.log(`[WaitingRoom] Verified gameId "${cleanId}". Navigating to game board.`);
           navigateToMatch(cleanId);
         } else {
           // Document might still be syncing due to replication lag; release lock and retry
