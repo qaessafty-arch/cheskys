@@ -713,6 +713,44 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                 <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white/[0.04] border border-white/10 backdrop-blur-md">
                   <div>
+                    <div className="text-xs font-semibold text-white/90">Always Play White at Bottom</div>
+                    <div className="text-[11px] text-[#DFD0B0]/60">Keep your pieces on the bottom regardless of assigned color</div>
+                  </div>
+                  <button
+                    onClick={() => onUpdateSettings({ whiteBottom: !settings.whiteBottom })}
+                    className={`w-11 h-6 rounded-full transition-colors relative border border-white/10 cursor-pointer ${
+                      settings.whiteBottom ? 'bg-[#52673A]' : 'bg-white/10'
+                    }`}
+                  >
+                    <span
+                      className={`block w-4 h-4 rounded-full bg-white transition-transform transform shadow-sm ${
+                        settings.whiteBottom ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white/[0.04] border border-white/10 backdrop-blur-md">
+                  <div>
+                    <div className="text-xs font-semibold text-white/90">Premove</div>
+                    <div className="text-[11px] text-[#DFD0B0]/60">Queue your next move while the opponent is thinking</div>
+                  </div>
+                  <button
+                    onClick={() => onUpdateSettings({ premoveEnabled: !settings.premoveEnabled })}
+                    className={`w-11 h-6 rounded-full transition-colors relative border border-white/10 cursor-pointer ${
+                      settings.premoveEnabled !== false ? 'bg-[#52673A]' : 'bg-white/10'
+                    }`}
+                  >
+                    <span
+                      className={`block w-4 h-4 rounded-full bg-white transition-transform transform shadow-sm ${
+                        settings.premoveEnabled !== false ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white/[0.04] border border-white/10 backdrop-blur-md">
+                  <div>
                     <div className="text-xs font-semibold text-white/90">Evaluation Bar</div>
                     <div className="text-[11px] text-[#DFD0B0]/60">Real-time advantage engine gauge on side of board</div>
                   </div>

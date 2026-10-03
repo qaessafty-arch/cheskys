@@ -480,11 +480,18 @@ export default function App() {
     return () => clearTimeout(timeoutId);
   }, [activeMode, game, playerColor, gameResult, currentBot, executeMove, isJudgmentModalOpen]);
 
+  const pendingPremoveRef = useRef<{ from: Square; to: Square } | null>(null);
+
   const handleBoardMove = useCallback((from: Square, to: Square) => {
     if (gameResult || isAiThinking || isJudgmentModalOpen) return;
     if (activeMode === 'ai') {
       const isPlayerTurn = (playerColor === 'w' && game.turn() === 'w') || (playerColor === 'b' && game.turn() === 'b');
-      if (!isPlayerTurn) return;
+      if (!isPlayerTurn) {
+        if (settings.premoveEnabled && activeMode === 'ai') {
+          pendingPremoveRef.current = { from, to };
+        }
+        return;
+      }
     }
     const piece = game.get(from);
     const isPawn = piece && piece.type === 'p';
@@ -496,7 +503,18 @@ export default function App() {
       return;
     }
     executeMove(from, to);
-  }, [gameResult, isAiThinking, isJudgmentModalOpen, activeMode, playerColor, game, settings.autoQueen, executeMove]);
+  }, [gameResult, isAiThinking, isJudgmentModalOpen, activeMode, playerColor, game, settings.autoQueen, settings.premoveEnabled, executeMove]);
+
+  // Fire queued premove as soon as the turn returns to the player
+  useEffect(() => {
+    if (activeMode !== 'ai' || gameResult || isAiThinking) return;
+    const isPlayerTurn = (playerColor === 'w' && game.turn() === 'w') || (playerColor === 'b' && game.turn() === 'b');
+    if (isPlayerTurn && pendingPremoveRef.current) {
+      const { from, to } = pendingPremoveRef.current;
+      pendingPremoveRef.current = null;
+      executeMove(from, to);
+    }
+  }, [game, playerColor, activeMode, gameResult, isAiThinking, executeMove]);
 
   const handlePromotionSelect = (promoPiece: PieceType) => {
     if (pendingPromotion) {
@@ -793,7 +811,9 @@ export default function App() {
 
   const capturedMaterial = getCapturedMaterial(displayGame);
   const openingInfo: OpeningInfo | null = detectOpening(moveLogs.map(l => l.san));
-  const isBoardFlipped = activeMode === 'pass_and_play' ? settings.flipBoard || game.turn() === 'b' : settings.flipBoard || playerColor === 'b';
+  const isBoardFlipped = activeMode === 'pass_and_play'
+    ? (settings.whiteBottom ? false : (settings.flipBoard || game.turn() === 'b'))
+    : (settings.whiteBottom ? playerColor === 'b' : (settings.flipBoard || playerColor === 'b'));
 
   return (
     <div id="app-root-container" className="min-h-screen flex flex-col relative overflow-x-hidden font-jakarta text-white selection:bg-[#FFD700]/30 selection:text-white transition-all duration-700">

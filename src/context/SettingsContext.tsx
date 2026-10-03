@@ -28,6 +28,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   showLegalMoves: true,
   autoQueen: false,
   flipBoard: false,
+  whiteBottom: false,
+  premoveEnabled: true,
   boardTheme: 'obsidian',
   pieceTheme: 'classic',
   showCoordinates: true,

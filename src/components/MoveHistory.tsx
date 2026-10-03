@@ -35,6 +35,26 @@ export const MoveHistory: React.FC<MoveHistoryProps> = ({
   const endAnchorRef = useRef<HTMLDivElement | null>(null);
   const [copiedPgn, setCopiedPgn] = React.useState(false);
   const [copiedFen, setCopiedFen] = React.useState(false);
+  const touchStartXRef = useRef<number | null>(null);
+
+  // Swipe horizontally on the move list to step through the game
+  const handleSwipeTouchStart = (e: React.TouchEvent) => {
+    touchStartXRef.current = e.touches[0]?.clientX ?? null;
+  };
+  const handleSwipeTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartXRef.current === null) return;
+    const endX = e.changedTouches[0]?.clientX ?? 0;
+    const dx = endX - touchStartXRef.current;
+    touchStartXRef.current = null;
+    if (Math.abs(dx) < 50) return;
+    if (dx < 0) {
+      // Swipe left → forward toward latest move
+      onSelectMoveIndex(Math.min(moveLogs.length - 1, currentMoveIndex + 1));
+    } else {
+      // Swipe right → back toward oldest move
+      onSelectMoveIndex(Math.max(0, currentMoveIndex - 1));
+    }
+  };
 
   useEffect(() => {
     // Smooth auto-scroll so the latest move or currently selected move is always visible
@@ -126,7 +146,7 @@ export const MoveHistory: React.FC<MoveHistoryProps> = ({
       </div>
 
       {/* Move list table */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-1 font-mono scroll-smooth custom-scrollbar">
+      <div ref={scrollRef} onTouchStart={handleSwipeTouchStart} onTouchEnd={handleSwipeTouchEnd} className="flex-1 overflow-y-auto p-3 space-y-1 font-mono scroll-smooth custom-scrollbar">
         {movePairs.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center text-[#94A3B8] py-10 gap-3 px-6">
             <Layers className="w-9 h-9 stroke-[1] opacity-25" />
