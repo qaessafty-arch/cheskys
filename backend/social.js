@@ -6,6 +6,7 @@
  */
 
 import { query } from './database.js';
+import crypto from 'crypto';
 
 export class SocialService {
   constructor(io = null) {

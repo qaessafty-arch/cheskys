@@ -7,6 +7,7 @@
 
 import pg from 'pg';
 import winston from 'winston';
+import crypto from 'crypto';
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
