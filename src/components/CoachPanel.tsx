@@ -22,7 +22,7 @@ import {
   BrainCircuit,
   ClipboardPaste
 } from 'lucide-react';
-import { AppSettings, OpeningInfo, PieceColor } from '../types/chess';
+import { AppSettings, OpeningInfo } from '../types/chess';
 import { useTranslation } from 'react-i18next';
 
 interface CoachPanelProps {
