@@ -127,10 +127,11 @@ export const FriendPanel: React.FC<FriendPanelProps> = ({
     }
 
     setUsernameChecking(true);
-    const timer = setTimeout(async () => {
-      const available = await checkUsernameAvailability(clean, profile?.uid);
-      setUsernameAvailability(available);
-      setUsernameChecking(false);
+    const timer = setTimeout(() => {
+      checkUsernameAvailability(clean, profile?.uid).then(available => {
+        setUsernameAvailability(available);
+        setUsernameChecking(false);
+      });
     }, 350);
 
     return () => clearTimeout(timer);

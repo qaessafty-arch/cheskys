@@ -80,7 +80,7 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({
 
               {match.id === currentMatchId && (
                 <div className="mt-4 pt-3 border-t border-white/5">
-                  <button className="w-full py-2 bg-[#FFD700] text-black text-[10px] font-black uppercase tracking-widest rounded-md hover:bg-white transition-colors">
+                  <button className="w-full py-2 bg-[#FFD700] text-black text-xs font-black uppercase tracking-wider rounded-md hover:bg-white transition-colors truncate">
                     Enter Match
                   </button>
                 </div>

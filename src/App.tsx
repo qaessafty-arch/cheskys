@@ -66,6 +66,7 @@ const PuzzlePractice = lazyPreload(() => import('./components/PuzzlePractice').t
 const PuzzleMode = lazyPreload(() => import('./components/PuzzleMode').then(m => ({ default: m.PuzzleMode })));
 const DailyPuzzleView = lazyPreload(() => import('./components/DailyPuzzleView').then(m => ({ default: m.DailyPuzzleView })));
 const AnalysisPanel = lazyPreload(() => import('./components/AnalysisPanel').then(m => ({ default: m.AnalysisPanel })));
+const CoachPanel = lazyPreload(() => import('./components/CoachPanel').then(m => ({ default: m.CoachPanel })));
 const CheckmateJudgmentModal = lazyPreload(() => import('./components/CheckmateJudgmentModal').then(m => ({ default: m.CheckmateJudgmentModal })));
 const LeaderboardModal = lazyPreload(() => import('./components/LeaderboardModal').then(m => ({ default: m.LeaderboardModal })));
 const ProfileModal = lazyPreload(() => import('./components/ProfileModal').then(m => ({ default: m.ProfileModal })));
@@ -464,7 +465,7 @@ export default function App() {
     setIsAiThinking(true);
     const delay = Math.min(1500, Math.max(400, 300 + currentBot.depth * 80));
     const currentFen = game.fen();
-    const timeoutId = setTimeout(async () => {
+    const timeoutId = setTimeout(() => {
       try {
         const res = await engine.botMove({ fen: currentFen }, currentBot.id);
         if (res.bestMove && res.bestMove.length >= 4) {
@@ -920,9 +921,17 @@ export default function App() {
             <motion.div key="puzzle-mode" className="w-full h-full">
               <PuzzleMode settings={settings} />
             </motion.div>
-          ) : activeMode === 'puzzle_practice' ? (
+      ) : activeMode === 'puzzle_practice' ? (
             <motion.div key="puzzle-practice" className="w-full h-full">
               <PuzzlePractice settings={settings} onNavigateHome={() => setActiveMode('ai')} />
+            </motion.div>
+          ) : activeMode === 'analysis' ? (
+            <motion.div key="analysis-panel" className="w-full h-full">
+              <AnalysisPanel settings={settings} onUpdateSettings={updates => setSettings(s => ({ ...s, ...updates }))} />
+            </motion.div>
+          ) : activeMode === 'coach' ? (
+            <motion.div key="coach-panel" className="w-full h-full">
+              <CoachPanel settings={settings} onUpdateSettings={updates => setSettings(s => ({ ...s, ...updates }))} />
             </motion.div>
           ) : (
             <motion.div key="local-game-view" className="w-full max-w-7xl mx-auto p-3 sm:p-6 lg:px-8 lg:py-5 grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-start justify-center relative z-10">
@@ -971,12 +980,12 @@ export default function App() {
                 <div className="flex flex-col gap-4 h-full">
                   <GlassCard className="flex-1 !rounded-[2rem] border-white/10 shadow-2xl overflow-hidden flex flex-col">
                     <div className="flex items-center p-1.5 bg-white/5 border-b border-white/10 shrink-0">
-                      <button onClick={() => setActiveTacticalTab('moves')} className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all relative ${activeTacticalTab === 'moves' ? 'text-black' : 'text-[#94A3B8] hover:text-white'}`}>
+                      <button onClick={() => setActiveTacticalTab('moves')} className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-2xl text-xs font-black uppercase tracking-wider transition-all relative min-w-0 ${activeTacticalTab === 'moves' ? 'text-black' : 'text-[#94A3B8] hover:text-white'}`}>
                         {activeTacticalTab === 'moves' && <motion.div layoutId="tactical-tab-bg" className="absolute inset-0 bg-[var(--secondary-accent)] rounded-2xl shadow-lg shadow-[var(--secondary-accent)]/20" transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }} />}
                         <Layers className="w-3.5 h-3.5 relative z-10" />
                         <span className="relative z-10">Battle Log</span>
                       </button>
-                      <button onClick={() => setActiveTacticalTab('chat')} className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all relative ${activeTacticalTab === 'chat' ? 'text-black' : 'text-[#94A3B8] hover:text-white'}`}>
+                      <button onClick={() => setActiveTacticalTab('chat')} className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-2xl text-xs font-black uppercase tracking-wider transition-all relative min-w-0 ${activeTacticalTab === 'chat' ? 'text-black' : 'text-[#94A3B8] hover:text-white'}`}>
                         {activeTacticalTab === 'chat' && <motion.div layoutId="tactical-tab-bg" className="absolute inset-0 bg-[var(--secondary-accent)] rounded-2xl shadow-lg shadow-[var(--secondary-accent)]/20" transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }} />}
                         <MessageSquare className="w-3.5 h-3.5 relative z-10" />
                         <span className="relative z-10">Match Chat</span>

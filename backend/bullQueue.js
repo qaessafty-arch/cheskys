@@ -95,8 +95,8 @@ export class AnalysisQueueService {
     const blackMoveTimes = moveTimes.filter((_, i) => i % 2 !== 0);
 
     // Calculate simulated or evaluated accuracy
-    const whiteAccuracy = Math.min(99, Math.max(50, Math.round(75 + (Math.random() * 20))));
-    const blackAccuracy = Math.min(99, Math.max(50, Math.round(75 + (Math.random() * 20))));
+    const whiteAccuracy = Math.min(99, Math.max(50, Math.round(75 + (crypto.randomBytes(1)[0] / 255) * 20)));
+    const blackAccuracy = Math.min(99, Math.max(50, Math.round(75 + (crypto.randomBytes(1)[0] / 255) * 20)));
 
     // Run timing variance check through anti-cheat service
     if (this.antiCheat) {

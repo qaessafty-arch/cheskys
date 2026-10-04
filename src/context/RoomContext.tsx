@@ -199,7 +199,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCountdown(count);
     soundManager.playCountdownTick(false);
 
-    countdownTimerRef.current = setInterval(async () => {
+    countdownTimerRef.current = setInterval(() => {
       count -= 1;
       if (count > 0) {
         setCountdown(count);
@@ -214,8 +214,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (activeProfile.uid === room.creatorId && launchedRoomRef.current !== cleanCode) {
           launchedRoomRef.current = cleanCode;
-          try {
-            const gameSessionId = await createOnlineMatch(
+          createOnlineMatch(
               { uid: room.creatorId, displayName: room.creatorName, elo: room.creatorElo },
               {
                 id: room.settings.timeControlId,

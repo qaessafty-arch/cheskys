@@ -133,7 +133,7 @@ function executeMemoryQuery(text, params = []) {
   }
 
   if (sql.startsWith('INSERT INTO USERS')) {
-    const id = params[0] || `u_${Date.now()}_${Math.floor(Math.random()*1000)}`;
+    const id = params[0] || `u_${Date.now()}_${crypto.randomBytes(4).readUInt32BE(0) % 1000000}`;
     const user = {
       id,
       username: params[1] || `user_${Date.now()}`,

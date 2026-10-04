@@ -18,6 +18,9 @@ import { Chess } from 'chess.js';
 import { v4 as uuidv4 } from 'uuid';
 import winston from 'winston';
 import dotenv from 'dotenv';
+import crypto from 'crypto';
+import cookieParser from 'cookie-parser';
+import csrf from 'csurf';
 import { registerUser, loginUser, logoutUser, socketAuthMiddleware } from './auth.js';
 import apiRouter from './routes.js';
 import { AntiCheatService } from './antiCheat.js';
@@ -31,10 +34,23 @@ dotenv.config();
 // 1. CONFIGURATION & LOGGER SETUP
 // ==========================================
 const PORT = process.env.PORT || 5000;
-const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_chess_key_2026';
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'refresh_secret_jwt_chess_key_2026';
+const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
 const DATABASE_URL = process.env.DATABASE_URL || 'postgres://chess_user:chess_secure_pass_2026@localhost:5432/chess_db';
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+
+if (!JWT_SECRET || !JWT_REFRESH_SECRET) {
+  throw new Error('JWT_SECRET and JWT_REFRESH_SECRET must be set in environment variables');
+}
+
+// Security constants
+const MAX_GAME_CODE_ATTEMPTS = 5;
+const GAME_CODE_ATTEMPT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+const REFRESH_TOKEN_ROTATION = true;
+const TOKEN_BLACKLIST_TTL = 7 * 24 * 60 * 60; // 7 days
+
+// Game code attempt tracking (IP-based)
+const gameCodeAttempts = new Map();
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
@@ -117,12 +133,103 @@ const cacheDel = async (key) => {
 const app = express();
 const server = http.createServer(app);
 
-app.use(helmet({ contentSecurityPolicy: false }));
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      fontSrc: ["'self'"],
+      connectSrc: ["'self'", "wss:", "https:"],
+      frameSrc: ["'none'"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"]
+    }
+  },
+  hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  crossOriginEmbedderPolicy: false
+});
+
+// Prevent clickjacking
+app.use((req, res, next) => {
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-DNS-Prefetch-Control', 'off');
+  res.setHeader('X-Download-Options', 'noopen');
+  res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+  next();
+});
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+  : ['http://localhost:5173', 'https://qaessafty-arch.github.io'];
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : '*',
-  credentials: true
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express.json());
+app.use(express.json({ limit: '100kb' }));
+app.use(express.urlencoded({ extended: true, limit: '100kb' }));
+app.use(cookieParser());
+
+// Security headers for cookies
+app.use((req, res, next) => {
+  res.cookie('test', 'test', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 0
+  });
+  next();
+});
+
+// CSRF protection (disabled for Socket.IO handshake & health checks)
+const csrfProtection = csrf({
+  cookie: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 3600000 // 1 hour
+  },
+  ignoreMethods: ['GET', 'HEAD', 'OPTIONS'],
+  value: (req) => req.cookies['csrf-token'] || req.headers['x-csrf-token']
+});
+
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/auth/refresh') || req.path === '/api/health' || req.path === '/metrics') {
+    return next();
+  }
+  csrfProtection(req, res, next);
+});
+
+// Expose CSRF token endpoint
+app.get('/api/csrf-token', (req, res) => {
+  res.json({ csrfToken: req.csrfToken() });
+});
+
+// Security headers middleware
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('X-DNS-Prefetch-Control', 'off');
+  res.setHeader('X-Download-Options', 'noopen');
+  res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+  res.setHeader('Permissions-Policy', 'accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()');
+  next();
+});
 
 // Rate Limiting: 100 requests per minute per IP
 const apiLimiter = rateLimit({
@@ -130,9 +237,91 @@ const apiLimiter = rateLimit({
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Too many requests, please slow down.' }
+  message: { error: 'Too many requests, please slow down.' },
+  keyGenerator: (req) => req.ip,
+  skip: (req) => req.path === '/api/health' || req.path === '/metrics'
 });
 app.use('/api/', apiLimiter);
+
+// Auth endpoint specific rate limits
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 attempts per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many auth attempts, please try again later.' }
+});
+app.use('/api/auth/', authLimiter);
+
+// Refresh token endpoint rate limit
+const refreshLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many refresh attempts, please try again later.' }
+});
+app.post('/api/auth/refresh', refreshLimiter);
+
+// Game code attempt tracking to prevent enumeration
+const gameCodeAttempts = new Map();
+
+function checkGameCodeAttempts(ip) {
+  const now = Date.now();
+  const record = gameCodeAttempts.get(ip) || { count: 0, windowStart: Date.now() };
+  if (now - record.windowStart > GAME_CODE_ATTEMPT_WINDOW_MS) {
+    record.count = 0;
+    record.windowStart = now;
+  }
+  record.count++;
+  gameCodeAttempts.set(ip, record);
+  return record.count <= MAX_GAME_CODE_ATTEMPTS;
+}
+
+function recordGameCodeAttempt(ip, success) {
+  const record = gameCodeAttempts.get(ip) || { count: 0, windowStart: Date.now() };
+  if (!success) {
+    record.count++;
+  } else {
+    record.count = 0; // Reset on success
+  }
+  gameCodeAttempts.set(ip, record);
+}
+
+// Request validation middleware
+app.use((req, res, next) => {
+  // Block requests with suspicious patterns
+  const suspiciousPatterns = [
+    /<script/i,
+    /javascript:/i,
+    /on\w+\s*=/i,
+    /eval\s*\(/i,
+    /document\.cookie/i,
+    /document\.write/i,
+    /innerHTML/i,
+    /outerHTML/i
+  ];
+
+  const checkValue = (val) => {
+    if (typeof val === 'string') {
+      return suspiciousPatterns.some(pattern => pattern.test(val));
+    }
+    if (typeof val === 'object' && val !== null) {
+      return Object.values(val).some(checkValue);
+    }
+    return false;
+  };
+
+  if (checkValue(req.body) || checkValue(req.query) || checkValue(req.params)) {
+    logger.warn('Suspicious request blocked', {
+      ip: req.ip,
+      path: req.path,
+      userAgent: req.get('user-agent')
+    });
+    return res.status(400).json({ error: 'Invalid request' });
+  }
+  next();
+});
 
 // Prometheus / Metrics Endpoint
 let activeConnectionsCount = 0;
@@ -179,11 +368,13 @@ const authenticateToken = (req, res, next) => {
 };
 
 // 6-Character Game Code Generator (No ambiguous characters: 0/O, 1/I)
+// Uses crypto.randomBytes for cryptographic security
 const CODE_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
 export function generateGameCode() {
+  const bytes = crypto.randomBytes(6);
   let code = '';
   for (let i = 0; i < 6; i++) {
-    code += CODE_CHARS.charAt(Math.floor(Math.random() * CODE_CHARS.length));
+    code += CODE_CHARS[bytes[i] % CODE_CHARS.length];
   }
   return code;
 }
@@ -572,13 +763,85 @@ app.get('/api/tournaments/:id', async (req, res) => {
   }
 });
 
+// WebSocket connection tracking for rate limiting
+const socketConnections = new Map();
+const socketEventCounts = new Map(); // key: "userId:eventName" -> { count, windowStart }
+
+function trackSocketConnection(socket, userId) {
+  const now = Date.now();
+  const key = userId || socket.id;
+  const record = socketConnections.get(key) || { count: 0, windowStart: Date.now() };
+  if (now - record.windowStart > 60000) {
+    record.count = 0;
+    record.windowStart = now;
+  }
+  record.count++;
+  socketConnections.set(key, record);
+  if (socketConnections.size > 10000) {
+    const cutoff = Date.now() - 120000;
+    for (const [k, v] of socketConnections.entries()) {
+      if (v.windowStart < cutoff) socketConnections.delete(k);
+    }
+  }
+  return record.count;
+}
+
+function checkSocketRateLimit(socket, userId, maxPerMinute = 30) {
+  const count = trackSocketConnection(socket, userId);
+  return count <= maxPerMinute;
+}
+
+// Per-event WebSocket rate limiting
+const socketEventCountsMap = new Map(); // "userId:eventName" -> { count, windowStart }
+
+function trackSocketEvent(userId, eventName) {
+  const now = Date.now();
+  const key = `${userId}:${eventName}`;
+  const record = socketEventCountsMap.get(key) || { count: 0, windowStart: Date.now() };
+  if (now - record.windowStart > 60000) {
+    record.count = 0;
+    record.windowStart = now;
+  }
+  record.count++;
+  socketEventCountsMap.set(key, record);
+  return record.count;
+}
+
+function checkSocketEventRateLimit(userId, eventName, maxPerMinute) {
+  const count = trackSocketEvent(userId, eventName);
+  return count <= maxPerMinute;
+}
+
+// Sensitive event rate limits (per minute per user)
+const WS_EVENT_LIMITS = {
+  makeMove: 30,
+  resign: 5,
+  offerDraw: 10,
+  acceptDraw: 5,
+  declineDraw: 5,
+  requestTakeback: 10,
+  acceptTakeback: 5,
+  declineTakeback: 5,
+  pauseGame: 5,
+  resumeGame: 5,
+  claimDraw: 5,
+  sendMessage: 20,
+  spectateGame: 10,
+  stopSpectating: 10,
+  heartbeat: 60,
+  reconnectGame: 10,
+  quickMatch: 5,
+  cancelMatchmaking: 10
+};
+
 // ==========================================
 // 6. REAL-TIME ENGINE & SOCKET.IO EVENTS
 // ==========================================
 const io = new SocketIOServer(server, {
   cors: {
-    origin: '*',
-    methods: ['GET', 'POST']
+    origin: allowedOrigins,
+    methods: ['GET', 'POST'],
+    credentials: true
   },
   pingInterval: 10000,
   pingTimeout: 5000
@@ -755,6 +1018,14 @@ function evaluateAntiCheat(userId, moveDurationMs, gameId) {
   }
 }
 
+// WS connection rate limiter
+io.use((socket, next) => {
+  if (!checkSocketRateLimit(socket, socket.userId)) {
+    return next(new Error('Rate limit exceeded'));
+  }
+  next();
+});
+
 // Socket Connection Lifecycle
 io.on('connection', (socket) => {
   activeConnectionsCount++;
@@ -773,6 +1044,10 @@ io.on('connection', (socket) => {
 
   // 1. 'createGame'
   socket.on('createGame', async ({ timeControl = '10+0', rated = true, variant = 'standard', colorPreference = 'white', visibility = 'public' }, callback) => {
+    if (!checkSocketEventRateLimit(currentUserId || socket.id, 'createGame', WS_EVENT_LIMITS.quickMatch)) {
+      socket.emit('error', { code: 'RATE_LIMITED', message: 'Too many game creation requests' });
+      return;
+    }
     try {
       const gameId = uuidv4();
       const code = generateGameCode();
@@ -796,7 +1071,7 @@ io.on('connection', (socket) => {
       } else if (colorPreference === 'white') {
         session.white = playerInfo;
       } else {
-        Math.random() > 0.5 ? (session.white = playerInfo) : (session.black = playerInfo);
+        crypto.randomBytes(1)[0] > 127 ? (session.white = playerInfo) : (session.black = playerInfo);
       }
 
       activeGames.set(gameId, session);
@@ -817,11 +1092,29 @@ io.on('connection', (socket) => {
   // 2. 'joinGame'
   socket.on('joinGame', async ({ gameCode }, callback) => {
     try {
+      // Get client IP for rate limiting
+      const clientIp = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;
+      if (!checkGameCodeAttempts(clientIp)) {
+        recordGameCodeAttempt(clientIp, false);
+        return socket.emit('error', { code: 'RATE_LIMITED', message: 'Too many failed join attempts, please wait' });
+      }
+
+      try {
+        const cleanCode = (gameCode || '').trim().toUpperCase();
+        const gameId = gameCodeIndex.get(cleanCode);
+        if (!gameId || !activeGames.has(gameId)) {
+          recordGameCodeAttempt(clientIp, false);
+          return socket.emit('error', { code: 'GAME_NOT_FOUND', message: 'No game found with code ' + cleanCode });
+        }
+      } catch (err) {
+        recordGameCodeAttempt(clientIp, false);
+        throw err;
+      }
+
+      // If we get here, the game code exists - reset attempts
       const cleanCode = (gameCode || '').trim().toUpperCase();
       const gameId = gameCodeIndex.get(cleanCode);
-      if (!gameId || !activeGames.has(gameId)) {
-        return socket.emit('error', { code: 'GAME_NOT_FOUND', message: 'No game found with code ' + cleanCode });
-      }
+      recordGameCodeAttempt(clientIp, true);
 
       const session = activeGames.get(gameId);
       if (session.status !== 'waiting') {
@@ -886,6 +1179,10 @@ io.on('connection', (socket) => {
 
   // 3. 'quickMatch'
   socket.on('quickMatch', ({ timeControl = '10+0' }) => {
+    if (!checkSocketEventRateLimit(currentUserId || socket.id, 'quickMatch', WS_EVENT_LIMITS.quickMatch)) {
+      socket.emit('error', { code: 'RATE_LIMITED', message: 'Too many quick match requests' });
+      return;
+    }
     if (!quickMatchQueue.has(timeControl)) {
       quickMatchQueue.set(timeControl, []);
     }
@@ -937,6 +1234,10 @@ io.on('connection', (socket) => {
 
   // 4. 'cancelMatchmaking'
   socket.on('cancelMatchmaking', () => {
+    if (!checkSocketEventRateLimit(currentUserId || socket.id, 'cancelMatchmaking', WS_EVENT_LIMITS.cancelMatchmaking)) {
+      socket.emit('error', { code: 'RATE_LIMITED', message: 'Too many cancel requests' });
+      return;
+    }
     for (const [tc, queue] of quickMatchQueue.entries()) {
       const idx = queue.findIndex(p => p.socket.id === socket.id);
       if (idx !== -1) {
@@ -977,6 +1278,14 @@ io.on('connection', (socket) => {
     const movingPlayerId = currentTurn === 'w' ? session.white?.id : session.black?.id;
     if (movingPlayerId) {
       evaluateAntiCheat(movingPlayerId, elapsedMs, session.id);
+    }
+
+    // Per-event WS rate limit for makeMove
+    if (!checkSocketEventRateLimit(currentUserId || socket.id, 'makeMove', WS_EVENT_LIMITS.makeMove)) {
+      const err = { code: 'RATE_LIMITED', message: 'Too many moves, please slow down' };
+      socket.emit('error', err);
+      if (typeof callback === 'function') callback(err);
+      return;
     }
 
     const fenBefore = session.chess.fen();
@@ -1061,6 +1370,10 @@ io.on('connection', (socket) => {
 
   // 6. 'resign'
   socket.on('resign', async ({ gameId }) => {
+    if (!checkSocketEventRateLimit(currentUserId || socket.id, 'resign', WS_EVENT_LIMITS.resign)) {
+      socket.emit('error', { code: 'RATE_LIMITED', message: 'Too many resignations' });
+      return;
+    }
     const session = activeGames.get(gameId);
     if (!session || session.status !== 'active') return;
 
@@ -1073,6 +1386,10 @@ io.on('connection', (socket) => {
 
   // 7. Draw Offer & Response
   socket.on('offerDraw', ({ gameId }) => {
+    if (!checkSocketEventRateLimit(currentUserId || socket.id, 'offerDraw', WS_EVENT_LIMITS.offerDraw)) {
+      socket.emit('error', { code: 'RATE_LIMITED', message: 'Too many draw offers' });
+      return;
+    }
     const session = activeGames.get(gameId);
     if (!session || session.status !== 'active') return;
     const isWhite = (session.white?.socketId === socket.id) || (session.white?.id === currentUserId);
@@ -1085,6 +1402,10 @@ io.on('connection', (socket) => {
   });
 
   socket.on('acceptDraw', async ({ gameId }) => {
+    if (!checkSocketEventRateLimit(currentUserId || socket.id, 'acceptDraw', WS_EVENT_LIMITS.acceptDraw)) {
+      socket.emit('error', { code: 'RATE_LIMITED', message: 'Too many draw acceptances' });
+      return;
+    }
     const session = activeGames.get(gameId);
     if (!session || session.status !== 'active' || !session.pendingDraw) return;
     await handleGameOver(session, { result: '½-½', reason: 'draw_agreement', winner: 'draw' });
@@ -1092,6 +1413,10 @@ io.on('connection', (socket) => {
   });
 
   socket.on('declineDraw', ({ gameId }) => {
+    if (!checkSocketEventRateLimit(currentUserId || socket.id, 'declineDraw', WS_EVENT_LIMITS.declineDraw)) {
+      socket.emit('error', { code: 'RATE_LIMITED', message: 'Too many draw declines' });
+      return;
+    }
     const session = activeGames.get(gameId);
     if (session) {
       session.pendingDraw = null;
@@ -1101,6 +1426,10 @@ io.on('connection', (socket) => {
 
   // 8. Takeback Request & Handling
   socket.on('requestTakeback', ({ gameId, moveIndex }) => {
+    if (!checkSocketEventRateLimit(currentUserId || socket.id, 'requestTakeback', WS_EVENT_LIMITS.requestTakeback)) {
+      socket.emit('error', { code: 'RATE_LIMITED', message: 'Too many takeback requests' });
+      return;
+    }
     const session = activeGames.get(gameId);
     if (!session || session.status !== 'active') return;
     const isWhite = (session.white?.socketId === socket.id) || (session.white?.id === currentUserId);
@@ -1114,6 +1443,10 @@ io.on('connection', (socket) => {
   });
 
   socket.on('acceptTakeback', ({ gameId }) => {
+    if (!checkSocketEventRateLimit(currentUserId || socket.id, 'acceptTakeback', WS_EVENT_LIMITS.acceptTakeback)) {
+      socket.emit('error', { code: 'RATE_LIMITED', message: 'Too many takeback acceptances' });
+      return;
+    }
     const session = activeGames.get(gameId);
     if (!session || session.status !== 'active' || !session.pendingTakeback) return;
 
@@ -1132,6 +1465,10 @@ io.on('connection', (socket) => {
   });
 
   socket.on('declineTakeback', ({ gameId }) => {
+    if (!checkSocketEventRateLimit(currentUserId || socket.id, 'declineTakeback', WS_EVENT_LIMITS.declineTakeback)) {
+      socket.emit('error', { code: 'RATE_LIMITED', message: 'Too many takeback declines' });
+      return;
+    }
     const session = activeGames.get(gameId);
     if (session) {
       session.pendingTakeback = null;
@@ -1141,6 +1478,10 @@ io.on('connection', (socket) => {
 
   // 9. Pause & Resume Game
   socket.on('pauseGame', ({ gameId }) => {
+    if (!checkSocketEventRateLimit(currentUserId || socket.id, 'pauseGame', WS_EVENT_LIMITS.pauseGame)) {
+      socket.emit('error', { code: 'RATE_LIMITED', message: 'Too many pause requests' });
+      return;
+    }
     const session = activeGames.get(gameId);
     if (!session || session.status !== 'active') return;
     session.status = 'paused';
@@ -1149,6 +1490,10 @@ io.on('connection', (socket) => {
   });
 
   socket.on('resumeGame', ({ gameId }) => {
+    if (!checkSocketEventRateLimit(currentUserId || socket.id, 'resumeGame', WS_EVENT_LIMITS.resumeGame)) {
+      socket.emit('error', { code: 'RATE_LIMITED', message: 'Too many resume requests' });
+      return;
+    }
     const session = activeGames.get(gameId);
     if (!session || session.status !== 'paused') return;
     session.status = 'active';
@@ -1164,6 +1509,10 @@ io.on('connection', (socket) => {
 
   // 10. Claim Draw (50-move rule, threefold repetition)
   socket.on('claimDraw', async ({ gameId, reason }) => {
+    if (!checkSocketEventRateLimit(currentUserId || socket.id, 'claimDraw', WS_EVENT_LIMITS.claimDraw)) {
+      socket.emit('error', { code: 'RATE_LIMITED', message: 'Too many draw claims' });
+      return;
+    }
     const session = activeGames.get(gameId);
     if (!session || session.status !== 'active') return;
 
@@ -1180,6 +1529,10 @@ io.on('connection', (socket) => {
 
   // 11. In-game Chat Messaging
   socket.on('sendMessage', async ({ gameId, message }) => {
+    if (!checkSocketEventRateLimit(currentUserId || socket.id, 'sendMessage', WS_EVENT_LIMITS.sendMessage)) {
+      socket.emit('error', { code: 'RATE_LIMITED', message: 'Too many messages, please slow down' });
+      return;
+    }
     if (!message || !message.trim()) return;
     const cleanMsg = message.trim().slice(0, 500);
 

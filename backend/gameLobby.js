@@ -43,9 +43,10 @@ export async function generateGameCode() {
   let exists = true;
 
   while (exists && attempts < 15) {
+    const bytes = crypto.randomBytes(6);
     code = '';
     for (let i = 0; i < 6; i++) {
-      code += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
+      code += CODE_ALPHABET[bytes[i] % CODE_ALPHABET.length];
     }
 
     try {
@@ -213,8 +214,7 @@ export class GameLobbyService {
     } else if (value.colorPreference === 'black') {
       blackId = value.creatorId;
     } else {
-      if (Math.random() > 0.5) whiteId = value.creatorId;
-      else blackId = value.creatorId;
+      crypto.randomBytes(1)[0] > 127 ? whiteId = value.creatorId : blackId = value.creatorId;
     }
 
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();

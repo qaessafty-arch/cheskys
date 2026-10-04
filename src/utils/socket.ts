@@ -6,8 +6,9 @@ class SocketService {
   
   public connect(uid?: string, token?: string) {
     if (uid) this.uid = uid;
-    let authToken = token; try { authToken = authToken || localStorage.getItem('token') || localStorage.getItem('chess_jwt') || undefined; } catch (e) {}
-    
+    // Token is now read from httpOnly cookie by backend, no need to send from localStorage
+    const authToken = token;
+
     if (!this.socket) {
       // Connect to the same origin that serves this page so the browser can reach
       // the server's Socket.IO endpoint (http://host:port/socket.io/).

@@ -1528,7 +1528,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
               <div className="flex items-center p-1.5 bg-black/40 border-b border-white/10 shrink-0">
                 <button
                   onClick={() => setActiveTab('moves')}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all relative ${
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-2xl text-xs font-black uppercase tracking-wider transition-all relative whitespace-nowrap min-w-0 ${
                     activeTab === 'moves'
                       ? 'text-black'
                       : 'text-[#94A3B8] hover:text-white'
@@ -1546,7 +1546,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                 </button>
                 <button
                   onClick={() => setActiveTab('chat')}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all relative ${
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-2xl text-xs font-black uppercase tracking-wider transition-all relative whitespace-nowrap min-w-0 ${
                     activeTab === 'chat'
                       ? 'text-black'
                       : 'text-[#94A3B8] hover:text-white'
