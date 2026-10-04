@@ -15,12 +15,28 @@ import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import Joi from 'joi';
 import winston from 'winston';
+import crypto from 'crypto';
 import { ServerChessEngine, withMoveLock, moveLocks } from './gameEngine.js';
 import { GameModel, UserModel, MoveModel } from './models.js';
 import { GameLobbyService, syncGameState, validateGameCodeInput } from './gameLobby.js';
 import { query } from './database.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_chess_key_2026';
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET must be set in environment variables');
+}
+
+// Crypto-secure game code generator
+const CODE_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+function generateGameCode() {
+  const bytes = crypto.randomBytes(6);
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += CODE_CHARS[bytes[i] % CODE_CHARS.length];
+  }
+  return code;
+}
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
@@ -576,9 +592,9 @@ export function setupWebSocket(io, { redis, antiCheat, socialService, tournament
 
       if (opponentIndex !== -1) {
         const opponent = queue.splice(opponentIndex, 1)[0];
-        const gameCode = await lobbyService.generateGameCode?.() || Math.random().toString(36).substring(2, 8).toUpperCase();
+        const gameCode = generateGameCode();
 
-        const isWhite = colorPreference === 'white' ? true : (colorPreference === 'black' ? false : Math.random() > 0.5);
+        const isWhite = colorPreference === 'white' ? true : (colorPreference === 'black' ? false : crypto.randomBytes(1)[0] > 127);
         const whiteUser = isWhite ? user : opponent.user;
         const blackUser = isWhite ? opponent.user : user;
         const whiteSocketId = isWhite ? socket.id : opponent.socketId;

@@ -71,7 +71,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
           title="New Game (Hotkey: N)"
         >
           <PlusCircle className="w-4 h-4" />
-          <span className="text-[10px] font-black uppercase tracking-tighter">New</span>
+          <span className="text-[10px] font-black uppercase tracking-tighter truncate">New</span>
         </GlassButton>
       </motion.div>
 
@@ -85,7 +85,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
           title="Flip Board Orientation (Hotkey: F)"
         >
           <RotateCw className="w-4 h-4" />
-          <span className="text-[10px] font-black uppercase tracking-tighter">Flip</span>
+          <span className="text-[10px] font-black uppercase tracking-tighter truncate">Flip</span>
         </GlassButton>
       </motion.div>
 
@@ -100,7 +100,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
           title="Undo Move (Hotkey: U or Ctrl+Z)"
         >
           <Undo2 className="w-4 h-4" />
-          <span className="text-[10px] font-black uppercase tracking-tighter">Undo</span>
+          <span className="text-[10px] font-black uppercase tracking-tighter truncate">Undo</span>
         </GlassButton>
       </motion.div>
 
@@ -115,7 +115,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
           title="Redo Move (Hotkey: Y or Ctrl+Y)"
         >
           <Redo2 className="w-4 h-4" />
-          <span className="text-[10px] font-black uppercase tracking-tighter">Redo</span>
+          <span className="text-[10px] font-black uppercase tracking-tighter truncate">Redo</span>
         </GlassButton>
       </motion.div>
 
@@ -129,7 +129,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
           title="Tactical Hint (Hotkey: H)"
         >
           <Sparkles className="w-4 h-4" />
-          <span className="text-[10px] font-black uppercase tracking-tighter">Hint</span>
+          <span className="text-[10px] font-black uppercase tracking-tighter truncate">Hint</span>
         </GlassButton>
       </motion.div>
 
@@ -143,7 +143,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
           title="Toggle Sound (Hotkey: S or M)"
         >
           {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 opacity-40" />}
-          <span className="text-[10px] font-black uppercase tracking-tighter">{soundEnabled ? 'On' : 'Off'}</span>
+          <span className="text-[10px] font-black uppercase tracking-tighter truncate">{soundEnabled ? 'On' : 'Off'}</span>
         </GlassButton>
       </motion.div>
 
@@ -157,7 +157,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
           title="Resign Match (Hotkey: Shift + R)"
         >
           <Flag className="w-4 h-4" />
-          <span className="text-[10px] font-black uppercase tracking-tighter">Resign</span>
+          <span className="text-[10px] font-black uppercase tracking-tighter truncate">Resign</span>
         </GlassButton>
       </motion.div>
 
@@ -172,7 +172,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
             title="Keyboard Shortcuts (Hotkey: ?)"
           >
             <Keyboard className="w-4 h-4" />
-            <span className="text-[10px] font-black uppercase tracking-tighter">Keys</span>
+            <span className="text-[10px] font-black uppercase tracking-tighter truncate">Keys</span>
           </GlassButton>
         </motion.div>
       )}

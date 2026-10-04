@@ -177,7 +177,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ profile, onC
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab as any)}
-                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap ${
                   activeTab === tab
                     ? 'bg-[var(--secondary-accent)] text-[var(--app-bg)] shadow-lg shadow-[var(--secondary-accent)]/20'
                     : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--glass-bg)]'

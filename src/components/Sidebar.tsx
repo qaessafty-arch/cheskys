@@ -26,7 +26,8 @@ import {
   Bell,
   Trophy,
   Info,
-  Terminal
+  Terminal,
+  BrainCircuit
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -172,6 +173,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: <Glasses className="w-5 h-5 text-sky-400" />,
       action: () => {
         onSelectMode('analysis');
+        onClose();
+      }
+    },
+    {
+      id: 'coach',
+      mode: 'coach' as GameMode,
+      label: 'Coach',
+      badge: 'NEW',
+      badgeClass: 'bg-gradient-to-r from-emerald-500 to-blue-500 text-black font-black text-[10px] px-1.5 py-0.5 rounded shadow-sm',
+      icon: <BrainCircuit className="w-5 h-5 text-emerald-400" />,
+      action: () => {
+        onSelectMode('coach');
         onClose();
       }
     },

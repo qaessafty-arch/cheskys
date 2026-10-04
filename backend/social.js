@@ -115,7 +115,7 @@ export class SocialService {
    * Create direct challenge with 60-second expiration
    */
   createChallenge(fromUser, toUserId, timeControl = '10+0', rated = true) {
-    const challengeId = `chal_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const challengeId = `chal_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
 
     const timeoutId = setTimeout(() => {
       this.pendingChallenges.delete(challengeId);

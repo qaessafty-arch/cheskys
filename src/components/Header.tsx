@@ -190,7 +190,7 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           type="button"
           onClick={onOpenLogin}
-          className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#52673A] to-[#8C2425] hover:brightness-110 text-white text-[10px] font-black uppercase tracking-widest border border-[#F5C453]/40 shadow-lg transition-all cursor-pointer"
+          className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#52673A] to-[#8C2425] hover:brightness-110 text-white text-xs font-black uppercase tracking-wider border border-[#F5C453]/40 shadow-lg transition-all cursor-pointer"
         >
           <Swords className="w-3.5 h-3.5" />
           Astral Sanctum
@@ -302,7 +302,7 @@ const NotificationListItem: React.FC<{
                       }
                       onRead();
                     }}
-                    className="px-3 py-1.5 rounded-lg bg-emerald-500 text-black text-[10px] font-black uppercase tracking-widest hover:bg-emerald-400 hover:scale-105 active:scale-95 transition-all"
+                    className="px-3 py-1.5 rounded-lg bg-emerald-500 text-black text-xs font-black uppercase tracking-wider hover:bg-emerald-400 hover:scale-105 active:scale-95 transition-all"
                   >
                     Ascend
                   </button>
@@ -323,7 +323,7 @@ const NotificationListItem: React.FC<{
                       }));
                       onRead();
                     }}
-                    className="px-3 py-1.5 rounded-lg bg-red-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-red-400 hover:scale-105 active:scale-95 transition-all"
+                    className="px-3 py-1.5 rounded-lg bg-red-500 text-white text-xs font-black uppercase tracking-wider hover:bg-red-400 hover:scale-105 active:scale-95 transition-all"
                   >
                     Dismiss
                   </button>
@@ -331,7 +331,7 @@ const NotificationListItem: React.FC<{
               ) : (
                 <button 
                   onClick={(e) => { e.stopPropagation(); onRead(); }}
-                  className="px-3 py-1.5 rounded-lg bg-[var(--secondary-accent)] text-[var(--app-bg)] text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
+                  className="px-3 py-1.5 rounded-lg bg-[var(--secondary-accent)] text-[var(--app-bg)] text-xs font-black uppercase tracking-wider hover:scale-105 active:scale-95 transition-all"
                 >
                   View Action
                 </button>
@@ -341,7 +341,7 @@ const NotificationListItem: React.FC<{
                   e.stopPropagation();
                   onRead();
                 }}
-                className="px-3 py-1.5 rounded-lg bg-[var(--glass-border)] text-white text-[10px] font-black uppercase tracking-widest hover:bg-[var(--glass-bg-hover)] transition-all"
+                className="px-3 py-1.5 rounded-lg bg-[var(--glass-border)] text-white text-xs font-black uppercase tracking-wider hover:bg-[var(--glass-bg-hover)] transition-all"
               >
                 Dismiss
               </button>

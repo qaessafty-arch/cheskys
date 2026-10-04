@@ -9,11 +9,15 @@ import Joi from 'joi';
 import jwt from 'jsonwebtoken';
 import { query } from './database.js';
 import { UserModel, GameModel, TournamentModel } from './models.js';
-import { authenticateToken, registerUser, loginUser, logoutUser } from './auth.js';
+import { authenticateToken, registerUser, loginUser, logoutUser, setRefreshTokenCookie, clearRefreshTokenCookie, rotateRefreshToken } from './auth.js';
 
 const router = Router();
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'refresh_secret_jwt_chess_key_2026';
-const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_chess_key_2026';
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET || !JWT_REFRESH_SECRET) {
+  throw new Error('JWT_SECRET and JWT_REFRESH_SECRET must be set in environment variables');
+}
 
 // Validation Schemas
 const registerSchema = Joi.object({
@@ -49,8 +53,9 @@ router.post('/auth/register', async (req, res) => {
     const accessToken = jwt.sign({ userId: user.id, username: user.username }, JWT_SECRET, { expiresIn: '15m' });
     const refreshToken = jwt.sign({ userId: user.id }, JWT_REFRESH_SECRET, { expiresIn: '7d' });
 
+    setRefreshTokenCookie(res, refreshToken);
     delete user.password_hash;
-    res.status(201).json({ accessToken, refreshToken, user });
+    res.status(201).json({ accessToken, user });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -62,7 +67,8 @@ router.post('/auth/login', async (req, res) => {
     if (error) return res.status(400).json({ error: error.details[0].message });
 
     const result = await loginUser(value.email, value.password, { query }, req.app.locals.redis);
-    res.json(result);
+    setRefreshTokenCookie(res, result.refreshToken);
+    res.json({ accessToken: result.accessToken, user: result.user });
   } catch (err) {
     res.status(401).json({ error: err.message || 'Invalid credentials' });
   }
@@ -70,28 +76,31 @@ router.post('/auth/login', async (req, res) => {
 
 router.post('/auth/refresh', async (req, res) => {
   try {
-    const { refreshToken } = req.body;
+    const refreshToken = req.cookies?.refreshToken;
     if (!refreshToken) return res.status(400).json({ error: 'Refresh token required' });
 
-    jwt.verify(refreshToken, JWT_REFRESH_SECRET, async (err, decoded) => {
-      if (err) return res.status(403).json({ error: 'Invalid refresh token' });
+    const { accessToken, refreshToken: newRefreshToken } = await rotateRefreshToken(
+      refreshToken,
+      { query },
+      req.app.locals.redis
+    );
 
-      // Verify Redis token store if available
-      const redis = req.app.locals.redis;
-      if (redis) {
-        const stored = await redis.get(`refresh:${decoded.userId}`);
-        if (stored && stored !== refreshToken) {
-          return res.status(403).json({ error: 'Refresh token revoked' });
-        }
-      }
-
-      const newAccessToken = jwt.sign({ userId: decoded.userId }, JWT_SECRET, { expiresIn: '15m' });
-      res.json({ accessToken: newAccessToken });
-    });
+    setRefreshTokenCookie(res, newRefreshToken);
+    res.json({ accessToken });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(403).json({ error: err.message });
   }
 });
+
+// Rate limit refresh endpoint
+const refreshLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 refresh attempts per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many refresh attempts, please try again later.' }
+});
+router.post('/auth/refresh', refreshLimiter);
 
 router.post('/auth/logout', async (req, res) => {
   const authHeader = req.headers['authorization'];
@@ -102,6 +111,7 @@ router.post('/auth/logout', async (req, res) => {
       await logoutUser(decoded.userId, req.app.locals.redis);
     } catch {}
   }
+  clearRefreshTokenCookie(res);
   res.json({ message: 'Logged out successfully' });
 });
 

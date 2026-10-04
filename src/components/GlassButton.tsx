@@ -35,7 +35,7 @@ export const GlassButton: React.FC<GlassButtonProps> = ({
   };
 
   const sizes = {
-    sm: 'px-4 py-1.5 text-[10px]',
+    sm: 'px-4 py-1.5 text-[11px]',
     md: 'px-6 py-2.5 text-xs',
     lg: 'px-8 py-3.5 text-sm'
   };
@@ -77,7 +77,7 @@ export const GlassButton: React.FC<GlassButtonProps> = ({
         ${className}
       `}
     >
-      <span className="relative z-10 flex items-center gap-2 transition-transform duration-300 group-hover:scale-105">
+      <span className="relative z-10 flex items-center gap-2 transition-transform duration-300 group-hover:scale-105 truncate whitespace-nowrap overflow-hidden">
         {children}
       </span>
       

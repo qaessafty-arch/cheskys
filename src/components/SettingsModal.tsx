@@ -263,7 +263,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="flex items-center gap-1.5 p-1.5 rounded-2xl bg-white/[0.03] border border-white/5 backdrop-blur-md overflow-x-auto no-scrollbar">
                 <button
                   onClick={() => setActiveTab('themes')}
-                  className={`flex-1 min-w-[100px] flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-[10px] uppercase tracking-widest font-black transition-all cursor-pointer whitespace-nowrap ${
+                  className={`flex-1 min-w-[100px] flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs uppercase tracking-widest font-black transition-all cursor-pointer whitespace-nowrap ${
                     activeTab === 'themes'
                       ? 'bg-[#FFD700] text-black shadow-xl shadow-[#FFD700]/20'
                       : 'text-white/60 hover:text-white hover:bg-white/5'
@@ -275,7 +275,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                 <button
                   onClick={() => setActiveTab('background')}
-                  className={`flex-1 min-w-[110px] flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-[10px] uppercase tracking-widest font-black transition-all cursor-pointer whitespace-nowrap ${
+                  className={`flex-1 min-w-[110px] flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs uppercase tracking-widest font-black transition-all cursor-pointer whitespace-nowrap ${
                     activeTab === 'background'
                       ? 'bg-[#FFD700] text-black shadow-xl shadow-[#FFD700]/20'
                       : 'text-white/60 hover:text-white hover:bg-white/5'
@@ -287,7 +287,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                 <button
                   onClick={() => setActiveTab('board')}
-                  className={`flex-1 min-w-[110px] flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-[10px] uppercase tracking-widest font-black transition-all cursor-pointer whitespace-nowrap ${
+                  className={`flex-1 min-w-[110px] flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs uppercase tracking-widest font-black transition-all cursor-pointer whitespace-nowrap ${
                     activeTab === 'board'
                       ? 'bg-[#FFD700] text-black shadow-xl shadow-[#FFD700]/20'
                       : 'text-white/60 hover:text-white hover:bg-white/5'
@@ -311,7 +311,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                 <button
                   onClick={() => setActiveTab('database')}
-                  className={`flex-1 min-w-[110px] flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-[10px] uppercase tracking-widest font-black transition-all cursor-pointer whitespace-nowrap ${
+                  className={`flex-1 min-w-[110px] flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs uppercase tracking-widest font-black transition-all cursor-pointer whitespace-nowrap ${
                     activeTab === 'database'
                       ? 'bg-emerald-600 text-black shadow-xl shadow-emerald-500/20'
                       : 'text-emerald-400/60 hover:text-emerald-400 hover:bg-emerald-400/5'
@@ -323,7 +323,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                 <button
                   onClick={() => setActiveTab('logs')}
-                  className={`flex-1 min-w-[105px] flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-[10px] uppercase tracking-widest font-black transition-all cursor-pointer whitespace-nowrap ${
+                  className={`flex-1 min-w-[105px] flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs uppercase tracking-widest font-black transition-all cursor-pointer whitespace-nowrap ${
                     activeTab === 'logs'
                       ? 'bg-[#8C2425] text-white shadow-xl shadow-red-900/40 border border-white/20'
                       : 'text-white/60 hover:text-white hover:bg-white/5'

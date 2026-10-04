@@ -320,14 +320,12 @@ export const joinWorldwideMatchmaking = async (
     onStatusUpdate?.('Searching worldwide live queue for real live players…');
 
     // Start 10-second heartbeat ping so others know this ticket is live
-    heartbeatTimer = setInterval(async () => {
+    heartbeatTimer = setInterval(() => {
       if (isCancelled || hasMatched) {
         if (heartbeatTimer) clearInterval(heartbeatTimer);
         return;
       }
-      try {
-        await safeUpdateDoc(ticketDocRef, { lastPing: Date.now() });
-      } catch {}
+      safeUpdateDoc(ticketDocRef, { lastPing: Date.now() }).catch(() => {});
     }, 10000);
 
     // 3. Listen to our own ticket doc to see if another real player pairs with us

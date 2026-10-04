@@ -1,8 +1,12 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_chess_key_2026';
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'refresh_secret_jwt_chess_key_2026';
+const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
+
+if (!JWT_SECRET || !JWT_REFRESH_SECRET) {
+  throw new Error('JWT_SECRET and JWT_REFRESH_SECRET must be set in environment variables');
+}
 
 /**
  * User registers
@@ -43,7 +47,7 @@ export async function loginUser(email, password, db, redis) {
 
   // 3. Generate JWT (access token: 15min, refresh token: 7days)
   const accessToken = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '15m' });
-  const refreshToken = jwt.sign({ userId: user.id }, JWT_REFRESH_SECRET, { expiresIn: '7d' });
+  const refreshToken = jwt.sign({ userId: user.id, tokenId: crypto.randomUUID() }, JWT_REFRESH_SECRET, { expiresIn: '7d' });
 
   // 4. Store refresh token in Redis (invalidate on logout)
   if (redis) {
@@ -58,6 +62,69 @@ export async function loginUser(email, password, db, redis) {
   delete user.password_hash;
 
   return { accessToken, refreshToken, user };
+}
+
+/**
+ * Rotate refresh token - issue new one, invalidate old one
+ */
+export async function rotateRefreshToken(refreshToken, db, redis) {
+  try {
+    const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
+
+    // Check if token is blacklisted
+    const isBlacklisted = await redis.get(`blacklist:${refreshToken}`);
+    if (isBlacklisted) {
+      throw new Error('Token revoked');
+    }
+
+    // Verify Redis token store if available
+    if (redis) {
+      const stored = await redis.get(`refresh:${decoded.userId}`);
+      if (!stored || stored !== refreshToken) {
+        throw new Error('Refresh token revoked or rotated');
+      }
+    }
+
+    // Blacklist old token
+    await redis.setex(`blacklist:${refreshToken}`, 604800, '1');
+
+    // Generate new token pair
+    const newAccessToken = jwt.sign({ userId: decoded.userId }, JWT_SECRET, { expiresIn: '15m' });
+    const newRefreshToken = jwt.sign({
+      userId: decoded.userId,
+      tokenId: crypto.randomUUID()
+    }, JWT_REFRESH_SECRET, { expiresIn: '7d' });
+
+    // Store new refresh token
+    if (redis) {
+      await redis.setex(`refresh:${decoded.userId}`, 604800, newRefreshToken);
+    }
+
+    return { accessToken: newAccessToken, refreshToken: newRefreshToken };
+  } catch (err) {
+    throw new Error('Token rotation failed: ' + err.message);
+  }
+}
+
+// Set httpOnly cookie for refresh token
+export function setRefreshTokenCookie(res, refreshToken) {
+  res.cookie('refreshToken', refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    path: '/'
+  });
+}
+
+// Clear refresh token cookie
+export function clearRefreshTokenCookie(res) {
+  res.clearCookie('refreshToken', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/'
+  });
 }
 
 /**
