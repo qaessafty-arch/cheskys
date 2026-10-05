@@ -465,7 +465,7 @@ export default function App() {
     setIsAiThinking(true);
     const delay = Math.min(1500, Math.max(400, 300 + currentBot.depth * 80));
     const currentFen = game.fen();
-    const timeoutId = setTimeout(() => {
+    const timeoutId = setTimeout(async () => {
       try {
         const res = await engine.botMove({ fen: currentFen }, currentBot.id);
         if (res.bestMove && res.bestMove.length >= 4) {
