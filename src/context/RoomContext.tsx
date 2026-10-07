@@ -199,7 +199,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCountdown(count);
     soundManager.playCountdownTick(false);
 
-    countdownTimerRef.current = setInterval(() => {
+    countdownTimerRef.current = setInterval(async () => {
       count -= 1;
       if (count > 0) {
         setCountdown(count);
