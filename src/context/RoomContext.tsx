@@ -214,7 +214,8 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (activeProfile.uid === room.creatorId && launchedRoomRef.current !== cleanCode) {
           launchedRoomRef.current = cleanCode;
-          createOnlineMatch(
+          try {
+            const gameSessionId = await createOnlineMatch(
               { uid: room.creatorId, displayName: room.creatorName, elo: room.creatorElo },
               {
                 id: room.settings.timeControlId,
