@@ -263,9 +263,6 @@ const refreshLimiter = rateLimit({
 });
 app.post('/api/auth/refresh', refreshLimiter);
 
-// Game code attempt tracking to prevent enumeration
-const gameCodeAttempts = new Map();
-
 function checkGameCodeAttempts(ip) {
   const now = Date.now();
   const record = gameCodeAttempts.get(ip) || { count: 0, windowStart: Date.now() };

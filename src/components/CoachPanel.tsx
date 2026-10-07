@@ -798,5 +798,4 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
   );
 };
 
-export { CoachPanel };
 export type { CoachAdvice, TrainingExercise, CoachProfile, CoachMessage };
