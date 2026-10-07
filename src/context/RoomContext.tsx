@@ -199,7 +199,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCountdown(count);
     soundManager.playCountdownTick(false);
 
-    countdownTimerRef.current = setInterval(async () => {
+    countdownTimerRef.current = setInterval(() => {
       count -= 1;
       if (count > 0) {
         setCountdown(count);
@@ -214,31 +214,33 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (activeProfile.uid === room.creatorId && launchedRoomRef.current !== cleanCode) {
           launchedRoomRef.current = cleanCode;
-          try {
-            const gameSessionId = await createOnlineMatch(
-              { uid: room.creatorId, displayName: room.creatorName, elo: room.creatorElo },
-              {
-                id: room.settings.timeControlId,
-                name: room.settings.timeControlName,
-                initialSeconds: room.settings.initialSeconds,
-                incrementSeconds: room.settings.incrementSeconds,
-                category: room.settings.initialSeconds < 180 ? 'bullet' : room.settings.initialSeconds < 600 ? 'blitz' : 'rapid'
-              },
-              room.settings.color,
-              cleanCode,
-              { uid: room.opponentId || '', displayName: room.opponentName || 'Challenger', elo: room.opponentElo || 1200 }
-            );
+          (async () => {
+            try {
+              const gameSessionId = await createOnlineMatch(
+                { uid: room.creatorId, displayName: room.creatorName, elo: room.creatorElo },
+                {
+                  id: room.settings.timeControlId,
+                  name: room.settings.timeControlName,
+                  initialSeconds: room.settings.initialSeconds,
+                  incrementSeconds: room.settings.incrementSeconds,
+                  category: room.settings.initialSeconds < 180 ? 'bullet' : room.settings.initialSeconds < 600 ? 'blitz' : 'rapid'
+                },
+                room.settings.color,
+                cleanCode,
+                { uid: room.opponentId || '', displayName: room.opponentName || 'Challenger', elo: room.opponentElo || 1200 }
+              );
 
-            await safeUpdateDoc(doc(db, 'rooms', cleanCode), {
-              status: 'in_progress',
-              gameId: gameSessionId,
-              startedAt: serverTimestamp(),
-            });
+              await safeUpdateDoc(doc(db, 'rooms', cleanCode), {
+                status: 'in_progress',
+                gameId: gameSessionId,
+                startedAt: serverTimestamp(),
+              });
 
-            setActiveGameId(gameSessionId);
-          } catch (err) {
-            console.error('Match launch failed', err);
-          }
+              setActiveGameId(gameSessionId);
+            } catch (err) {
+              console.error('Match launch failed', err);
+            }
+          })();
         }
       }
     }, 1000);
