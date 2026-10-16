@@ -5,9 +5,11 @@ import {
   Users, Award, Brain, Target, Crown, Shield, MessageSquare,
   Volume2, Settings, Palette, Layers, Clock, Search, Flag,
   HeartHandshake, BarChart2, Download, Upload, Eye, ChevronRight,
-  ChevronLeft, Play, Pause, RotateCcw, Flag as FlagIcon, Bell
+  ChevronLeft, Play, Pause, RotateCcw, Flag as FlagIcon, Bell, ChevronDown,
 } from 'lucide-react';
 import { UkhLogo } from './UkhLogo';
+import { useDemo } from '../context/DemoContext';
+import { ArrowLeft } from 'lucide-react';
 
 const FEATURE_CATEGORIES = [
   {
@@ -300,7 +302,7 @@ const FeatureCard: React.FC<FeatureCardProps> = ({ feature, index, color }) => (
     className="glass-panel p-6 rounded-2xl hover:glass-panel-hover transition-all group relative overflow-hidden"
     style={{ border: `1px solid ${color}30` }}
   >
-    <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-transparent to-transparent group-hover:from-[${color}]20 group-hover:to-transparent transition-all duration-500" />
+    <div className="absolute top-0 right-0 w-24 h-24 opacity-40 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" style={{ background: `radial-gradient(circle at top right, ${color}33, transparent 70%)` }} />
     <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 relative z-10 group-hover:scale-110 transition-transform" style={{ backgroundColor: `${color}20` }}>
       <feature.icon className="w-6 h-6" style={{ color }} />
     </div>
@@ -368,9 +370,17 @@ const CategorySection: React.FC<CategorySectionProps> = ({ category, index }) =>
 
 export const FeaturesShowcase: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const { setViewMode } = useDemo();
 
   return (
     <div className="min-h-screen bg-[var(--app-bg)]">
+      {/* Back to the dashboard, so the presenter can always get out of this page */}
+      <button
+        onClick={() => setViewMode('dashboard')}
+        className="fixed top-20 left-4 z-50 flex items-center gap-2 px-4 py-2 rounded-xl glass-panel text-sm font-bold text-[var(--text-main)] hover:text-[var(--primary-accent)]"
+      >
+        <ArrowLeft className="w-4 h-4" /> Back
+      </button>
       {/* Hero */}
       <motion.section
         initial={{ opacity: 0, y: 30 }}

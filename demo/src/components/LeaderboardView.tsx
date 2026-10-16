@@ -1,10 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Trophy, Crown, ChevronRight, Flame, RefreshCw, Search, Filter, Globe, Users, Award, Star, Zap, Shield, HeartHandshake } from 'lucide-react';
 import { useDemo } from '../context/DemoContext';
 import { DEMO_PLAYERS, DEMO_TIME_CONTROLS } from '../data/demoData';
 import { Player } from '../types/chess';
-import { UkhLogo } from './UkhLogo';
 import { UkhLogo } from './UkhLogo';
 
 interface LeaderboardEntry extends Player {
@@ -26,6 +25,13 @@ export const LeaderboardView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  // Stable pseudo-random numbers per player, so the table doesn't reshuffle on every render
+  const seededNumber = (seed: string, range: number) => {
+    let hash = 0;
+    for (const ch of seed) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+    return hash % range;
+  };
+
   const generateLeaderboard = (): LeaderboardEntry[] => {
     const basePlayers = [...DEMO_PLAYERS];
     // Add some mock players
@@ -40,12 +46,12 @@ export const LeaderboardView: React.FC = () => {
     return [...basePlayers, ...extraPlayers].map((p, i) => ({
       ...p,
       rank: i + 1,
-      wins: Math.floor(Math.random() * 100) + 50,
-      losses: Math.floor(Math.random() * 50) + 20,
-      draws: Math.floor(Math.random() * 20) + 5,
+      wins: 50 + seededNumber(p.uid + 'w', 100),
+      losses: 20 + seededNumber(p.uid + 'l', 50),
+      draws: 5 + seededNumber(p.uid + 'd', 20),
       winRate: 0,
-      streak: Math.floor(Math.random() * 10),
-      streakType: Math.random() > 0.5 ? 'win' : 'loss',
+      streak: seededNumber(p.uid + 's', 10),
+      streakType: seededNumber(p.uid + 't', 2) === 0 ? 'win' as const : 'loss' as const,
     })).map(p => ({
       ...p,
       winRate: Math.round((p.wins / (p.wins + p.losses + p.draws)) * 100),
@@ -100,7 +106,7 @@ export const LeaderboardView: React.FC = () => {
               ].map(tab => (
                 <button
                   key={tab.id}
-                  onClick={() => setLeaderboardType(tab.id)}
+                  onClick={() => setLeaderboardType(tab.id as 'elo' | 'respect')}
                   className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${
                     leaderboardType === tab.id
                       ? 'bg-[var(--primary-accent)] text-[var(--app-bg)] shadow-[0_0_20px_rgba(245,184,61,0.3)]'
@@ -120,7 +126,7 @@ export const LeaderboardView: React.FC = () => {
               ].map(tab => (
                 <button
                   key={tab.id}
-                  onClick={() => setScope(tab.id)}
+                  onClick={() => setScope(tab.id as 'ukh' | 'global' | 'friends')}
                   className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${
                     scope === tab.id
                       ? 'bg-[var(--secondary-accent)]/20 text-[var(--secondary-accent)] border border-[var(--secondary-accent)]/30'
@@ -241,7 +247,7 @@ export const LeaderboardView: React.FC = () => {
 
 const LegendItem: React.FC<{ color: string; label: string; icon: React.ReactNode | React.ComponentType }> = ({ color, label, icon }) => (
   <div className="flex items-center gap-2" style={{ color }}>
-    {typeof icon === 'function' ? <icon className="w-4 h-4" /> : icon}
+    {typeof icon === 'function' ? React.createElement(icon as React.ComponentType<{ className?: string }>, { className: 'w-4 h-4' }) : icon}
     <span>{label}</span>
   </div>
 );

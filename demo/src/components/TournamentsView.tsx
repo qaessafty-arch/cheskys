@@ -2,14 +2,15 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Trophy, Crown, Clock, Users, Zap, Shield, ChevronRight, ChevronLeft, ArrowLeft, Calendar, Lock, Globe, Star, Zap as ZapIcon, Shield as ShieldIcon, Award, Flag } from 'lucide-react';
 import { useDemo } from '../context/DemoContext';
-import { DEMO_TOURNAMENT, DEMO_TIME_CONTROLS, Tournament, TournamentMatch } from '../data/demoData';
+import { DEMO_TOURNAMENT, DEMO_TIME_CONTROLS } from '../data/demoData';
+import { Tournament, TournamentMatch } from '../types/chess';
 
 export const TournamentsView: React.FC = () => {
   const { viewMode, setViewMode, settings } = useDemo();
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(DEMO_TOURNAMENT);
   const [view, setView] = useState<'list' | 'bracket' | 'details'>('list');
 
-  const tournaments = [DEMO_TOURNAMENT, {
+  const tournaments: Tournament[] = [DEMO_TOURNAMENT, {
     ...DEMO_TOURNAMENT,
     id: 'ukh-blitz-championship',
     name: 'UKH BLITZ CHAMPIONSHIP',

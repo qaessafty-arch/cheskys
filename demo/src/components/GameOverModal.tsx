@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { RefreshCw, Share2, Trophy, ArrowLeft, ChevronRight } from 'lucide-react';
+import { RefreshCw, Share2, Trophy, ArrowLeft, ChevronRight, X } from 'lucide-react';
 import { GameState } from '../types/chess';
 import { formatTimeLong } from '../utils/chessEngine';
 
@@ -41,7 +41,10 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   };
 
   const result = getResultText();
-  const eloChange = isDraw ? 0 : winner?.uid === 'demo-1' ? +12 : -10;
+  // Rating change shown from the player's side (demo-1 is the signed-in player); the opponent gets the opposite
+  const userDelta = isDraw ? 0 : winner?.uid === 'demo-1' ? +12 : -10;
+  const whiteDelta = game.white.uid === 'demo-1' ? userDelta : -userDelta;
+  const blackDelta = -whiteDelta;
 
   return (
     <motion.div
@@ -96,10 +99,10 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
           <div className={`flex-1 text-center p-4 rounded-2xl ${isWhiteWin ? 'bg-[var(--secondary-accent)]/10 border border-[var(--secondary-accent)]/30' : isBlackWin ? 'bg-[var(--danger)]/10 border border-[var(--danger)]/30' : 'bg-[var(--glass-bg)] border border-[var(--glass-border)]'}`}>
             <div className="flex items-center justify-center gap-2 mb-2">
               <span className="text-2xl">{game.white.flag}</span>
-              <span className="font-black text-[var(--text-main)]">{game.white.name}</span>
+              <span className="font-black text-[var(--text-main)] truncate max-w-[9rem]">{game.white.name}</span>
               {isWhiteWin && <Trophy className="w-5 h-5 text-[var(--secondary-accent)]" />}
             </div>
-            <div className="text-[var(--primary-accent)] font-black text-lg">⚔️ {game.white.elo} {eloChange > 0 && <span className="text-[var(--secondary-accent)]">(+12)</span>}</div>
+            <div className="text-[var(--primary-accent)] font-black text-lg">⚔️ {game.white.elo} <span className={whiteDelta >= 0 ? 'text-[var(--secondary-accent)]' : 'text-[var(--danger)]'}>({whiteDelta >= 0 ? '+' : ''}{whiteDelta})</span></div>
             <div className="text-[var(--text-dim)] text-xs mt-1">{game.timeControl.name}</div>
           </div>
 
@@ -111,10 +114,10 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
           <div className={`flex-1 text-center p-4 rounded-2xl ${isBlackWin ? 'bg-[var(--secondary-accent)]/10 border border-[var(--secondary-accent)]/30' : isWhiteWin ? 'bg-[var(--danger)]/10 border border-[var(--danger)]/30' : 'bg-[var(--glass-bg)] border border-[var(--glass-border)]'}`}>
             <div className="flex items-center justify-center gap-2 mb-2">
               <span className="text-2xl">{game.black.flag}</span>
-              <span className="font-black text-[var(--text-main)]">{game.black.name}</span>
+              <span className="font-black text-[var(--text-main)] truncate max-w-[9rem]">{game.black.name}</span>
               {isBlackWin && <Trophy className="w-5 h-5 text-[var(--secondary-accent)]" />}
             </div>
-            <div className="text-[var(--primary-accent)] font-black text-lg">⚔️ {game.black.elo} {eloChange < 0 && <span className="text-[var(--danger)]">(-10)</span>}</div>
+            <div className="text-[var(--primary-accent)] font-black text-lg">⚔️ {game.black.elo} <span className={blackDelta >= 0 ? 'text-[var(--secondary-accent)]' : 'text-[var(--danger)]'}>({blackDelta >= 0 ? '+' : ''}{blackDelta})</span></div>
             <div className="text-[var(--text-dim)] text-xs mt-1">{game.timeControl.name}</div>
           </div>
         </div>

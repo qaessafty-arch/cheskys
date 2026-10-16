@@ -7,21 +7,38 @@ import { ChessBoard } from './ChessBoard';
 import { MoveHistory } from './MoveHistory';
 import { DEMO_GAMES } from '../data/demoData';
 import { formatTimeLong } from '../utils/chessEngine';
+import { GameState } from '../types/chess';
+
+// Replays need the real move list. A FEN has no history, so the moves come from the PGN and
+// the replay always starts from the standard starting position.
+const movesFromPgn = (pgn: string) => {
+  const parsed = new Chess();
+  try { parsed.loadPgn(pgn); } catch { /* keep whatever parsed before the error */ }
+  return parsed.history({ verbose: true });
+};
+
+// Simple material balance, in pawns, from White's point of view
+const materialScore = (g: Chess) => {
+  const values: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+  return g.board().flat().reduce((sum, sq) => {
+    if (!sq) return sum;
+    return sum + (sq.color === 'w' ? values[sq.type] : -values[sq.type]);
+  }, 0);
+};
 
 export const ReplayView: React.FC = () => {
-  const { viewMode, setViewMode, settings, currentUser } = useDemo();
-  const [selectedGame, setSelectedGame] = useState(DEMO_GAMES[0]);
-  const [game, setGame] = useState<Chess>(() => new Chess(DEMO_GAMES[0].fen));
+  const { viewMode, setViewMode, settings, currentUser, currentGame } = useDemo();
+  // The game just played (if any) comes first, so it can be reviewed straight away
+  const replayGames: GameState[] = currentGame && currentGame.moves.length > 0 ? [currentGame, ...DEMO_GAMES] : DEMO_GAMES;
+  const [selectedGame, setSelectedGame] = useState<GameState>(() => replayGames[0]);
+  const [game, setGame] = useState<Chess>(() => new Chess());
   const [moveIndex, setMoveIndex] = useState(0);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [evalScore, setEvalScore] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const playIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
 
-  const moves = useMemo(() => {
-    const history = game.history({ verbose: true });
-    return history;
-  }, [game]);
+  const moves = useMemo(() => movesFromPgn(selectedGame.pgn), [selectedGame]);
 
   const movePairs = useMemo(() => {
     const pairs: Array<{ moveNumber: number; white: string; black?: string; whiteSan: string; blackSan?: string }> = [];
@@ -37,23 +54,24 @@ export const ReplayView: React.FC = () => {
     return pairs;
   }, [moves]);
 
+  // Open each game at its final position
   useEffect(() => {
-    if (selectedGame) {
-      const newGame = new Chess(selectedGame.fen);
-      setGame(newGame);
-      setMoveIndex(selectedGame.moves.length);
-    }
+    const list = movesFromPgn(selectedGame.pgn);
+    const finalGame = new Chess();
+    for (const m of list) finalGame.move({ from: m.from, to: m.to, promotion: m.promotion });
+    setGame(finalGame);
+    setMoveIndex(list.length);
   }, [selectedGame]);
 
   const goToMove = (index: number) => {
     const targetIndex = Math.max(0, Math.min(index, moves.length));
-    const newGame = new Chess(selectedGame.fen);
+    const newGame = new Chess();
     for (let i = 0; i < targetIndex; i++) {
-      newGame.move(moves[i]);
+      newGame.move({ from: moves[i].from, to: moves[i].to, promotion: moves[i].promotion });
     }
     setGame(newGame);
     setMoveIndex(targetIndex);
-    setEvalScore((Math.random() - 0.5) * 10);
+    setEvalScore(materialScore(newGame));
   };
 
   const handlePlayPause = () => {
@@ -108,10 +126,10 @@ export const ReplayView: React.FC = () => {
           <div className="flex items-center gap-2">
             <select
               value={selectedGame.id}
-              onChange={(e) => setSelectedGame(DEMO_GAMES.find(g => g.id === e.target.value)!)}
+              onChange={(e) => setSelectedGame(replayGames.find(g => g.id === e.target.value)!)}
               className="px-3 py-2 bg-[var(--panel-bg)] border border-[var(--glass-border)] rounded-xl text-[var(--text-main)] text-sm"
             >
-              {DEMO_GAMES.map(g => (
+              {replayGames.map(g => (
                 <option key={g.id} value={g.id}>{g.white.name} vs {g.black.name} ({g.timeControl.name})</option>
               ))}
             </select>
@@ -143,7 +161,7 @@ export const ReplayView: React.FC = () => {
             </div>
             <div className="flex flex-wrap items-center justify-center gap-4 text-sm">
               <span className="px-3 py-1 rounded-full bg-[var(--primary-accent)]/20 text-[var(--primary-accent)] font-bold">{selectedGame.timeControl.name}</span>
-              <span className="text-[var(--text-dim)]">{selectedGame.result === '1-0' ? '1-0' : selectedGame.result === '0-1' ? '0-1' : '½-½'}</span>
+              <span className="text-[var(--text-dim)]">{selectedGame.result ?? '*'}</span>
               <span className="text-[var(--text-dim)]">{selectedGame.moves.length} moves</span>
             </div>
           </div>
@@ -156,7 +174,6 @@ export const ReplayView: React.FC = () => {
             lastMove={moves[moveIndex - 1] ? { from: moves[moveIndex - 1].from, to: moves[moveIndex - 1].to } : null}
             selectedSquare={null}
             onSquareClick={() => {}}
-            onMove={() => false}
             disabled={true}
           />
 

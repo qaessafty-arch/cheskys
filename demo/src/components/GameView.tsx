@@ -12,8 +12,15 @@ import { GameOverModal } from './GameOverModal';
 import { PromotionModal } from './PromotionModal';
 import { ExecuteSpareModal } from './ExecuteSpareModal';
 import { formatTime, formatTimeLong, getDemoBotMove, getGameStatus, makeMove } from '../utils/chessEngine';
-import { TimeControl } from '../types/chess';
+import { PieceColor, TimeControl } from '../types/chess';
 import { DEMO_BOT_CONFIG } from '../data/demoData';
+
+// chess.js keeps move history per instance, so copy it with the game instead of rebuilding from the FEN
+const copyGame = (source: Chess): Chess => {
+  const copy = new Chess();
+  copy.loadPgn(source.pgn());
+  return copy;
+};
 
 export const GameView: React.FC = () => {
   const {
@@ -32,12 +39,12 @@ export const GameView: React.FC = () => {
     endGame,
   } = useDemo();
 
-  const [game, setGame] = useState<Chess>(() => new Chess());
+  const [game, setGame] = useState<Chess>(() => (currentGame ? new Chess(currentGame.fen) : new Chess()));
   const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null);
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
-  const [whiteTime, setWhiteTime] = useState(0);
-  const [blackTime, setBlackTime] = useState(0);
-  const [activeColor, setActiveColor] = useState<PieceColor>('w');
+  const [whiteTime, setWhiteTime] = useState(() => currentGame?.whiteTime ?? 0);
+  const [blackTime, setBlackTime] = useState(() => currentGame?.blackTime ?? 0);
+  const [activeColor, setActiveColor] = useState<PieceColor>(() => currentGame?.activeColor ?? 'w');
   const [showChat, setShowChat] = useState(false);
   const [showMoveHistory, setShowMoveHistory] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
@@ -55,6 +62,65 @@ export const GameView: React.FC = () => {
   const botMoveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const soundContextRef = useRef<AudioContext | null>(null);
 
+  const isWhitePlayer = currentGame?.white.uid === currentUser.uid;
+  const myColor: PieceColor = isWhitePlayer ? 'w' : 'b';
+
+  const playSound = useCallback((type: 'move' | 'capture' | 'check' | 'gameover') => {
+    if (isMuted || !settings.soundEnabled) return;
+    if (!soundContextRef.current) {
+      soundContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    const ctx = soundContextRef.current;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    switch (type) {
+      case 'move':
+        osc.frequency.setValueAtTime(440, ctx.currentTime);
+        osc.type = 'sine';
+        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.1);
+        break;
+      case 'capture':
+        osc.frequency.setValueAtTime(330, ctx.currentTime);
+        osc.type = 'square';
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.15);
+        break;
+      case 'check':
+        osc.frequency.setValueAtTime(523, ctx.currentTime);
+        osc.type = 'triangle';
+        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.3);
+        break;
+      case 'gameover':
+        osc.frequency.setValueAtTime(220, ctx.currentTime);
+        osc.type = 'sawtooth';
+        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.5);
+        break;
+    }
+  }, [isMuted, settings.soundEnabled]);
+
+  const triggerConfetti = useCallback(() => {
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: ['#F5B83D', '#6EE7B7', '#60A5FA', '#FB7185', '#FFFFFF'],
+    });
+  }, []);
+
   // Initialize game from currentGame
   useEffect(() => {
     if (currentGame) {
@@ -70,7 +136,7 @@ export const GameView: React.FC = () => {
       setGameEndReason('');
       setSelectedSquare(null);
     }
-  }, [currentGame]);
+  }, [currentGame?.id]);
 
   // Sync game state back to context
   useEffect(() => {
@@ -83,12 +149,12 @@ export const GameView: React.FC = () => {
         whiteTime,
         blackTime,
         activeColor,
-        lastMove,
+        lastMove: lastMove ?? undefined,
         status: gameOver ? (gameResult === '1/2-1/2' ? 'draw' : gameResult === '1-0' || gameResult === '0-1' ? 'checkmate' : 'in_progress') : 'in_progress',
         result: gameResult || undefined,
       });
     }
-  }, [game, whiteTime, blackTime, activeColor, lastMove, gameOver, gameResult, gameEndReason, currentGame, setCurrentGame]);
+  }, [game, activeColor, lastMove, gameOver, gameResult, gameEndReason, setCurrentGame]);
 
   // Handle bot moves
   useEffect(() => {
@@ -104,7 +170,7 @@ export const GameView: React.FC = () => {
       botMoveTimeoutRef.current = setTimeout(() => {
         const botMove = getDemoBotMove(game, settings.difficulty);
         if (botMove) {
-          handleMove(botMove.from, botMove.to, botMove.promotion);
+          handleMove(botMove.from as Square, botMove.to as Square, botMove.promotion as 'q' | 'r' | 'b' | 'n' | undefined);
         }
         setIsBotThinking(false);
       }, config.moveDelay);
@@ -112,8 +178,9 @@ export const GameView: React.FC = () => {
 
     return () => {
       if (botMoveTimeoutRef.current) clearTimeout(botMoveTimeoutRef.current);
+      setIsBotThinking(false);
     };
-  }, [activeColor, game, gameOver, currentGame, currentUser.uid, settings.difficulty]);
+  }, [activeColor, game, gameOver, currentGame?.id, currentGame?.white.uid, currentGame?.black.uid, currentUser.uid, settings.difficulty]);
 
   // Clock updates
   const handleTimeUpdate = useCallback((wTime: number, bTime: number) => {
@@ -145,7 +212,7 @@ export const GameView: React.FC = () => {
     playSound(moveResult.captured ? 'capture' : 'move');
 
     // Update state
-    setGame(new Chess(game.fen()));
+    setGame(copyGame(game));
     setLastMove({ from, to });
     setSelectedSquare(null);
     setActiveColor(activeColor === 'w' ? 'b' : 'w');
@@ -179,7 +246,7 @@ export const GameView: React.FC = () => {
         setShowExecuteSpare(true);
         setExecuteSpareData({
           currentUserColor: myColor,
-          opponentName: isWhitePlayer ? currentGame.black.name : currentGame.white.name,
+          opponentName: isWhitePlayer ? (currentGame?.black.name ?? '') : (currentGame?.white.name ?? ''),
         });
       }
     }
@@ -189,7 +256,7 @@ export const GameView: React.FC = () => {
 
   const handlePromote = useCallback((piece: 'q' | 'r' | 'b' | 'n') => {
     if (!pendingPromotion) return;
-    handleMove(pendingPromotion.from, pendingPromotion.to, piece);
+    handleMove(pendingPromotion.from as Square, pendingPromotion.to as Square, piece);
     setPendingPromotion(null);
   }, [pendingPromotion, handleMove]);
 
@@ -226,7 +293,7 @@ export const GameView: React.FC = () => {
     if (game.history().length >= 2) {
       game.undo();
       game.undo();
-      setGame(new Chess(game.fen()));
+      setGame(copyGame(game));
       setMoveIndex(Math.max(0, moveIndex - 2));
       setLastMove(null);
     }
@@ -295,62 +362,6 @@ export const GameView: React.FC = () => {
     addChatMessage({ senderId: 'system', senderName: 'System', message: `You showed mercy. Draw agreed. +8 Honor (Mercy)`, isSystem: true });
   }, [playSound, addChatMessage]);
 
-  const playSound = useCallback((type: 'move' | 'capture' | 'check' | 'gameover') => {
-    if (isMuted || !settings.soundEnabled) return;
-    if (!soundContextRef.current) {
-      soundContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-    const ctx = soundContextRef.current;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-
-    switch (type) {
-      case 'move':
-        osc.frequency.setValueAtTime(440, ctx.currentTime);
-        osc.type = 'sine';
-        gain.gain.setValueAtTime(0.1, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.1);
-        break;
-      case 'capture':
-        osc.frequency.setValueAtTime(330, ctx.currentTime);
-        osc.type = 'square';
-        gain.gain.setValueAtTime(0.15, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.15);
-        break;
-      case 'check':
-        osc.frequency.setValueAtTime(523, ctx.currentTime);
-        osc.type = 'triangle';
-        gain.gain.setValueAtTime(0.1, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.3);
-        break;
-      case 'gameover':
-        osc.frequency.setValueAtTime(220, ctx.currentTime);
-        osc.type = 'sawtooth';
-        gain.gain.setValueAtTime(0.1, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.5);
-        break;
-    }
-  }, [isMuted, settings.soundEnabled]);
-
-  const triggerConfetti = useCallback(() => {
-    confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: ['#F5B83D', '#6EE7B7', '#60A5FA', '#FB7185', '#FFFFFF'],
-    });
-  }, []);
-
   const checkSquare = game.isCheck() ? game.turn() === 'w'
     ? game.board().flat().find(p => p && p.type === 'k' && p.color === 'w')?.square as Square
     : game.board().flat().find(p => p && p.type === 'k' && p.color === 'b')?.square as Square
@@ -358,10 +369,8 @@ export const GameView: React.FC = () => {
 
   if (!currentGame) return null;
 
-  const isWhitePlayer = currentGame.white.uid === currentUser.uid;
   const myTime = isWhitePlayer ? whiteTime : blackTime;
   const opponentTime = isWhitePlayer ? blackTime : whiteTime;
-  const myColor: PieceColor = isWhitePlayer ? 'w' : 'b';
 
   return (
     <div className="min-h-screen pt-20 bg-[var(--app-bg)]">
@@ -396,7 +405,6 @@ export const GameView: React.FC = () => {
             lastMove={lastMove}
             selectedSquare={selectedSquare}
             onSquareClick={handleSquareClick}
-            onMove={handleMove}
             disabled={gameOver}
             checkSquare={checkSquare}
           />
@@ -404,8 +412,8 @@ export const GameView: React.FC = () => {
           {/* My Info + Clock */}
           <div className="w-full max-w-[560px] flex items-center justify-between gap-4">
             <ChessClock
-              whiteTime={isWhitePlayer ? whiteTime : blackTime}
-              blackTime={isWhitePlayer ? blackTime : whiteTime}
+              whiteTime={whiteTime}
+              blackTime={blackTime}
               activeColor={activeColor}
               timeControl={currentGame.timeControl}
               onTimeUpdate={handleTimeUpdate}
@@ -474,7 +482,7 @@ export const GameView: React.FC = () => {
           <PromotionModal
             square={pendingPromotion.to}
             color={pendingPromotion.game.activeColor === 'w' ? 'w' : 'b'}
-            onPromote={handlePromote}
+            onPromote={(piece) => handlePromote(piece as 'q' | 'r' | 'b' | 'n')}
             onCancel={() => setPendingPromotion(null)}
           />
         )}
@@ -497,7 +505,6 @@ export const GameView: React.FC = () => {
             onClose={() => setShowExecuteSpare(false)}
             onExecute={handleExecute}
             onSpare={handleSpare}
-            currentUserColor={executeSpareData.currentUserColor}
             opponentName={executeSpareData.opponentName}
           />
         )}
