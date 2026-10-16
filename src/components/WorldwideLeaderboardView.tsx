@@ -3,6 +3,7 @@ import { PanelContainer } from './PanelContainer';
 import { Trophy, Search, Zap, ChevronLeft, ChevronRight, Flame, Snowflake, Medal, Shield, Globe, Users, Clock, Hash, Percent, History, BarChart2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { getLeaderboardEntries, getRespectProfile } from '../utils/respectSystem';
 
 interface LeaderboardUser {
   uid: string;
@@ -31,6 +32,66 @@ interface HistogramData {
   start: number;
 }
 
+const toInt = (v: number | string | undefined): number => {
+  const n = typeof v === 'number' ? v : parseInt(String(v ?? ''), 10);
+  return Number.isFinite(n) ? n : 0;
+};
+
+// Local ladder shown when the cloud leaderboard (/api/leaderboard, backed by Firestore) fails or is
+// empty, e.g. for guests. Reuses the sample players from respectSystem; entries for real-world
+// champions (ids "gm-*") and the immortal tiers (no numeric rating) are left out of this rated table.
+const buildLocalLeaderboard = (): LeaderboardUser[] => {
+  const respect = getRespectProfile();
+  return getLeaderboardEntries(respect, 'elo')
+    .filter(e => !e.isImmortal && !e.id.startsWith('gm-') && toInt(e.elo) > 0)
+    .map((e, i): LeaderboardUser => {
+      // respectSystem accounting: every judged game is played, only executions count as wins.
+      const wins = e.isCurrentUser ? toInt(respect.wins) : toInt(e.executions);
+      const played = e.isCurrentUser ? toInt(respect.gamesPlayed) : wins + toInt(e.mercies);
+      const losses = Math.max(0, played - wins);
+      return {
+        uid: e.id,
+        displayName: e.username,
+        username: e.isCurrentUser ? '' : e.username.toLowerCase().replace(/\s+/g, ''),
+        photoURL: '',
+        avatar: e.avatar,
+        country: e.country,
+        flag: e.flag,
+        elo: toInt(e.elo),
+        wins,
+        losses,
+        draws: 0,
+        winRate: wins + losses > 0 ? Math.round((wins / (wins + losses)) * 100) : 0,
+        streak: 0,
+        streakType: 'win',
+        rank: i + 1,
+        title: (e.title || '').split(' ')[0],
+        isCurrentUser: !!e.isCurrentUser
+      };
+    });
+};
+
+// Unreachable avatar URLs would show the browser's broken-image icon: swap in a
+// plain king silhouette instead (inline SVG, allowed by the CSP's data: img-src).
+const AVATAR_PLACEHOLDER = `data:image/svg+xml,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#52673A"/><text x="32" y="44" font-size="34" text-anchor="middle" fill="#F5C453">♚</text></svg>'
+)}`;
+const replaceBrokenAvatar = (e: React.SyntheticEvent<HTMLImageElement>) => {
+  const img = e.currentTarget;
+  if (img.src !== AVATAR_PLACEHOLDER) img.src = AVATAR_PLACEHOLDER;
+};
+
+const buildLocalHistogram = (list: LeaderboardUser[]): HistogramData[] => {
+  const counts = new Map<number, number>();
+  list.forEach(p => {
+    const start = Math.floor(p.elo / 200) * 200;
+    counts.set(start, (counts.get(start) || 0) + 1);
+  });
+  return [...counts.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([start, count]) => ({ range: `${start}-${start + 200}`, count, start }));
+};
+
 export const WorldwideLeaderboardView: React.FC = () => {
   const { user, profile } = useAuth();
   const [activeMode, setActiveMode] = useState<'bullet' | 'blitz' | 'rapid' | 'puzzle' | 'daily'>('blitz');
@@ -44,6 +105,7 @@ export const WorldwideLeaderboardView: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [players, setPlayers] = useState<LeaderboardUser[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isOfflineLadder, setIsOfflineLadder] = useState(false);
   const [histogramData, setHistogramData] = useState<HistogramData[]>([]);
   
   const [myRankData, setMyRankData] = useState<LeaderboardUser | null>(null);
@@ -72,20 +134,30 @@ export const WorldwideLeaderboardView: React.FC = () => {
           url += `&country=${profile.country}`;
         }
         
-        const res = await fetch(url);
+        const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
         const data = await res.json();
         
-        if (data.data) {
+        if (Array.isArray(data.data) && data.data.length > 0) {
           const formattedPlayers = data.data.map((p: any) => ({
             ...p,
             isCurrentUser: p.uid === user?.uid
           }));
           setPlayers(formattedPlayers);
           setTotalPages(data.totalPages || 1);
+          setIsOfflineLadder(false);
+          setIsLoading(false);
+          return;
         }
       } catch (e) {
         console.error('Failed to fetch leaderboard', e);
       }
+      // Cloud leaderboard failed or is empty (guest / Firestore unreachable): fall back to the local ladder.
+      const local = buildLocalLeaderboard();
+      const term = debouncedSearch.trim().toLowerCase().replace('@', '');
+      setPlayers(term ? local.filter(p => p.displayName.toLowerCase().includes(term) || p.username.includes(term)) : local);
+      setTotalPages(1);
+      setIsOfflineLadder(true);
+      if (!user?.uid) setMyRankData(local.find(p => p.isCurrentUser) || null);
       setIsLoading(false);
     };
     
@@ -96,9 +168,10 @@ export const WorldwideLeaderboardView: React.FC = () => {
   useEffect(() => {
     const fetchMeta = async () => {
       try {
-        const histRes = await fetch(`/api/leaderboard/distribution?mode=${activeMode}`);
-        const histData = await histRes.json();
-        setHistogramData(histData);
+        const histData = await fetch(`/api/leaderboard/distribution?mode=${activeMode}`, { signal: AbortSignal.timeout(8000) })
+          .then(r => r.json())
+          .catch(() => null);
+        setHistogramData(Array.isArray(histData) && histData.length > 0 ? histData : buildLocalHistogram(buildLocalLeaderboard()));
         
         if (user?.uid) {
           const rankRes = await fetch(`/api/leaderboard/rank/${user.uid}?mode=${activeMode}`);
@@ -167,6 +240,11 @@ export const WorldwideLeaderboardView: React.FC = () => {
           <div>
             <h1 className="text-2xl font-black text-white tracking-tight">Worldwide Leaderboard</h1>
             <p className="text-sm text-[#DFD0B0]/70">Compete for glory. Climb the ranks.</p>
+            {isOfflineLadder && (
+              <p className="mt-1 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-[11px] font-bold text-amber-300">
+                Offline ladder: sample players, shown while the global ranking can't be reached
+              </p>
+            )}
           </div>
         </div>
         
@@ -268,7 +346,7 @@ export const WorldwideLeaderboardView: React.FC = () => {
                       {renderTitleBadge(p.title)}
                       <div className={`relative rounded-full p-1 border-2 ${isFirst ? 'border-yellow-400' : isSecond ? 'border-slate-300' : 'border-amber-600'}`}>
                         {p.photoURL || p.avatar ? (
-                          <img src={p.photoURL || p.avatar} className={`${isFirst ? 'w-14 h-14' : 'w-12 h-12'} rounded-full object-cover`} />
+                          <img src={p.photoURL || p.avatar} alt={p.displayName} onError={replaceBrokenAvatar} className={`${isFirst ? 'w-14 h-14' : 'w-12 h-12'} rounded-full object-cover`} />
                         ) : (
                           <div className={`${isFirst ? 'w-14 h-14' : 'w-12 h-12'} rounded-full bg-black/50 flex items-center justify-center font-bold`}>
                             {p.displayName.charAt(0)}
@@ -331,7 +409,7 @@ export const WorldwideLeaderboardView: React.FC = () => {
                           <div className="flex items-center gap-3">
                             <div className="relative">
                               {p.photoURL || p.avatar ? (
-                                <img src={p.photoURL || p.avatar} className="w-8 h-8 rounded-full object-cover border border-white/10" />
+                                <img src={p.photoURL || p.avatar} alt={p.displayName} onError={replaceBrokenAvatar} className="w-8 h-8 rounded-full object-cover border border-white/10" />
                               ) : (
                                 <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-xs font-bold border border-white/10">
                                   {p.displayName.charAt(0)}

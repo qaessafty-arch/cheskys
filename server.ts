@@ -473,7 +473,7 @@ app.get('/api/leaderboard/distribution', async (req, res) => {
          return { range, count, start: parseInt(start, 10) };
       })
       .sort((a, b) => a.start - b.start)
-      .map(({ range, count }) => ({ range, count }));
+      .map(({ range, count, start }) => ({ range, count, start }));
       
     res.json(sorted);
   } catch (e) {

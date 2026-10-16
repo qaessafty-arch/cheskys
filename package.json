@@ -16,6 +16,7 @@
     "test:multiplayer": "tsx src/services/matchRules.test.ts",
     "test:multiplayer-platform": "tsx src/services/multiplayerPlatform.test.ts",
     "bench": "tsx src/engine/bench.ts 3000",
+    "theme:brutalist": "node scripts/generate-brutalist-palette.mjs",
     "deploy:rules": "firebase deploy --only firestore --non-interactive"
   },
   "dependencies": {

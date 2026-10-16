@@ -27,7 +27,8 @@ import {
   Trophy,
   Info,
   Terminal,
-  BrainCircuit
+  BrainCircuit,
+  Target
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -156,11 +157,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'puzzle_practice',
+      mode: 'puzzle_practice' as GameMode,
       label: t('sidebar.tacticsTrainer'),
-      icon: <Sparkles className="w-4 h-4 text-emerald-400" />,
-      description: t('sidebar.tacticsTrainerDesc'),
-      isActive: activeMode === 'puzzle_practice',
-      onClick: () => {
+      icon: <Target className="w-5 h-5 text-emerald-400" />,
+      action: () => {
         onSelectMode('puzzle_practice');
         onClose();
       }

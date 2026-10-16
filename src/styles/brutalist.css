@@ -1,81 +1,361 @@
-/* Brutalist UI style.
+/* Brutalist UI style: light neo-brutalism.
+ * Cream page, white surfaces, black ink, thick black outlines, hard offset
+ * shadows, flat saturated fills. No gradients, blur, glow or rounded corners.
+ *
  * Only active when the "Brutalist" preset is selected: applyThemeToDOM sets
  * data-ui-style="brutalist" on <html>. Every rule is scoped to that attribute,
- * so the other themes are unaffected.
+ * so the other themes are unaffected. The hard-coded dark Tailwind colours used
+ * across the app are remapped in brutalist-palette.css (generated).
  */
 
 [data-ui-style='brutalist'] {
-  --brutal-border: 3px solid var(--primary-accent);
-  --brutal-shadow: 6px 6px 0 var(--primary-accent);
-  --brutal-shadow-sm: 4px 4px 0 var(--primary-accent);
+  --nb-bg: #fff3dc;
+  --nb-surface: #ffffff;
+  --nb-inset: #fbf4e6;
+  --nb-ink: #0b0b0b;
+  --nb-ink-2: #333333;
+  --nb-yellow: #ffd23f;
+  --nb-blue: #2f5bff;
+  --nb-pink: #ff7ab6;
+  --nb-green: #2fd38a;
+  --nb-red: #ff5a5a;
+  --nb-border: 3px solid var(--nb-ink);
+  --nb-shadow-sm: 3px 3px 0 0 var(--nb-ink);
+  --nb-shadow: 5px 5px 0 0 var(--nb-ink);
+  --nb-shadow-lg: 8px 8px 0 0 var(--nb-ink);
+  color-scheme: light;
 }
 
-/* No blur anywhere: brutalism is flat */
-[data-ui-style='brutalist'] [class*='backdrop-blur'],
-[data-ui-style='brutalist'] .glass-premium,
-[data-ui-style='brutalist'] .glass-panel,
-[data-ui-style='brutalist'] .glass-card,
-[data-ui-style='brutalist'] .glass-interactive,
-[data-ui-style='brutalist'] .glass-panel-hover {
+/* Page: cream with a flat dot grid. The dark cinematic layers are removed.
+ * index.html forces a dark html/body background with !important, so these
+ * need !important and a higher specificity. */
+html[data-ui-style='brutalist'],
+html[data-ui-style='brutalist'] body {
+  background-color: var(--nb-bg) !important;
+}
+
+[data-ui-style='brutalist'] body {
+  background-image: radial-gradient(rgba(11, 11, 11, 0.14) 1px, transparent 1.4px);
+  background-size: 22px 22px;
+  background-attachment: fixed;
+  color: var(--nb-ink);
+}
+
+[data-ui-style='brutalist'] body:not(.font-vazirmatn) {
+  font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+}
+
+[data-ui-style='brutalist'] body::after,
+[data-ui-style='brutalist'] .bg-vignette,
+[data-ui-style='brutalist'] .bg-grain,
+[data-ui-style='brutalist'] .particles-container {
+  display: none !important;
+}
+
+/* Flat: no blur, glow or soft shadows anywhere */
+[data-ui-style='brutalist'] *,
+[data-ui-style='brutalist'] *::before,
+[data-ui-style='brutalist'] *::after {
+  text-shadow: none !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
 
-/* Surfaces: solid fill, hard outline, hard offset shadow */
+[data-ui-style='brutalist'] [class*='shadow'] {
+  box-shadow: none;
+}
+
+[data-ui-style='brutalist'] :is([class*='blur-'], [class*='drop-shadow']):not([class*='backdrop-blur']) {
+  filter: none !important;
+}
+
+/* Decorative glow blobs and light streaks */
+[data-ui-style='brutalist'] .pointer-events-none[class*='blur-']:not([class*='backdrop-blur']),
+[data-ui-style='brutalist'] .glass-shimmer::after,
+[data-ui-style='brutalist'] .glass-platform::after {
+  display: none !important;
+}
+
+/* No gradients: the generated palette gives these elements a flat fill */
+[data-ui-style='brutalist'] [class*='bg-gradient-'],
+[data-ui-style='brutalist'] [class*='bg-linear-'],
+[data-ui-style='brutalist'] [class*='bg-radial'],
+[data-ui-style='brutalist'] [class*='bg-conic'],
+[data-ui-style='brutalist'] [class*='bg-[radial'],
+[data-ui-style='brutalist'] [class*='bg-[linear'],
+[data-ui-style='brutalist'] [class*='bg-[conic'] {
+  background-image: none !important;
+}
+
+/* Gradient sheens laid over content are pure decoration: drop them */
+[data-ui-style='brutalist'] .pointer-events-none.absolute:is([class*='bg-gradient-'], [class*='bg-linear-'], [class*='bg-radial'], [class*='bg-[radial'], [class*='bg-[linear']) {
+  display: none !important;
+}
+
+/* Gradient text becomes solid ink */
+[data-ui-style='brutalist'] .bg-clip-text,
+[data-ui-style='brutalist'] .text-transparent {
+  background: none !important;
+  color: var(--nb-ink) !important;
+  -webkit-text-fill-color: var(--nb-ink) !important;
+}
+
+/* Square corners. Full circles (avatars, dots, toggle knobs) stay round.
+ * In @layer base because important declarations in an earlier layer beat the
+ * important utilities (!rounded-2xl) Tailwind emits in its utilities layer. */
+@layer base {
+  [data-ui-style='brutalist'] *:not(.rounded-full):not([class*='rounded-full']) {
+    border-radius: 0 !important;
+  }
+}
+
+/* Surfaces: white fill, thick ink outline, hard offset shadow */
 [data-ui-style='brutalist'] .glass-premium,
 [data-ui-style='brutalist'] .glass-panel,
 [data-ui-style='brutalist'] .glass-card,
 [data-ui-style='brutalist'] .glass-interactive,
-[data-ui-style='brutalist'] .glass-panel-hover {
-  background: var(--glass-bg) !important;
-  border: var(--brutal-border) !important;
-  box-shadow: var(--brutal-shadow) !important;
-  border-radius: 0 !important;
+[data-ui-style='brutalist'] .glass-panel-hover,
+[data-ui-style='brutalist'] .glass-frost,
+[data-ui-style='brutalist'] .glass-platform {
+  background: var(--nb-surface) !important;
+  border: var(--nb-border) !important;
+  box-shadow: var(--nb-shadow) !important;
+  color: var(--nb-ink);
 }
 
-/* Square off rounded corners. Full circles (dots, avatars, toggles) are kept. */
-[data-ui-style='brutalist'] [class*='rounded-']:not([class*='rounded-full']) {
-  border-radius: 0 !important;
+/* Outlined elements get a heavier ink line */
+[data-ui-style='brutalist'] .border:not(:where(.board-3d-frame *)) {
+  border-width: 2px;
 }
 
-/* Buttons and inputs: outlined, with a press-down interaction */
-[data-ui-style='brutalist'] button:not(:disabled),
-[data-ui-style='brutalist'] select,
-[data-ui-style='brutalist'] input {
-  border: var(--brutal-border);
-  box-shadow: var(--brutal-shadow-sm);
-  border-radius: 0 !important;
-  transition: transform 80ms ease, box-shadow 80ms ease;
+/* Cards and panels drawn with utilities: outline plus hard shadow */
+[data-ui-style='brutalist'] :is(.rounded-2xl, .rounded-3xl, [class*='rounded-[2'], [class*='rounded-[3']).border:not(button):not(:where(.board-3d-frame, .board-3d-frame *)) {
+  border-width: 3px;
+  box-shadow: var(--nb-shadow);
 }
 
-[data-ui-style='brutalist'] button:not(:disabled):hover {
-  transform: translate(-2px, -2px);
-  box-shadow: var(--brutal-shadow);
+/* A card nested in another surface keeps its outline but drops the shadow */
+[data-ui-style='brutalist'] :is(.glass-premium, .glass-panel, .glass-card, .glass-platform) :is(.rounded-2xl, .rounded-3xl, [class*='rounded-[2'], [class*='rounded-[3']).border:not(button) {
+  border-width: 2px;
+  box-shadow: none;
 }
 
-[data-ui-style='brutalist'] button:not(:disabled):active {
+/* Buttons with a fill or outline read as hard-edged keys */
+[data-ui-style='brutalist'] button:is([class*='bg-'], .border):not([class*='bg-transparent']):not(:where(.board-3d-frame *, [role='switch'], [data-nb-keep] *)) {
+  border: 2px solid var(--nb-ink);
+  box-shadow: var(--nb-shadow-sm);
+  font-weight: 800;
+  transition: transform 80ms ease, box-shadow 80ms ease, background-color 120ms ease;
+}
+
+[data-ui-style='brutalist'] button:is([class*='bg-'], .border):not([class*='bg-transparent']):not(:disabled):not(:where(.board-3d-frame *, [role='switch'], [data-nb-keep] *)):hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 0 var(--nb-ink);
+}
+
+[data-ui-style='brutalist'] button:is([class*='bg-'], .border):not([class*='bg-transparent']):not(:disabled):not(:where(.board-3d-frame *, [role='switch'], [data-nb-keep] *)):active {
   transform: translate(3px, 3px);
-  box-shadow: 0 0 0 var(--primary-accent);
+  box-shadow: 0 0 0 0 var(--nb-ink);
 }
 
-/* Flat type: no glow or soft text shadows */
-[data-ui-style='brutalist'] * {
-  text-shadow: none !important;
+[data-ui-style='brutalist'] button:disabled {
+  box-shadow: none;
+  opacity: 0.45;
 }
 
-/* Board frame: thick outline and a hard shadow in the secondary accent */
-[data-ui-style='brutalist'] #chess-board-container {
-  border: 4px solid var(--primary-accent) !important;
-  border-radius: 0 !important;
-  box-shadow: 10px 10px 0 var(--secondary-accent) !important;
+/* Toggle switches (a pill track holding a round white knob): outline the
+ * track and ink the knob, so the off state is visible on a light surface */
+[data-ui-style='brutalist'] .rounded-full:has(> .absolute.rounded-full.bg-white) {
+  outline: 2px solid var(--nb-ink);
 }
 
+[data-ui-style='brutalist'] .rounded-full > .absolute.rounded-full.bg-white {
+  background-color: var(--nb-ink);
+}
+
+/* Inputs */
+[data-ui-style='brutalist'] :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']), select, textarea, .glass-input, .input-tactical) {
+  background-color: var(--nb-surface) !important;
+  color: var(--nb-ink) !important;
+  border: 2px solid var(--nb-ink) !important;
+  box-shadow: none;
+}
+
+[data-ui-style='brutalist'] :is(input, select, textarea):focus {
+  outline: none;
+  box-shadow: var(--nb-shadow-sm) !important;
+}
+
+[data-ui-style='brutalist'] ::placeholder {
+  color: #6b6b6b !important;
+}
+
+[data-ui-style='brutalist'] input[type='range'] {
+  accent-color: var(--nb-ink);
+}
+
+/* Headings: heavy and tight */
+[data-ui-style='brutalist'] :is(h1, h2, h3) {
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  color: var(--nb-ink);
+}
+
+/* Full-screen backdrops stay dark so the dialog on top stands out */
+[data-ui-style='brutalist'] .fixed.inset-0:is([class*='bg-black/'], [class*='bg-slate-9'], [class*='bg-[#0'], [class*='bg-[#1']) {
+  background-color: rgba(11, 11, 11, 0.55) !important;
+}
+
+/* Overlays drawn over content (game over, locked cards) become light veils */
+[data-ui-style='brutalist'] .absolute.inset-0:is([class*='bg-black/'], [class*='bg-slate-9']):not(.pointer-events-none) {
+  background-color: rgba(255, 243, 220, 0.82) !important;
+}
+
+/* Board: thick ink frame and a hard shadow */
 [data-ui-style='brutalist'] .board-3d-frame {
   filter: none !important;
 }
 
-/* Scrollbars match the outline style */
+[data-ui-style='brutalist'] .board-3d-frame > .pointer-events-none {
+  display: none;
+}
+
+[data-ui-style='brutalist'] #chess-board-container {
+  border: 4px solid var(--nb-ink) !important;
+  box-shadow: var(--nb-shadow-lg) !important;
+}
+
+/* Eval bar: solid ink for Black, white for White */
+[data-ui-style='brutalist'] [data-eval-side='black'] {
+  background-color: var(--nb-ink) !important;
+  color: #ffffff !important;
+}
+
+[data-ui-style='brutalist'] [data-eval-side='black'] * {
+  color: #ffffff !important;
+}
+
+[data-ui-style='brutalist'] [data-eval-side='white'] {
+  background-color: var(--nb-surface) !important;
+}
+
+/* Signature badge */
+[data-ui-style='brutalist'] .watermark-glass-panel {
+  background: var(--nb-surface);
+  border: 2px solid var(--nb-ink);
+  box-shadow: var(--nb-shadow-sm);
+}
+
+[data-ui-style='brutalist'] .watermark-glass-panel:hover {
+  background: var(--nb-yellow);
+  box-shadow: 4px 4px 0 0 var(--nb-ink);
+  transform: translate(-1px, -1px);
+}
+
+/* Component classes from the other stylesheets (friends, rooms, chat, toasts,
+ * settings) paint their own dark fills, so they are restyled here. */
+:root[data-ui-style='brutalist'] {
+  --room-bg-deep: #fbf4e6;
+  --room-bg-mountain: #ffffff;
+  --room-bg-raised: #fbf4e6;
+  --room-bg-overlay: rgba(11, 11, 11, 0.55);
+  --room-gold: #8a5a00;
+  --room-gold-soft: #fff0b8;
+  --room-gold-border: #0b0b0b;
+  --room-red: #b3121b;
+  --room-red-soft: #ffd3d3;
+  --room-green: #0b7a4b;
+  --room-green-soft: #c9f5da;
+  --room-green-border: #0b0b0b;
+  --room-text: #0b0b0b;
+  --room-text-secondary: #333333;
+  --room-text-muted: #595959;
+  --room-border: #0b0b0b;
+  --room-border-strong: #0b0b0b;
+}
+
+[data-ui-style='brutalist'] :is(.glass-friend-panel, .room-glass-card, .room-card-primary, .room-chat-container, .toast-card, .obsidian-panel) {
+  background: var(--nb-surface) !important;
+  border: var(--nb-border) !important;
+  box-shadow: var(--nb-shadow-lg) !important;
+  color: var(--nb-ink) !important;
+}
+
+[data-ui-style='brutalist'] :is(.glass-card-subtle, .player-slot, .room-card-secondary, .room-player, .room-setting, .bg-settings-card, .room-chat-header, .room-chat-input-bar, .room-code, .room-empty__icon, .glass-chat-bubble-peer, .chat-bubble.theirs .chat-content) {
+  background: var(--nb-inset) !important;
+  border: 2px solid var(--nb-ink) !important;
+  color: var(--nb-ink) !important;
+}
+
+[data-ui-style='brutalist'] :is(.glass-pill-tab, .bg-mode-chip, .glass-action-btn, .glass-button, .room-btn-action.ghost, .room-btn-secondary, .room-code-badge, .room-chat-input) {
+  background: var(--nb-surface) !important;
+  border: 2px solid var(--nb-ink) !important;
+  color: var(--nb-ink) !important;
+}
+
+[data-ui-style='brutalist'] :is(.glass-card-selected, .player-slot.active, .glass-pill-tab.active, .bg-mode-chip.active, .glass-button-gold, .room-btn-action.gold, .room-btn-primary, .glass-chat-bubble-self, .chat-bubble.mine .chat-content, .chat-bubble.system .chat-content) {
+  background: var(--nb-yellow) !important;
+  border: 2px solid var(--nb-ink) !important;
+  color: var(--nb-ink) !important;
+}
+
+[data-ui-style='brutalist'] .room-btn-action.danger {
+  background: #ffd3d3 !important;
+  border: 2px solid var(--nb-ink) !important;
+  color: #b3121b !important;
+}
+
+[data-ui-style='brutalist'] :is(.glass-pill-tab, .bg-mode-chip, .glass-action-btn, .room-btn-action, .room-btn-primary, .room-btn-secondary):hover {
+  box-shadow: var(--nb-shadow-sm) !important;
+}
+
+[data-ui-style='brutalist'] .toast-icon-badge {
+  background: var(--nb-inset) !important;
+  border: 2px solid var(--nb-ink);
+  color: var(--nb-ink) !important;
+}
+
+[data-ui-style='brutalist'] :is(.accent-gradient-text, .room-countdown-number) {
+  background: none !important;
+  color: var(--nb-ink) !important;
+  -webkit-text-fill-color: currentColor !important;
+}
+
+[data-ui-style='brutalist'] .room-countdown-number {
+  color: var(--nb-yellow) !important;
+}
+
+[data-ui-style='brutalist'] .kurdistan-sunset-bg {
+  background: var(--nb-bg) !important;
+}
+
+[data-ui-style='brutalist'] .custom-bg-shield {
+  display: none !important;
+}
+
+[data-ui-style='brutalist'] .custom-range-slider {
+  background: var(--nb-inset) !important;
+  border: 2px solid var(--nb-ink);
+}
+
+[data-ui-style='brutalist'] .custom-range-slider::-webkit-slider-thumb {
+  background: var(--nb-yellow) !important;
+  border: 2px solid var(--nb-ink);
+  box-shadow: none;
+}
+
+/* Scrollbars */
+[data-ui-style='brutalist'] ::-webkit-scrollbar-track {
+  background: var(--nb-inset);
+}
+
 [data-ui-style='brutalist'] ::-webkit-scrollbar-thumb {
-  background: var(--primary-accent);
+  background: var(--nb-ink);
   border-radius: 0;
+}
+
+/* Text selection */
+[data-ui-style='brutalist'] ::selection {
+  background: var(--nb-yellow);
+  color: var(--nb-ink);
 }

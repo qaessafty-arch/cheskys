@@ -53,7 +53,7 @@ export const FriendPanel: React.FC<FriendPanelProps> = ({
   onOpenChat,
   onChallengeFriend
 }) => {
-  const { profile, updateProfileDetails } = useAuth();
+  const { profile, updateProfileDetails, isGuest } = useAuth();
   const { sendNotification } = useNotification();
   const { currentRoom, inviteFriend, inviteFriendNotify } = useRoom();
 
@@ -87,8 +87,15 @@ export const FriendPanel: React.FC<FriendPanelProps> = ({
 
   // Real-time Firestore subscriptions
   useEffect(() => {
-    if (!isOpen || !profile?.uid) return;
+    if (!isOpen) return;
+    if (!profile?.uid) {
+      setFriendsList([]);
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
+    // Never leave the skeleton up forever if Firestore is slow or unreachable
+    const loadingFallback = setTimeout(() => setIsLoading(false), 8000);
 
     const unsubFriends = listenToFriendsList(profile.uid, friends => {
       setFriendsList(friends);
@@ -109,6 +116,7 @@ export const FriendPanel: React.FC<FriendPanelProps> = ({
     setBlockedUsers(localBlocked);
 
     return () => {
+      clearTimeout(loadingFallback);
       if (unsubFriends) unsubFriends();
       if (unsubRequests) unsubRequests();
     };
@@ -484,6 +492,12 @@ export const FriendPanel: React.FC<FriendPanelProps> = ({
                 />
 
                 <div className="flex-1 overflow-y-auto pr-1">
+                  {(isGuest || profile?.isGuest) && (
+                    <div className="mb-2 p-3 rounded-2xl bg-[#F5C453]/10 border border-[#F5C453]/30 flex items-start gap-2 text-xs text-[#DFD0B0]">
+                      <ShieldAlert className="w-4 h-4 text-[#F5C453] shrink-0 mt-0.5" />
+                      <span>You are playing as a guest. Sign in to save allies, send friend requests and challenge friends online.</span>
+                    </div>
+                  )}
                   <FriendList
                     friends={filteredFriends}
                     selectedFriend={selectedFriend}

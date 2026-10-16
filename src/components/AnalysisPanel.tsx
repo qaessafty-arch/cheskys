@@ -175,7 +175,9 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
       {/* Board & Eval Bar */}
       <div className="flex items-stretch justify-center gap-2 sm:gap-3 w-full lg:flex-1 lg:max-w-[640px]">
         {settings.showEvalBar && (
-          <EvalBar score={evalScore} isFlipped={isFlipped} />
+          <div className="w-5 sm:w-8 shrink-0 flex glass-premium overflow-hidden !rounded-xl border-white/10">
+            <EvalBar score={evalScore} isFlipped={isFlipped} />
+          </div>
         )}
         <ChessBoard
           game={analysisGame}

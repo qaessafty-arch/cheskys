@@ -109,14 +109,14 @@ const THEME_STYLES: Record<
     glow: 'shadow-[0_0_25px_rgba(181,136,99,0.3)]'
   },
   brutalist: {
-    light: 'bg-[#FFE66D]',
-    dark: 'bg-[#FF5C00]',
-    lightText: 'text-[#0F0F0F]',
-    darkText: 'text-[#0F0F0F]',
-    border: 'border-[#FFE66D]',
-    glow: 'shadow-[10px_10px_0_0_#FF5C00]',
-    marker: 'bg-[#0F0F0F]/75',
-    captureRing: 'border-[#0F0F0F]/75'
+    light: 'bg-[#FFF1C1]',
+    dark: 'bg-[#5B8CFF]',
+    lightText: 'text-[#0B0B0B]',
+    darkText: 'text-[#0B0B0B]',
+    border: 'border-[#0B0B0B]',
+    glow: 'shadow-[8px_8px_0_0_#0B0B0B]',
+    marker: 'bg-[#0B0B0B]/70',
+    captureRing: 'border-[#0B0B0B]/75'
   },
   peshmerga: {
     light: 'bg-[#435433]',
