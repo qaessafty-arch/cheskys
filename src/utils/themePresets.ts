@@ -3,6 +3,32 @@ import { CustomBackgroundConfig } from '../types/chess';
 
 export const PRESET_THEMES: UITheme[] = [
   {
+    id: 'brutalist',
+    name: '🧱 Brutalist',
+    description: 'Raw neo-brutalist UI: flat surfaces, thick accent outlines, hard offset shadows and no blur',
+    category: 'vibrant',
+    colors: {
+      primary: '#FFE66D',
+      primaryHover: '#FFD93D',
+      secondary: '#FF5C00',
+      accentGlow: 'rgba(255, 230, 109, 0.45)',
+      appBg: '#0F0F0F',
+      mesh1: 'rgba(255, 230, 109, 0.0)',
+      mesh2: 'rgba(255, 92, 0, 0.0)',
+      mesh3: 'rgba(255, 92, 0, 0.0)',
+      cardBg: '#161616',
+      cardBorder: '#FFE66D',
+      cardHoverBg: '#2A2400',
+      cardHoverBorder: '#FFE66D',
+      panelBg: '#111111',
+      textMain: '#FFFFFF',
+      textMuted: '#D4D4D4',
+      boardLight: '#FFE66D',
+      boardDark: '#FF5C00',
+      boardBorder: '#FFE66D'
+    }
+  },
+  {
     id: 'bluesky',
     name: '☀️ BlueSky',
     description: 'Clear azure horizons with bright clouds and solar brilliance',
@@ -571,6 +597,13 @@ export function applyThemeToDOM(theme: UITheme) {
     root.setAttribute('data-theme', 'high-contrast-dark');
   } else {
     root.removeAttribute('data-theme');
+  }
+
+  // Brutalist restyles surfaces, borders and shadows via src/styles/brutalist.css
+  if (theme.id === 'brutalist') {
+    root.setAttribute('data-ui-style', 'brutalist');
+  } else {
+    root.removeAttribute('data-ui-style');
   }
 
   root.style.setProperty('--app-bg', c.appBg);

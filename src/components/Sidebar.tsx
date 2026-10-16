@@ -92,12 +92,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // Clean formatted online string that NEVER returns "null null"
   const formattedOnlineText = () => {
     if (onlineFriendsCount > 0) {
-      return `${onlineFriendsCount} Online`;
+      return t('sidebar.onlineCount', { count: onlineFriendsCount });
     }
     if (totalFriendsCount > 0) {
-      return `${totalFriendsCount} ${totalFriendsCount === 1 ? 'Friend' : 'Friends'}`;
+      return t('sidebar.friendsCount', { count: totalFriendsCount });
     }
-    return 'Social';
+    return t('sidebar.social');
   };
 
   const navItems = [
@@ -114,7 +114,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       id: 'multiplayer',
       mode: 'multiplayer' as GameMode,
-      label: 'Celestial Realm',
+      label: t('sidebar.celestialRealm'),
       icon: <Swords className="w-5 h-5 text-amber-400" />,
       action: () => {
         onSelectMode('multiplayer');
@@ -124,7 +124,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       id: 'private_room',
       mode: 'private_room' as GameMode,
-      label: 'Astral Sanctum',
+      label: t('sidebar.astralSanctum'),
       icon: <Users className="w-5 h-5 text-[#F5C453]" />,
       action: () => {
         onSelectMode('private_room');
@@ -133,7 +133,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'notifications',
-      label: 'Celestial Messages',
+      label: t('sidebar.celestialMessages'),
       badge: unreadCount > 0 ? `${unreadCount}` : undefined,
       badgeClass: 'bg-[#EF4444] text-white text-[10px] px-1.5 py-0.5 rounded-full font-black shadow-lg',
       icon: <Bell className="w-5 h-5 text-[#F59E0B]" />,
@@ -146,7 +146,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: 'puzzle',
       mode: 'puzzle' as GameMode,
       label: t('sidebar.puzzles'),
-      badge: 'DAILY',
+      badge: t('sidebar.daily'),
       badgeClass: 'bg-gradient-to-r from-amber-400 to-[#F59E0B] text-black font-black text-[10px] px-1.5 py-0.5 rounded shadow-sm',
       icon: <Sparkles className="w-5 h-5 text-yellow-300" />,
       action: () => {
@@ -156,9 +156,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'puzzle_practice',
-      label: 'Tactics Trainer',
+      label: t('sidebar.tacticsTrainer'),
       icon: <Sparkles className="w-4 h-4 text-emerald-400" />,
-      description: 'Practice specific tactical motifs',
+      description: t('sidebar.tacticsTrainerDesc'),
       isActive: activeMode === 'puzzle_practice',
       onClick: () => {
         onSelectMode('puzzle_practice');
@@ -179,8 +179,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       id: 'coach',
       mode: 'coach' as GameMode,
-      label: 'Coach',
-      badge: 'NEW',
+      label: t('sidebar.coach'),
+      badge: t('sidebar.new'),
       badgeClass: 'bg-gradient-to-r from-emerald-500 to-blue-500 text-black font-black text-[10px] px-1.5 py-0.5 rounded shadow-sm',
       icon: <BrainCircuit className="w-5 h-5 text-emerald-400" />,
       action: () => {
@@ -200,7 +200,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'leaderboard',
-      label: t('sidebar.worldwide') + ' Leaderboard',
+      label: t('sidebar.worldwideLeaderboard'),
       icon: <Trophy className="w-5 h-5 text-amber-400 animate-pulse" />,
       action: () => {
         onOpenLeaderboard();
@@ -209,8 +209,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'worldwide',
-      label: t('sidebar.worldwide') + ' Live',
-      badge: 'Real Players',
+      label: t('sidebar.worldwideLive'),
+      badge: t('sidebar.realPlayers'),
       badgeClass: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1',
       badgeDot: true,
       icon: <Globe className="w-5 h-5 text-emerald-400" />,
@@ -235,7 +235,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'about',
-      label: 'About Chesskys',
+      label: t('sidebar.about'),
       icon: <Info className="w-5 h-5 text-amber-400" />,
       action: () => {
         onOpenAbout();
@@ -248,7 +248,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     navItems.push({
       id: 'dev_panel',
       mode: 'dev_panel' as GameMode,
-      label: 'Developer Console',
+      label: t('sidebar.developerConsole'),
       icon: <Terminal className="w-5 h-5 text-sky-400" />,
       action: () => {
         onSelectMode('dev_panel' as GameMode);
@@ -301,7 +301,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       PRO
                     </span>
                   </div>
-                  <p className="text-[10px] text-[var(--text-muted)] font-mono mt-1 uppercase tracking-widest opacity-60">Celestial Matrix</p>
+                  <p className="text-[10px] text-[var(--text-muted)] font-mono mt-1 uppercase tracking-widest opacity-60">{t('sidebar.celestialMatrix')}</p>
                 </div>
               </div>
 
@@ -310,7 +310,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 type="button"
                 onClick={onClose}
                 className="w-10 h-10 rounded-xl bg-[var(--glass-bg)] text-[var(--text-muted)] hover:text-[var(--secondary-accent)] flex items-center justify-center transition-all interactive-btn border border-[var(--glass-border)] hover:border-[var(--secondary-accent)]/30"
-                aria-label="Close Sidebar"
+                aria-label={t('sidebar.closeSidebar')}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -319,7 +319,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {/* Sidebar Navigation Items */}
             <div className="flex-1 min-h-0 overflow-y-auto p-4 pb-6 space-y-2 overscroll-contain">
               <div className="px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-muted)] opacity-50 font-mono">
-                Astral Planes
+                {t('sidebar.astralPlanes')}
               </div>
 
               {navItems.map(item => {
@@ -378,13 +378,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </div>
                   <div className="text-left leading-tight">
                     <div className="text-xs font-black text-white flex items-center gap-2">
-                      <span>ASTRAL CORES</span>
+                      <span>{t('sidebar.astralCores')}</span>
                       <span className="text-[8px] px-1.5 py-0.5 rounded bg-[var(--secondary-accent)] text-[var(--app-bg)] font-black font-mono">
-                        NEW
+                        {t('sidebar.new')}
                       </span>
                     </div>
                     <span className="text-[9px] text-[var(--text-muted)] font-mono uppercase tracking-widest opacity-60">
-                      Design Presets
+                      {t('sidebar.designPresets')}
                     </span>
                   </div>
                 </div>

@@ -90,15 +90,12 @@ export default function App() {
   const { t, i18n } = useTranslation();
   const { settings, updateSettings } = useSettings();
 
+  // Pass updaters through so they run against the latest settings, not a stale closure
   const setSettings = useCallback(
     (action: React.SetStateAction<AppSettings>) => {
-      if (typeof action === 'function') {
-        updateSettings(action(settings));
-      } else {
-        updateSettings(action);
-      }
+      updateSettings(action);
     },
-    [settings, updateSettings]
+    [updateSettings]
   );
 
   const [respectProfile, setRespectProfile] = useState<RespectProfile>(() => getRespectProfile());

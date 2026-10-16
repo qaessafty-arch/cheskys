@@ -49,6 +49,7 @@ import { LoggingView } from './LoggingView';
 import { AuthoringView } from './AuthoringView';
 import { BackgroundSettings } from './Settings/BackgroundSettings';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 export type SettingsTab = 'themes' | 'background' | 'board' | 'gameplay' | 'database' | 'logs' | 'authoring' | 'developer' | 'feedback';
 
@@ -72,6 +73,7 @@ const BOARD_THEMES: { id: BoardThemeId; name: string; lightBg: string; darkBg: s
   { id: 'ocean', name: 'Ocean Breeze', lightBg: '#dee3e6', darkBg: '#678292', desc: 'Maritime Slate' },
   { id: 'midnight', name: 'Midnight Slate', lightBg: '#334155', darkBg: '#0f172a', desc: 'Deep Obsidian' },
   { id: 'marble', name: 'Royal Marble', lightBg: '#e8ebf0', darkBg: '#8ca2b0', desc: 'Polished Alabaster' },
+  { id: 'brutalist', name: '🧱 Brutalist Block', lightBg: '#FFE66D', darkBg: '#FF5C00', desc: 'Hard-edged yellow & orange with black ink' },
   { id: 'custom', name: 'Theme Matched', lightBg: 'var(--board-light)', darkBg: 'var(--board-dark)', desc: 'Synchronized with UI Palette' }
 ];
 
@@ -145,6 +147,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onOpenAnalysisWithFen
 }) => {
   const { isDeveloper, isOwner, isAdmin, devModeUnlocked } = useAuth();
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
   const [customThemes, setCustomThemes] = useState<UITheme[]>([]);
   const [activeThemeId, setActiveTheme] = useState<string>('peshmerga');
@@ -169,7 +172,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     setActiveTheme(theme.id);
     setActiveThemeId(theme.id);
     applyThemeToDOM(theme);
-    if (theme.id === 'aot') {
+    if (theme.id === 'brutalist') {
+      onUpdateSettings({ uiThemeId: theme.id, boardTheme: 'brutalist' });
+    } else if (theme.id === 'aot') {
       onUpdateSettings({ uiThemeId: theme.id, boardTheme: 'aot', pieceTheme: 'aot' });
     } else if (theme.id === 'ukh') {
       onUpdateSettings({ uiThemeId: theme.id, boardTheme: 'ukh', pieceTheme: 'ukh' });
@@ -214,6 +219,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     handleSelectTheme(cloned);
   };
 
+  const settingsTabs: Array<{ id: SettingsTab; label: string; icon: React.ReactNode }> = [
+    { id: 'themes', label: t('settingsModal.tabThemes'), icon: <Palette className="w-3.5 h-3.5" /> },
+    { id: 'background', label: t('settingsModal.tabBackground'), icon: <ImageIcon className="w-3.5 h-3.5" /> },
+    { id: 'board', label: t('settingsModal.tabPieceBoard'), icon: <Layers className="w-3.5 h-3.5" /> },
+    { id: 'gameplay', label: t('settingsModal.tabGameplay'), icon: <Sliders className="w-3.5 h-3.5" /> },
+    { id: 'database', label: t('settingsModal.tabDatabase'), icon: <Database className="w-3.5 h-3.5" /> },
+    { id: 'logs', label: t('settingsModal.tabBattleLogs'), icon: <History className="w-3.5 h-3.5" /> },
+    { id: 'authoring', label: t('settingsModal.tabCreatorStudio'), icon: <PenTool className="w-3.5 h-3.5" /> },
+  ];
+
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md p-2 sm:p-4">
@@ -238,10 +253,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
               <div>
                 <h2 className="text-xl font-black text-white tracking-tight uppercase">
-                  Settings & Studio
+                  {t('settingsModal.title')}
                 </h2>
                 <p className="text-[10px] font-black text-[#FFD700] uppercase tracking-[0.2em] opacity-60">
-                  Architect Tactical Command
+                  {t('settingsModal.subtitle')}
                 </p>
               </div>
             </div>
@@ -249,7 +264,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <button
               onClick={onClose}
               className="w-10 h-10 glass-interactive !rounded-xl text-white/60 hover:text-white transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xl"
-              aria-label="Close Settings"
+              aria-label={t('settingsModal.close')}
             >
               <X className="w-5 h-5" />
             </button>
@@ -257,94 +272,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar">
 
-            {/* Divided Categorized Tab Navigation */}
-            <div className="space-y-2 mb-5">
-              {/* Category 1: Preferences & Customization */}
-              <div className="flex items-center gap-1.5 p-1.5 rounded-2xl bg-white/[0.03] border border-white/5 backdrop-blur-md overflow-x-auto no-scrollbar">
-                <button
-                  onClick={() => setActiveTab('themes')}
-                  className={`flex-1 min-w-[100px] flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs uppercase tracking-widest font-black transition-all cursor-pointer whitespace-nowrap ${
-                    activeTab === 'themes'
-                      ? 'bg-[#FFD700] text-black shadow-xl shadow-[#FFD700]/20'
-                      : 'text-white/60 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <Palette className="w-3.5 h-3.5" />
-                  <span>UI Themes</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('background')}
-                  className={`flex-1 min-w-[110px] flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs uppercase tracking-widest font-black transition-all cursor-pointer whitespace-nowrap ${
-                    activeTab === 'background'
-                      ? 'bg-[#FFD700] text-black shadow-xl shadow-[#FFD700]/20'
-                      : 'text-white/60 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <ImageIcon className="w-3.5 h-3.5" />
-                  <span>Background</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('board')}
-                  className={`flex-1 min-w-[110px] flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs uppercase tracking-widest font-black transition-all cursor-pointer whitespace-nowrap ${
-                    activeTab === 'board'
-                      ? 'bg-[#FFD700] text-black shadow-xl shadow-[#FFD700]/20'
-                      : 'text-white/60 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <Layers className="w-3.5 h-3.5" />
-                  <span>Piece & Board</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('gameplay')}
-                  className={`flex-1 min-w-[100px] flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                    activeTab === 'gameplay'
-                      ? 'bg-[#52673A] text-white shadow-md shadow-[#52673A]/40 border border-[#F5C453]/50'
-                      : 'text-[#DFD0B0]/70 hover:text-white hover:bg-white/[0.06]'
-                  }`}
-                >
-                  <Sliders className="w-3.5 h-3.5 text-[#F5C453]" />
-                  <span>Gameplay</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('database')}
-                  className={`flex-1 min-w-[110px] flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs uppercase tracking-widest font-black transition-all cursor-pointer whitespace-nowrap ${
-                    activeTab === 'database'
-                      ? 'bg-emerald-600 text-black shadow-xl shadow-emerald-500/20'
-                      : 'text-emerald-400/60 hover:text-emerald-400 hover:bg-emerald-400/5'
-                  }`}
-                >
-                  <Database className="w-3.5 h-3.5" />
-                  <span>Database</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('logs')}
-                  className={`flex-1 min-w-[105px] flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs uppercase tracking-widest font-black transition-all cursor-pointer whitespace-nowrap ${
-                    activeTab === 'logs'
-                      ? 'bg-[#8C2425] text-white shadow-xl shadow-red-900/40 border border-white/20'
-                      : 'text-white/60 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <History className="w-3.5 h-3.5" />
-                  <span>Battle Logs</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('authoring')}
-                  className={`flex-1 min-w-[115px] flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                    activeTab === 'authoring'
-                      ? 'bg-[#52673A] text-white shadow-md border border-[#F5C453]/60'
-                      : 'text-[#DFD0B0]/70 hover:text-white hover:bg-white/[0.06]'
-                  }`}
-                >
-                  <PenTool className="w-3.5 h-3.5 text-[#F5C453]" />
-                  <span>Creator Studio</span>
-                </button>
-              </div>
+            {/* Tab Navigation: one consistent style for every tab, wraps instead of overflowing */}
+            <div className="mb-5 p-1.5 rounded-2xl bg-white/[0.03] border border-white/5 grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+              {settingsTabs.map(tab => {
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    aria-pressed={isActive}
+                    className={`min-h-[44px] flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-[11px] uppercase tracking-wider font-black transition-all cursor-pointer text-center leading-tight ${
+                      isActive
+                        ? 'bg-[#FFD700] text-black shadow-lg shadow-[#FFD700]/20'
+                        : 'text-white/60 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <span className="shrink-0">{tab.icon}</span>
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* TAB 1: UI THEMES */}
@@ -354,10 +302,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-                      Curated Themes
+                      {t('settingsModal.curatedThemes')}
                     </h3>
                     <p className="text-[11px] text-[#DFD0B0]/70">
-                      Signature Kurdish military and high-contrast grandmaster palettes
+                      {t('settingsModal.curatedThemesDesc')}
                     </p>
                   </div>
                   <button
@@ -368,7 +316,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     className="flex items-center gap-1.5 py-1.5 px-3 rounded-xl bg-[#52673A] text-white text-xs font-bold shadow-md shadow-[#52673A]/30 border border-[#F5C453]/40 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5 text-[#F5C453]" />
-                    <span>Create Custom</span>
+                    <span>{t('settingsModal.createCustom')}</span>
                   </button>
                 </div>
 
@@ -432,15 +380,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         <div className="flex items-center justify-between pt-2 border-t border-white/10 relative z-10">
                           <div className="flex items-center gap-1.5">
                             {isPeshmerga ? (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#F5C453]/20 text-[#F5C453] border border-[#F5C453]/30 flex items-center gap-1">
-                                <span>🔒 Protected Original</span>
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap bg-[#F5C453]/20 text-[#F5C453] border border-[#F5C453]/30 flex items-center gap-1">
+                                <span>🔒 {t('settingsModal.protectedOriginal')}</span>
                               </span>
                             ) : (
                               <span 
                                 className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold text-white"
                                 style={{ backgroundColor: hexToRgba(c.primary, 0.35), color: c.secondary || c.primary }}
                               >
-                                Preset
+                                {t('settingsModal.preset')}
                               </span>
                             )}
                             <div 
@@ -460,11 +408,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                               setEditingTheme(theme);
                               setIsCustomModalOpen(true);
                             }}
-                            className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-[#DFD0B0] hover:text-white font-medium flex items-center gap-1.5 transition-all border border-white/10 hover:border-[#F5C453]/40 cursor-pointer"
-                            title="Create an editable custom copy of this theme"
+                            className="shrink-0 whitespace-nowrap px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-[#DFD0B0] hover:text-white font-medium flex items-center gap-1.5 transition-all border border-white/10 hover:border-[#F5C453]/40 cursor-pointer"
+                            title={t('settingsModal.copyCustomizeHint')}
                           >
                             <Copy className="w-3 h-3 text-[#F5C453]" />
-                            <span>Copy & Customize</span>
+                            <span>{t('settingsModal.copyCustomize')}</span>
                           </button>
                         </div>
                       </div>
@@ -845,7 +793,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#94A3B8] hover:text-[#F59E0B] transition-colors cursor-pointer"
               >
                 <HelpCircle className="w-4 h-4" />
-                Feedback
+                {t('settingsModal.feedback')}
               </button>
             </div>
 
@@ -853,7 +801,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               onClick={onClose}
               className="w-full sm:w-auto px-8 py-3 rounded-2xl bg-[#FFD700] hover:brightness-110 text-black font-black text-[10px] uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(255,215,0,0.3)] border border-[#FFD700] active:scale-95 cursor-pointer"
             >
-              Done & Save
+              {t('settingsModal.done')}
             </button>
           </div>
         </motion.div>
