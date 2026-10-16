@@ -1,16 +1,18 @@
 import { Player, TimeControl, Tournament, TournamentMatch, GameState, ChatMessage, Notification, DemoSettings } from '../types/chess';
 
+// Fictional players. Ratings follow a realistic club-to-titled spread, and the
+// flags match each player's country.
 export const DEMO_PLAYERS: Player[] = [
   { uid: 'demo-1', name: 'Ren Barzani', elo: 1428, country: 'IQ', flag: '🇮🇶', avatar: 'ukh', online: true },
   { uid: 'demo-2', name: 'KnightMaster', elo: 1441, country: 'DE', flag: '🇩🇪', avatar: 'neo', online: true },
   { uid: 'demo-3', name: 'SaraChess', elo: 1567, country: 'IQ', flag: '🇮🇶', avatar: 'peshmerga', online: true },
   { uid: 'demo-4', name: 'Dilan', elo: 1290, country: 'SE', flag: '🇸🇪', avatar: 'classic', online: false },
-  { uid: 'demo-5', name: 'GM Magnus K.', elo: 2842, country: 'NO', flag: '🇳🇴', avatar: 'fide_3d', online: true },
-  { uid: 'demo-6', name: 'GM Hikaru N.', elo: 2820, country: 'US', flag: '🇺🇸', avatar: 'crystal_neon', online: true },
-  { uid: 'demo-7', name: 'PeshmergaKnight', elo: 2410, country: 'IQ', flag: '☀️', avatar: 'peshmerga', online: true },
-  { uid: 'demo-8', name: 'ArbilTactician', elo: 2395, country: 'IQ', flag: '☀️', avatar: 'ukh', online: true },
-  { uid: 'demo-9', name: 'IM Elena_V', elo: 2490, country: 'ES', flag: '🇪🇸', avatar: 'vintage', online: true },
-  { uid: 'demo-10', name: 'GM Alireza_F', elo: 2785, country: 'FR', flag: '🇫🇷', avatar: 'fide_3d', online: true },
+  { uid: 'demo-5', name: 'FM Lars_Vik', elo: 2235, country: 'NO', flag: '🇳🇴', avatar: 'fide_3d', online: true },
+  { uid: 'demo-6', name: 'IM Kenji_T', elo: 2352, country: 'US', flag: '🇺🇸', avatar: 'crystal_neon', online: true },
+  { uid: 'demo-7', name: 'PeshmergaKnight', elo: 1910, country: 'IQ', flag: '🇮🇶', avatar: 'peshmerga', online: true },
+  { uid: 'demo-8', name: 'ArbilTactician', elo: 1845, country: 'IQ', flag: '🇮🇶', avatar: 'ukh', online: true },
+  { uid: 'demo-9', name: 'IM Elena_V', elo: 2360, country: 'ES', flag: '🇪🇸', avatar: 'vintage', online: true },
+  { uid: 'demo-10', name: 'FM Alireza_F', elo: 2188, country: 'IR', flag: '🇮🇷', avatar: 'fide_3d', online: true },
 ];
 
 export const DEMO_TIME_CONTROLS: TimeControl[] = [
@@ -31,32 +33,51 @@ export const DEMO_TOURNAMENT: Tournament = {
   maxPlayers: 64,
   registeredCount: 32,
   status: 'registration',
-  startTime: '2026-10-15T14:00:00Z',
+  startTime: '2026-10-24T14:00:00Z',
   rounds: 6,
   currentRound: 0,
   prizePool: '10,000 XP + Champion Badge',
   bracket: [
-    { id: 'm1', round: 1, white: { name: 'Ren Barzani', elo: 1428, wins: 0 }, black: { name: 'Ali Hassan', elo: 1380, wins: 0 }, status: 'pending' },
-    { id: 'm2', round: 1, white: { name: 'Sara Ahmed', elo: 1567, wins: 0 }, black: { name: 'Dilan Omar', elo: 1290, wins: 0 }, status: 'pending' },
+    { id: 'm1', round: 1, white: { name: 'Ren Barzani', elo: 1428, wins: 0 }, black: { name: 'Hawre Ali', elo: 1380, wins: 0 }, status: 'pending' },
+    { id: 'm2', round: 1, white: { name: 'SaraChess', elo: 1567, wins: 0 }, black: { name: 'Dilan', elo: 1290, wins: 0 }, status: 'pending' },
     { id: 'm3', round: 1, white: { name: 'KnightMaster', elo: 1441, wins: 0 }, black: { name: 'Chen Wei', elo: 1410, wins: 0 }, status: 'pending' },
-    { id: 'm4', round: 1, white: { name: 'GM Magnus K.', elo: 2842, wins: 0 }, black: { name: 'Qualifier', elo: 1800, wins: 0 }, status: 'pending' },
+    { id: 'm4', round: 1, white: { name: 'FM Lars_Vik', elo: 2235, wins: 0 }, black: { name: 'Rojin_S', elo: 1812, wins: 0 }, status: 'pending' },
   ],
 };
 
+const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+
 export const DEMO_GAMES: GameState[] = [
   {
+    // Live Blitz 3+2 game, 20 plies in (Italian Game), White to move
     id: 'demo-game-1',
     white: DEMO_PLAYERS[0],
     black: DEMO_PLAYERS[1],
     timeControl: DEMO_TIME_CONTROLS[2],
-    whiteTime: 180000,
-    blackTime: 180000,
+    whiteTime: 142000,
+    blackTime: 118000,
     activeColor: 'w',
-    fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-    pgn: '[Event "Quick Match"]\n[Site "Chesskys Demo"]\n[Date "2026.10.09"]\n[Round "1"]\n[White "Ren Barzani"]\n[Black "KnightMaster"]\n[Result "*"]\n[TimeControl "180+2"]\n\n*',
-    moves: [],
+    fen: 'r1bqk2r/ppp1nppp/8/3n4/2BP4/1Q3N2/PP1N1PPP/R3K2R w KQkq - 2 11',
+    pgn: '[Event "Quick Match"]\n[Site "Chesskys Demo"]\n[Date "2026.10.16"]\n[Round "-"]\n[White "Ren Barzani"]\n[Black "KnightMaster"]\n[WhiteElo "1428"]\n[BlackElo "1441"]\n[Result "*"]\n[TimeControl "180+2"]\n\n1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. c3 Nf6 5. d4 exd4 6. cxd4 Bb4+ 7. Bd2 Bxd2+ 8. Nbxd2 d5 9. exd5 Nxd5 10. Qb3 Nce7 *',
+    moves: ['e4', 'e5', 'Nf3', 'Nc6', 'Bc4', 'Bc5', 'c3', 'Nf6', 'd4', 'exd4', 'cxd4', 'Bb4+', 'Bd2', 'Bxd2+', 'Nbxd2', 'd5', 'exd5', 'Nxd5', 'Qb3', 'Nce7'],
     status: 'in_progress',
-    lastMove: undefined,
+    lastMove: { from: 'c6', to: 'e7' },
+  },
+  {
+    // Finished Rapid 10+0 game. Black walked into Scholar's Mate, a common club-level mistake.
+    id: 'demo-game-2',
+    white: DEMO_PLAYERS[3],
+    black: DEMO_PLAYERS[0],
+    timeControl: DEMO_TIME_CONTROLS[4],
+    whiteTime: 412000,
+    blackTime: 296000,
+    activeColor: 'b',
+    fen: START_FEN,
+    pgn: '[Event "Club Rapid"]\n[Site "Chesskys Demo"]\n[Date "2026.10.14"]\n[Round "-"]\n[White "Dilan"]\n[Black "Ren Barzani"]\n[WhiteElo "1290"]\n[BlackElo "1428"]\n[Result "1-0"]\n[TimeControl "600"]\n\n1. e4 e5 2. Bc4 Nc6 3. Qh5 Nf6 4. Qxf7# 1-0',
+    moves: ['e4', 'e5', 'Bc4', 'Nc6', 'Qh5', 'Nf6', 'Qxf7#'],
+    status: 'checkmate',
+    result: '1-0',
+    lastMove: { from: 'h5', to: 'f7' },
   },
 ];
 
@@ -120,8 +141,6 @@ export const PIECE_THEMES: PieceThemeId[] = [
   { id: 'aot', name: '⚔️ Attack on Titan', tag: 'ANIME / DARK FANTASY', desc: 'Scouts vs Nine Titans (Colossal, Armored, Female, Beast)', icon: '⚔️' },
   { id: 'one-piece', name: '🏴‍☠️ One Piece', tag: 'ANIME', desc: 'Straw Hats vs Marines (Luffy, Zoro, Sanji vs Akainu, Kaido)', icon: '🏴‍☠️' },
   { id: 'batman', name: '🦇 Batman Gotham', tag: 'DARK HERO', desc: 'Heroes vs Villains (Batman, Robin vs Joker, Bane, Penguin)', icon: '🦇' },
-  { id: 'aot', name: '⚔️ Attack on Titan', tag: 'ANIME / DARK FANTASY', desc: 'Scouts vs Nine Titans (Colossal, Armored, Female, Beast)', icon: '⚔️' },
-  { id: 'one-piece', name: '🏴‍☠️ One Piece', tag: 'ANIME', desc: 'Straw Hats vs Marines', icon: '🏴‍☠️' },
   { id: 'crystal_neon', name: '💎 Crystal Glass & Neon', tag: 'GLOW', desc: 'Translucent glowing neon-infused laser vector shapes', icon: '💎' },
   { id: 'fide_3d', name: '👑 FIDE 3D Staunton', tag: 'OFFICIAL', desc: 'Official tournament 3D shaded piece set modeled after WCC pieces', icon: '👑' },
   { id: 'classic', name: 'Classic Staunton (Flat)', tag: 'STANDARD', desc: 'Clean, minimalist vector Staunton tournament pieces', icon: '♟️' },
