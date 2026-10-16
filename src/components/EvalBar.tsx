@@ -41,6 +41,7 @@ export const EvalBar: React.FC<EvalBarProps> = React.memo(({ score, isFlipped })
     >
       {/* Black's territory */}
       <div
+        data-eval-side="black"
         className="w-full bg-black/60 transition-all duration-700 ease-out flex items-start justify-center pt-3"
         style={{ height: `${100 - whiteBarHeight}%` }}
       >
@@ -51,6 +52,7 @@ export const EvalBar: React.FC<EvalBarProps> = React.memo(({ score, isFlipped })
 
       {/* White's territory */}
       <div
+        data-eval-side="white"
         className="w-full bg-white/80 transition-all duration-700 ease-out flex items-end justify-center pb-3"
         style={{ height: `${whiteBarHeight}%` }}
       >

@@ -73,7 +73,7 @@ const BOARD_THEMES: { id: BoardThemeId; name: string; lightBg: string; darkBg: s
   { id: 'ocean', name: 'Ocean Breeze', lightBg: '#dee3e6', darkBg: '#678292', desc: 'Maritime Slate' },
   { id: 'midnight', name: 'Midnight Slate', lightBg: '#334155', darkBg: '#0f172a', desc: 'Deep Obsidian' },
   { id: 'marble', name: 'Royal Marble', lightBg: '#e8ebf0', darkBg: '#8ca2b0', desc: 'Polished Alabaster' },
-  { id: 'brutalist', name: '🧱 Brutalist Block', lightBg: '#FFE66D', darkBg: '#FF5C00', desc: 'Hard-edged yellow & orange with black ink' },
+  { id: 'brutalist', name: '🧱 Brutalist Block', lightBg: '#FFF1C1', darkBg: '#5B8CFF', desc: 'Flat cream and electric blue with black ink' },
   { id: 'custom', name: 'Theme Matched', lightBg: 'var(--board-light)', darkBg: 'var(--board-dark)', desc: 'Synchronized with UI Palette' }
 ];
 
