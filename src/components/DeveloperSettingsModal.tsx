@@ -181,7 +181,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
     setEditBadgeNumber(u.badgeNumber !== undefined ? u.badgeNumber : 10);
     setEditCustomBadge(u.customBadge || '');
     setEditElo(typeof u.elo === 'number' ? u.elo : 1500);
-    setEditRespect(typeof u.respectPoints === 'number' ? u.respectPoints : 200);
+    setEditRespect(typeof u.respectPoints === 'number' ? u.respectPoints : 100);
     setEditStatus(u.customStatus || '');
   };
 

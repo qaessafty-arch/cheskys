@@ -83,6 +83,8 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
   const { profile, user, updateRespectMetrics } = useAuth();
   const [session, setSession] = useState<OnlineMatchSession | null>(null);
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'missing'>('loading');
+  // Server-computed rating result for a rated game. Shown on the game-over screen.
+  const [ratingChanges, setRatingChanges] = useState<{ whiteDelta: number; blackDelta: number; newWhiteRating: number; newBlackRating: number } | null>(null);
   const loadStateRef = useRef(loadState);
   const [game, setGame] = useState<Chess>(() => new Chess());
   const [lastMove, setLastMove] = useState<{ from: string; to: string | null }>(null);
@@ -409,7 +411,8 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
       if (typeof b === 'number') setBlackTime(Math.round(b));
     };
 
-    const onGameOver = (data: { reason: string, winner: string, result?: string }) => {
+    const onGameOver = (data: { reason: string, winner: string, result?: string, ratingChanges?: { whiteDelta: number; blackDelta: number; newWhiteRating: number; newBlackRating: number } | null }) => {
+      setRatingChanges(data.ratingChanges ?? null);
       if (data.result === 'aborted' || !data.winner || data.winner === 'draw') return;
       if (data.winner === myColor) soundManager.playVictory();
       else soundManager.playDefeat();
@@ -1688,6 +1691,11 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                   reason: session.reason || 'Match Concluded'
                 }}
                 pgn={session.pgn || game.pgn() || ''}
+                ratingChange={ratingChanges
+                  ? (myColor === 'w'
+                      ? { delta: ratingChanges.whiteDelta, after: ratingChanges.newWhiteRating }
+                      : { delta: ratingChanges.blackDelta, after: ratingChanges.newBlackRating })
+                  : null}
                 rematchState={
                   session.rematchOfferFrom
                     ? session.rematchOfferFrom === myUid

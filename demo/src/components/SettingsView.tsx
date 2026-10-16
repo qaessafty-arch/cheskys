@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronRight, ArrowLeft, Palette, Plus, Trash2, Edit3, Sparkles, Layers, Sliders, Crown, MessageSquare, Shield, Zap, Lock, Unlock, Database, History, PenTool, ExternalLink, HelpCircle, Eye, RotateCcw, Sun, Moon, Volume2, VolumeX, Check, X, Copy, ChevronDown, Globe, Users, Award, Zap as ZapIcon, Shield as ShieldIcon, HeartHandshake, BarChart2, Bell, Key, Wrench, Bug, Monitor, Smartphone, Globe as GlobeIcon, Download, Link, MousePointer, HeartHandshake as HeartHandshakeIcon, BarChart2 as BarChart2Icon } from 'lucide-react';
+import { Upload, Clock, ChevronRight, ArrowLeft, Palette, Plus, Trash2, Edit3, Sparkles, Layers, Sliders, Crown, MessageSquare, Shield, Zap, Lock, Unlock, Database, History, PenTool, ExternalLink, HelpCircle, Eye, RotateCcw, Sun, Moon, Volume2, VolumeX, Check, X, Copy, ChevronDown, Globe, Users, Award, Zap as ZapIcon, Shield as ShieldIcon, HeartHandshake, BarChart2, Bell, Key, Wrench, Bug, Monitor, Smartphone, Globe as GlobeIcon, Download, Link, MousePointer, HeartHandshake as HeartHandshakeIcon, BarChart2 as BarChart2Icon } from 'lucide-react';
 import { useDemo } from '../context/DemoContext';
 import { BOARD_THEMES, PIECE_THEMES, DEFAULT_DEMO_SETTINGS } from '../data/demoData';
 import { BoardThemeName, PieceThemeName, DemoSettings } from '../types/chess';
@@ -100,7 +100,7 @@ export const SettingsView: React.FC = () => {
           </div>
           <div className="flex items-center gap-2">
             <button onClick={handleExportSettings} className="btn-secondary text-sm"><Download className="w-4 h-4 mr-1" /> Export</button>
-            <input type="file" accept=".json" onChange={handleImportSettings} className="hidden" id="import-settings" ref={(el) => el?.click()} />
+            <input type="file" accept=".json" onChange={handleImportSettings} className="hidden" id="import-settings" />
             <label htmlFor="import-settings" className="btn-secondary text-sm cursor-pointer"><Upload className="w-4 h-4 mr-1" /> Import</label>
             <button onClick={handleResetSettings} className="btn-danger text-sm"><RotateCcw className="w-4 h-4 mr-1" /> Reset</button>
           </div>
@@ -109,13 +109,13 @@ export const SettingsView: React.FC = () => {
 
       <div className="pt-20 pb-8 px-4 max-w-5xl mx-auto">
         {/* Tab Navigation */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-panel p-1 rounded-xl mb-6 max-w-xs">
-          <div className="flex gap-1">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-panel p-1 rounded-xl mb-6 overflow-x-auto">
+          <div className="flex gap-1 min-w-max">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-bold transition-all ${
+                className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-bold whitespace-nowrap transition-all ${
                   activeTab === tab.id
                     ? 'bg-[var(--primary-accent)] text-[var(--app-bg)] shadow-[0_0_20px_rgba(245,184,61,0.3)]'
                     : 'text-[var(--text-dim)] hover:text-[var(--text-main)]'
@@ -202,17 +202,18 @@ const AppearanceTab: React.FC<{ settings: DemoSettings; updateSettings: (s: Part
 
     <Section title="Quick Theme Presets" icon={<Sparkles className="w-5 h-5" />}>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {/* Each preset switches to a real board theme, so it does something visible */}
         {[
-          { name: 'UKH Gold', primary: '#F5B83D', secondary: '#6EE7B7' },
-          { name: 'Emerald', primary: '#6EE7B7', secondary: '#60A5FA' },
-          { name: 'Purple', primary: '#A855F7', secondary: '#F5B83D' },
-          { name: 'Rose', primary: '#FB7185', secondary: '#6EE7B7' },
+          { name: 'UKH Chancellor', boardTheme: 'ukh' as BoardThemeName, primary: '#1A3B5C', secondary: '#E5A93B' },
+          { name: 'Emerald', boardTheme: 'emerald' as BoardThemeName, primary: '#769656', secondary: '#EEEED2' },
+          { name: 'Walnut', boardTheme: 'wood' as BoardThemeName, primary: '#9C6A38', secondary: '#E2C499' },
+          { name: 'Ocean', boardTheme: 'ocean' as BoardThemeName, primary: '#678292', secondary: '#DEE3E6' },
         ].map((preset) => (
           <button
             key={preset.name}
-            className="p-4 rounded-xl glass-panel-hover text-center transition-all border-2"
-            style={{ borderColor: settings.presentationMode ? 'transparent' : 'var(--glass-border)' }}
-            onClick={() => {}}
+            className={`p-4 rounded-xl glass-panel-hover text-center transition-all border-2 ${settings.boardTheme === preset.boardTheme ? 'border-[var(--primary-accent)]' : ''}`}
+            style={{ borderColor: settings.boardTheme === preset.boardTheme ? 'var(--primary-accent)' : 'var(--glass-border)' }}
+            onClick={() => updateSettings({ boardTheme: preset.boardTheme })}
           >
             <div className="w-8 h-8 rounded-lg mx-auto mb-2 flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${preset.primary}, ${preset.secondary})` }} />
             <div className="font-bold text-[var(--text-main)] text-sm">{preset.name}</div>
@@ -244,7 +245,6 @@ const BoardTab: React.FC<{ settings: DemoSettings; updateSettings: (s: Partial<D
             }} />
             <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
               <div className="font-bold text-[var(--text-main)] text-sm">{theme.name}</div>
-              <div className="text-[10px] text-[var(--text-dim)]">{theme.desc}</div>
             </div>
             {settings.boardTheme === theme.id && (
               <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-[var(--primary-accent)] flex items-center justify-center">
@@ -417,7 +417,7 @@ const AccessibilityTab: React.FC<{ settings: DemoSettings; updateSettings: (s: P
         <Toggle checked={false} onChange={() => {}} disabled />
       </SettingRow>
       <SettingRow label="Reduced Motion" desc="Disable non-essential animations">
-        <Toggle checked={false} onChange={() => {}} />
+        <Toggle checked={false} onChange={() => {}} disabled />
       </SettingRow>
       <SettingRow label="Color Blind Friendly" desc="Adjust piece colors for color blindness">
         <Toggle checked={false} onChange={() => {}} disabled />
@@ -462,19 +462,19 @@ const AccountTab: React.FC = () => (
 
     <Section title="Privacy" icon={<Lock className="w-5 h-5" />}>
       <SettingRow label="Show Online Status" desc="Let friends see when you're online">
-        <Toggle checked={true} onChange={() => {}} />
+        <Toggle checked={true} onChange={() => {}} disabled />
       </SettingRow>
       <SettingRow label="Show Rating History" desc="Public rating graph">
-        <Toggle checked={true} onChange={() => {}} />
+        <Toggle checked={true} onChange={() => {}} disabled />
       </SettingRow>
       <SettingRow label="Allow Friend Requests" desc="Receive friend requests from anyone">
-        <Toggle checked={true} onChange={() => {}} />
+        <Toggle checked={true} onChange={() => {}} disabled />
       </SettingRow>
       <SettingRow label="Allow Challenges" desc="Receive game challenges from anyone">
-        <Toggle checked={true} onChange={() => {}} />
+        <Toggle checked={true} onChange={() => {}} disabled />
       </SettingRow>
       <SettingRow label="Data Collection" desc="Anonymous analytics for improvement">
-        <Toggle checked={false} onChange={() => {}} />
+        <Toggle checked={false} onChange={() => {}} disabled />
       </SettingRow>
     </Section>
 
@@ -508,21 +508,21 @@ const AdvancedTab: React.FC<{ settings: DemoSettings; updateSettings: (s: Partia
   <>
     <Section title="Debug" icon={<Bug className="w-5 h-5" />}>
       <SettingRow label="Show FPS Counter" desc="Display frame rate in corner">
-        <Toggle checked={false} onChange={() => {}} />
+        <Toggle checked={false} onChange={() => {}} disabled />
       </SettingRow>
       <SettingRow label="Show Move Coordinates" desc="Log all moves to console">
-        <Toggle checked={false} onChange={() => {}} />
+        <Toggle checked={false} onChange={() => {}} disabled />
       </SettingRow>
       <SettingRow label="Verbose Logging" desc="Detailed console output">
-        <Toggle checked={false} onChange={() => {}} />
+        <Toggle checked={false} onChange={() => {}} disabled />
       </SettingRow>
     </Section>
 
     <Section title="Data Management" icon={<Database className="w-5 h-5" />}>
       <div className="space-y-3">
-        <button onClick={handleExportSettings} className="btn-secondary w-full justify-start"><Download className="w-4 h-4 mr-2" /> Export Settings</button>
-        <label className="btn-secondary w-full justify-start cursor-pointer"><Upload className="w-4 h-4 mr-2" /> Import Settings <input type="file" accept=".json" onChange={handleImportSettings} className="hidden" /></label>
-        <button onClick={handleResetSettings} className="btn-danger w-full justify-start"><RotateCcw className="w-4 h-4 mr-2" /> Reset All Settings</button>
+        <button onClick={() => handleExportSettings(settings)} className="btn-secondary w-full justify-start"><Download className="w-4 h-4 mr-2" /> Export Settings</button>
+        <label className="btn-secondary w-full justify-start cursor-pointer"><Upload className="w-4 h-4 mr-2" /> Import Settings <input type="file" accept=".json" onChange={(e) => handleImportSettings(e, updateSettings)} className="hidden" /></label>
+        <button onClick={() => handleResetSettings(updateSettings)} className="btn-danger w-full justify-start"><RotateCcw className="w-4 h-4 mr-2" /> Reset All Settings</button>
         <button className="btn-danger w-full justify-start"><Trash2 className="w-4 h-4 mr-2" /> Clear All Data (Demo)</button>
       </div>
     </Section>

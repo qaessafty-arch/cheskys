@@ -14,7 +14,7 @@ import {
 
 interface SettingsContextType {
   settings: AppSettings;
-  updateSettings: (newSettings: Partial<AppSettings>) => void;
+  updateSettings: (update: Partial<AppSettings> | ((prev: AppSettings) => AppSettings)) => void;
   customBackground: CustomBackgroundConfig;
   setCustomBackground: (bg: CustomBackgroundConfig) => void;
   resetCustomBackground: () => void;
@@ -92,11 +92,13 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
   }, [profile?.uid]);
 
-  // Update Settings Handler
+  // Update Settings Handler. Accepts a patch or an updater that receives the latest
+  // settings, so several updates in one event (e.g. theme + board) don't overwrite each other.
   const updateSettings = useCallback(
-    (newSettings: Partial<AppSettings>) => {
+    (update: Partial<AppSettings> | ((prev: AppSettings) => AppSettings)) => {
       setSettingsState(prev => {
-        const next = { ...prev, ...newSettings };
+        const patch = typeof update === 'function' ? update(prev) : update;
+        const next = { ...prev, ...patch };
         try {
           localStorage.setItem(LOCAL_STORAGE_KEY_SETTINGS, JSON.stringify(next));
         } catch (e) {

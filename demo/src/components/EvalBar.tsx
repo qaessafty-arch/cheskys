@@ -3,6 +3,7 @@ import React from 'react';
 interface EvalBarProps {
   score: number;
   isFlipped: boolean;
+  className?: string;
 }
 
 export const EvalBar: React.FC<EvalBarProps> = React.memo(({ score, isFlipped }) => {

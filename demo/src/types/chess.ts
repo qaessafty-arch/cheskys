@@ -172,8 +172,5 @@ export interface OnlineMatchSession {
   moveCount: number;
   drawOfferFrom?: string;
   rematchOfferFrom?: string;
-  hostId?: string;
   guestId?: string;
-  whiteId?: string;
-  blackId?: string;
 }

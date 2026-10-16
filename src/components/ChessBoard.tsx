@@ -51,14 +51,14 @@ const THEME_STYLES: Record<
   }
 > = {
   obsidian: {
-    light: 'obsidian-texture-light bg-[#27272a]', // Zinc 800
+    light: 'obsidian-texture-light bg-[#3f3f46]', // Zinc 700 (was Zinc 800, too close to the dark squares)
     dark: 'obsidian-texture-dark bg-[#09090b]',  // Zinc 950
-    lightText: 'text-[#a1a1aa]', // Zinc 400
-    darkText: 'text-[#3f3f46]',  // Zinc 600
+    lightText: 'text-[#d4d4d8]', // Zinc 300
+    darkText: 'text-[#52525b]',  // Zinc 600
     border: 'border-[#3f3f46]',  // Zinc 600
     glow: 'shadow-[0_0_50px_rgba(245,158,11,0.08)]',
-    marker: 'bg-[var(--secondary-accent)]/30',
-    captureRing: 'border-[var(--secondary-accent)]/30'
+    marker: 'bg-[#d4d4d8]/80', // fixed light ink, so dots stay visible whatever the UI palette is
+    captureRing: 'border-[#d4d4d8]/80'
   },
   'one-piece': {
     light: 'bg-[#0b1d3a]',
@@ -108,6 +108,16 @@ const THEME_STYLES: Record<
     border: 'border-[#8B5A2B]',
     glow: 'shadow-[0_0_25px_rgba(181,136,99,0.3)]'
   },
+  brutalist: {
+    light: 'bg-[#FFE66D]',
+    dark: 'bg-[#FF5C00]',
+    lightText: 'text-[#0F0F0F]',
+    darkText: 'text-[#0F0F0F]',
+    border: 'border-[#FFE66D]',
+    glow: 'shadow-[10px_10px_0_0_#FF5C00]',
+    marker: 'bg-[#0F0F0F]/75',
+    captureRing: 'border-[#0F0F0F]/75'
+  },
   peshmerga: {
     light: 'bg-[#435433]',
     dark: 'bg-[#DFD0B0]',
@@ -155,8 +165,8 @@ const THEME_STYLES: Record<
     darkText: 'text-[#0f3460]',
     border: 'border-[#0f3460]',
     glow: 'shadow-[0_0_50px_rgba(15,52,96,0.4)]',
-    marker: 'bg-blue-400/30',
-    captureRing: 'border-blue-400/40'
+    marker: 'bg-blue-400/75',
+    captureRing: 'border-blue-400/75'
   },
   premium: {
     light: 'bg-[#1e293b]', // Slate 800ish
@@ -165,8 +175,8 @@ const THEME_STYLES: Record<
     darkText: 'text-slate-400',
     border: 'border-slate-700',
     glow: 'shadow-[0_20px_50px_rgba(0,0,0,0.5)]',
-    marker: 'bg-emerald-400/40',
-    captureRing: 'border-emerald-400/50'
+    marker: 'bg-emerald-400/75',
+    captureRing: 'border-emerald-400/75'
   },
   marble: {
     light: 'bg-[#8ca2b0]',
@@ -1045,7 +1055,7 @@ const ChessBoardInner: React.FC<ChessBoardProps> = React.memo(({
                       ) : isBatmanBoard ? (
                         <div className="w-[88%] h-[88%] border-4 border-yellow-400 shadow-[0_0_14px_rgba(234,179,8,0.85)] rounded-full scale-95 transition-transform" />
                       ) : (
-                        <div className={`w-[85%] h-[85%] border-4 rounded-full scale-95 transition-transform ${theme.captureRing || 'border-slate-900/40'}`} />
+                        <div className={`w-[85%] h-[85%] border-4 rounded-full scale-95 transition-transform ${theme.captureRing || (isLight ? 'border-slate-900/45' : 'border-white/55')}`} />
                       )
                     ) : (
                       isAotBoard ? (
@@ -1053,7 +1063,7 @@ const ChessBoardInner: React.FC<ChessBoardProps> = React.memo(({
                       ) : isBatmanBoard ? (
                         <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 bg-yellow-400 shadow-[0_0_12px_rgba(234,179,8,0.9)] rounded-full ring-2 ring-yellow-300/80" />
                       ) : (
-                        <div className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full shadow-sm ${theme.marker || 'bg-slate-900/35'}`} />
+                        <div className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full shadow-sm ${theme.marker || (isLight ? 'bg-slate-900/35' : 'bg-white/50')}`} />
                       )
                     )}
                   </div>

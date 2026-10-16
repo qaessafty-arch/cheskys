@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
-import { ChevronRight, ArrowLeft, Edit2, Camera, Upload, Image as ImageIcon, CheckCircle2, Star, Flame, Award, Zap, Shield, Trophy, Crown, Star as StarIcon, HeartHandshake, Settings, X, Check, Copy, RotateCcw, Lock, Unlock, Key } from 'lucide-react';
+import { BarChart2, Users, ChevronRight, ArrowLeft, Edit2, Camera, Upload, Image as ImageIcon, CheckCircle2, Star, Flame, Award, Zap, Shield, Trophy, Crown, Star as StarIcon, HeartHandshake, Settings, X, Check, Copy, RotateCcw, Lock, Unlock, Key } from 'lucide-react';
 import { useDemo } from '../context/DemoContext';
 import { DEMO_PLAYERS } from '../data/demoData';
 import { Player } from '../types/chess';

@@ -103,23 +103,22 @@ export function saveRespectProfile(profile: RespectProfile): void {
   }
 }
 
-export function recordExecution(customProfile?: RespectProfile, eloGain = 8): RespectProfile {
+// Honor and Elo are separate. Judgments only move honor points. Rating changes only in rated
+// games, and the server sets them, so a local judgment can never change a player's Elo.
+export function recordExecution(customProfile?: RespectProfile): RespectProfile {
   const current = customProfile || getRespectProfile();
   const isInfinite = current.isImmortal || current.respectPoints === '∞' || current.elo === '∞';
 
   const numRespect = typeof current.respectPoints === 'number' ? current.respectPoints : 100;
-  const numElo = typeof current.elo === 'number' ? current.elo : 1200;
   const numExecutions = typeof current.executions === 'number' ? current.executions : 0;
 
-  // Execute: full rating gain, no honor gain (cold, decisive).
+  // Execute: no honor gain (cold, decisive).
   const updatedRespect = isInfinite ? '∞' : numRespect;
-  const updatedElo = isInfinite ? '∞' : numElo + 15;
   const rank = getHonorRank(updatedRespect);
 
   const updated: RespectProfile = {
     ...current,
     respectPoints: updatedRespect,
-    elo: updatedElo,
     executions: isInfinite ? '∞' : numExecutions + 1,
     gamesPlayed: typeof current.gamesPlayed === 'number' ? current.gamesPlayed + 1 : 1,
     wins: typeof current.wins === 'number' ? current.wins + 1 : 1,
@@ -136,18 +135,15 @@ export function recordMercy(customProfile?: RespectProfile): RespectProfile {
   const isInfinite = current.isImmortal || current.respectPoints === '∞' || current.elo === '∞';
 
   const numRespect = typeof current.respectPoints === 'number' ? current.respectPoints : 100;
-  const numElo = typeof current.elo === 'number' ? current.elo : 1200;
   const numMercies = typeof current.merciesGranted === 'number' ? current.merciesGranted : 0;
 
-  // Spare: honorific gain, modest rating.
+  // Spare: honorific gain only.
   const updatedRespect = isInfinite ? '∞' : numRespect + 12;
-  const updatedElo = isInfinite ? '∞' : numElo + 5;
   const rank = getHonorRank(updatedRespect);
 
   const updated: RespectProfile = {
     ...current,
     respectPoints: updatedRespect,
-    elo: updatedElo,
     merciesGranted: isInfinite ? '∞' : numMercies + 1,
     honorRank: isInfinite ? 'IMMORTAL' : rank.title,
     rankBadge: isInfinite ? '☀️' : rank.badge
@@ -158,7 +154,7 @@ export function recordMercy(customProfile?: RespectProfile): RespectProfile {
 }
 
 export function recordVictory(customProfile?: RespectProfile): RespectProfile {
-  return recordExecution(customProfile, 8);
+  return recordExecution(customProfile);
 }
 
 // Global & Kurdish Honor & ELO Leaderboard Data

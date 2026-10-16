@@ -24,7 +24,7 @@ interface ChessPieceProps {
   isCheck: boolean;
   isLegalMove: boolean;
   isCaptureTarget: boolean;
-  onClick: () => void;
+  onClick?: () => void;
   className?: string;
 }
 

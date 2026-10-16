@@ -11,7 +11,10 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ showBack = false, onBack, title }) => {
-  const { presentationMode, togglePresentationMode, showNotifications, setShowNotifications, settings, updateSettings, viewMode } = useDemo();
+  const { presentationMode, togglePresentationMode, showNotifications, setShowNotifications, settings, updateSettings, viewMode, setViewMode } = useDemo();
+
+  // These screens draw their own top bar (with a back button). Two fixed headers would overlap.
+  if (['landing', 'game', 'settings', 'tournaments', 'leaderboard', 'profile', 'replay'].includes(viewMode)) return null;
 
   return (
     <motion.header
@@ -56,7 +59,7 @@ export const Header: React.FC<HeaderProps> = ({ showBack = false, onBack, title 
         {/* Right */}
         <div className="flex items-center gap-2">
           {/* View mode indicator */}
-          {viewMode !== 'landing' && viewMode !== 'dashboard' && (
+          {viewMode !== 'dashboard' && (
             <span className="hidden sm:block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-[var(--glass-bg)] text-[var(--text-dim)] border border-[var(--glass-border)]">
               {viewMode.toUpperCase()}
             </span>
@@ -90,7 +93,8 @@ export const Header: React.FC<HeaderProps> = ({ showBack = false, onBack, title 
           {/* User menu */}
           <div className="relative">
             <button
-              onClick={() => {}}
+              onClick={() => setViewMode('profile')}
+              aria-label="Profile"
               className="w-10 h-10 rounded-xl glass-panel-hover flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors relative"
             >
               <User className="w-5 h-5" />

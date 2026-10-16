@@ -1,0 +1,81 @@
+/* Brutalist UI style.
+ * Only active when the "Brutalist" preset is selected: applyThemeToDOM sets
+ * data-ui-style="brutalist" on <html>. Every rule is scoped to that attribute,
+ * so the other themes are unaffected.
+ */
+
+[data-ui-style='brutalist'] {
+  --brutal-border: 3px solid var(--primary-accent);
+  --brutal-shadow: 6px 6px 0 var(--primary-accent);
+  --brutal-shadow-sm: 4px 4px 0 var(--primary-accent);
+}
+
+/* No blur anywhere: brutalism is flat */
+[data-ui-style='brutalist'] [class*='backdrop-blur'],
+[data-ui-style='brutalist'] .glass-premium,
+[data-ui-style='brutalist'] .glass-panel,
+[data-ui-style='brutalist'] .glass-card,
+[data-ui-style='brutalist'] .glass-interactive,
+[data-ui-style='brutalist'] .glass-panel-hover {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Surfaces: solid fill, hard outline, hard offset shadow */
+[data-ui-style='brutalist'] .glass-premium,
+[data-ui-style='brutalist'] .glass-panel,
+[data-ui-style='brutalist'] .glass-card,
+[data-ui-style='brutalist'] .glass-interactive,
+[data-ui-style='brutalist'] .glass-panel-hover {
+  background: var(--glass-bg) !important;
+  border: var(--brutal-border) !important;
+  box-shadow: var(--brutal-shadow) !important;
+  border-radius: 0 !important;
+}
+
+/* Square off rounded corners. Full circles (dots, avatars, toggles) are kept. */
+[data-ui-style='brutalist'] [class*='rounded-']:not([class*='rounded-full']) {
+  border-radius: 0 !important;
+}
+
+/* Buttons and inputs: outlined, with a press-down interaction */
+[data-ui-style='brutalist'] button:not(:disabled),
+[data-ui-style='brutalist'] select,
+[data-ui-style='brutalist'] input {
+  border: var(--brutal-border);
+  box-shadow: var(--brutal-shadow-sm);
+  border-radius: 0 !important;
+  transition: transform 80ms ease, box-shadow 80ms ease;
+}
+
+[data-ui-style='brutalist'] button:not(:disabled):hover {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--brutal-shadow);
+}
+
+[data-ui-style='brutalist'] button:not(:disabled):active {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 var(--primary-accent);
+}
+
+/* Flat type: no glow or soft text shadows */
+[data-ui-style='brutalist'] * {
+  text-shadow: none !important;
+}
+
+/* Board frame: thick outline and a hard shadow in the secondary accent */
+[data-ui-style='brutalist'] #chess-board-container {
+  border: 4px solid var(--primary-accent) !important;
+  border-radius: 0 !important;
+  box-shadow: 10px 10px 0 var(--secondary-accent) !important;
+}
+
+[data-ui-style='brutalist'] .board-3d-frame {
+  filter: none !important;
+}
+
+/* Scrollbars match the outline style */
+[data-ui-style='brutalist'] ::-webkit-scrollbar-thumb {
+  background: var(--primary-accent);
+  border-radius: 0;
+}

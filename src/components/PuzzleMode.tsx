@@ -110,11 +110,10 @@ export const PuzzleMode: React.FC<PuzzleModeProps> = ({ settings }) => {
             const updated = saveDailyProgress(todayKey, true);
             setDailyProgress(updated);
             
-            // Reward Respect Points (+25 for daily puzzle)
+            // Reward Respect Points (+25 for daily puzzle). Rating is not changed by puzzles.
             if (updateRespectMetrics) {
               updateRespectMetrics({
                 respectPoints: 25,
-                elo: 15,
                 wins: 1
               });
             }
@@ -526,7 +525,7 @@ export const PuzzleMode: React.FC<PuzzleModeProps> = ({ settings }) => {
 
             <div className="p-2 rounded-2xl bg-white/[0.03]">
               <div className="text-base sm:text-lg font-black text-[#F5C453] font-mono">
-                {profile?.respectPoints || 100}
+                {profile?.respectPoints ?? 100}
               </div>
               <div className="text-[10px] text-[#DFD0B0]/60 uppercase font-semibold">Respect Pts</div>
             </div>

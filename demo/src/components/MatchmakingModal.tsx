@@ -12,7 +12,7 @@ interface MatchmakingModalProps {
 }
 
 export const MatchmakingModal: React.FC<MatchmakingModalProps> = ({ isOpen, onClose, onStart }) => {
-  const { startQuickMatch, matchmakingState, matchmakingOpponent, settings } = useDemo();
+  const { startQuickMatch, cancelSearch, matchmakingState, matchmakingOpponent, settings } = useDemo();
   const [selectedTimeControl, setSelectedTimeControl] = useState<TimeControl>(DEMO_TIME_CONTROLS[2]);
   const [selectedDifficulty, setSelectedDifficulty] = useState<'easy' | 'medium' | 'hard'>(settings.difficulty);
   const [searchTime, setSearchTime] = useState(0);
@@ -163,8 +163,8 @@ export const MatchmakingModal: React.FC<MatchmakingModalProps> = ({ isOpen, onCl
             </div>
 
             <button
-              onClick={() => { startQuickMatch(selectedTimeControl, selectedDifficulty); }} // This will cancel
-              className="btn-danger w-full"
+              onClick={cancelSearch}
+              className="btn-danger w-full flex items-center justify-center gap-2"
             >
               <X className="w-5 h-5 mr-2" />
               Cancel Search
@@ -198,7 +198,7 @@ export const MatchmakingModal: React.FC<MatchmakingModalProps> = ({ isOpen, onCl
 
             <div className="glass-panel p-4 rounded-xl">
               <div className="text-[11px] font-black uppercase tracking-wider text-[var(--text-muted)] mb-2">{selectedTimeControl.name}</div>
-              <div className="text-[var(--text-main)] font-mono text-xl">{selectedTimeControl.initialMinutes}+{selectedTimeControl.incrementSeconds}</div>
+              <div className="text-[var(--text-main)] font-mono text-xl">{selectedTimeControl.initialSeconds / 60}+{selectedTimeControl.incrementSeconds}</div>
             </div>
           </div>
         ) : null}

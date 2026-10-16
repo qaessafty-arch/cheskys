@@ -193,7 +193,7 @@ export const MultiplayerLobbyView: React.FC<MultiplayerLobbyViewProps> = ({
       displayName: profile?.displayName || user?.displayName || 'Peshmerga Warrior',
       username: profile?.username || 'peshmerga',
       elo: Number(profile?.elo) || 1200,
-      respectPoints: Number(profile?.respectPoints) || 100,
+      respectPoints: profile?.respectPoints != null && !Number.isNaN(Number(profile.respectPoints)) ? Number(profile.respectPoints) : 100,
       honorRank: profile?.honorRank || 'Peshmerga Tactician',
       rankBadge: profile?.rankBadge || '🌿',
       country: profile?.country || 'Kurdistan',
@@ -663,7 +663,7 @@ export const MultiplayerLobbyView: React.FC<MultiplayerLobbyViewProps> = ({
               )}
             </div>
             <div className="text-[10px] text-[#DFD0B0]/60">
-              Live Battle Rating: <strong className="text-white font-mono">{profile?.elo || 1200} Elo</strong> • Respect: <strong className="text-[#F5C453] font-mono">{profile?.respectPoints || 100} pts</strong>
+              Live Battle Rating: <strong className="text-white font-mono">{profile?.elo || 1200} Elo</strong> • Respect: <strong className="text-[#F5C453] font-mono">{profile?.respectPoints ?? 100} pts</strong>
             </div>
           </div>
         </div>

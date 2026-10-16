@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { DemoSettings, Player, GameState, ChatMessage, Notification, TimeControl, DEFAULT_DEMO_SETTINGS, BOARD_THEMES, PIECE_THEMES, DEMO_PLAYERS, getMockOpponent } from '../data/demoData';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+import { DEFAULT_DEMO_SETTINGS, BOARD_THEMES, PIECE_THEMES, DEMO_PLAYERS, getMockOpponent } from '../data/demoData';
 import { generateGameRoomCode } from '../utils/chessEngine';
-import { BoardThemeName, PieceThemeName } from '../types/chess';
+import { BoardThemeName, PieceThemeName, DemoSettings, Player, GameState, ChatMessage, Notification, TimeControl } from '../types/chess';
 
 interface DemoContextType {
   settings: DemoSettings;
@@ -39,6 +39,11 @@ interface DemoContextType {
   setShowTournaments: (show: boolean) => void;
   showNotifications: boolean;
   setShowNotifications: (show: boolean) => void;
+  startQuickMatch: (timeControl: TimeControl, difficulty: 'easy' | 'medium' | 'hard') => Promise<void>;
+  cancelSearch: () => void;
+  createRoom: (timeControl: TimeControl) => void;
+  joinRoom: (code: string, timeControl: TimeControl) => void;
+  endGame: (result: '1-0' | '0-1' | '1/2-1/2', reason: string) => void;
 }
 
 const DemoContext = createContext<DemoContextType | undefined>(undefined);
@@ -118,13 +123,25 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     updateSettings({ presentationMode: !settings.presentationMode });
   }, [settings.presentationMode, updateSettings]);
 
-  // Quick match simulation
+  // Quick match simulation. Each search gets an id; a timer from an older search does nothing,
+  // so cancelling (or starting a new search) can't be undone by a late timer.
+  const searchIdRef = useRef(0);
+
+  const cancelSearch = useCallback(() => {
+    searchIdRef.current += 1;
+    setMatchmakingState('idle');
+    setMatchmakingOpponent(null);
+  }, []);
+
   const startQuickMatch = useCallback(async (timeControl: TimeControl, difficulty: 'easy' | 'medium' | 'hard') => {
+    const searchId = ++searchIdRef.current;
+    const isCurrent = () => searchId === searchIdRef.current;
     setMatchmakingState('searching');
     setMatchmakingOpponent(null);
 
     // Simulate search delay
     await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 2000));
+    if (!isCurrent()) return;
 
     const opponent = getMockOpponent(difficulty);
     setMatchmakingOpponent(opponent);
@@ -132,16 +149,19 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Auto-accept after 1.5s
     setTimeout(() => {
+      if (!isCurrent()) return;
+      // Colours are assigned once, so the player can never be on both sides
+      const userIsWhite = Math.random() > 0.5;
       const newGame: GameState = {
         id: `game-${Date.now()}`,
-        white: Math.random() > 0.5 ? currentUser : opponent,
-        black: Math.random() > 0.5 ? opponent : currentUser,
+        white: userIsWhite ? currentUser : opponent,
+        black: userIsWhite ? opponent : currentUser,
         timeControl,
-        whiteTime: timeControl.initialMinutes * 60 * 1000,
-        blackTime: timeControl.initialMinutes * 60 * 1000,
+        whiteTime: timeControl.initialSeconds * 1000,
+        blackTime: timeControl.initialSeconds * 1000,
         activeColor: 'w',
         fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-        pgn: `[Event "Quick Match"]\n[Site "Chesskys Demo"]\n[Date "${new Date().toISOString().split('T')[0]}"]\n[Round "1"]\n[White "${currentUser.name}"]\n[Black "${opponent.name}"]\n[Result "*"]\n[TimeControl "${timeControl.initialMinutes * 60}+${timeControl.incrementSeconds}"]\n\n*`,
+        pgn: `[Event "Quick Match"]\n[Site "Chesskys Demo"]\n[Date "${new Date().toISOString().split('T')[0]}"]\n[Round "1"]\n[White "${(userIsWhite ? currentUser : opponent).name}"]\n[Black "${(userIsWhite ? opponent : currentUser).name}"]\n[Result "*"]\n[TimeControl "${timeControl.initialSeconds}+${timeControl.incrementSeconds}"]\n\n*`,
         moves: [],
         status: 'in_progress',
       };
@@ -149,9 +169,9 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setViewMode('game');
       setMatchmakingState('idle');
       setMatchmakingOpponent(null);
-      addChatMessage({ senderId: 'system', senderName: 'System', message: `Game started vs ${opponent.name}. ${currentUser.name} plays as ${newGame.white.uid === currentUser.uid ? 'White' : 'Black'}.`, isSystem: true });
+      addChatMessage({ senderId: 'system', senderName: 'System', message: `Game started vs ${opponent.name}. ${currentUser.name} plays as ${userIsWhite ? 'White' : 'Black'}.`, isSystem: true });
     }, 1500);
-  }, [currentUser, addChatMessage, updateSettings]);
+  }, [currentUser, addChatMessage]);
 
   const createRoom = useCallback((timeControl: TimeControl) => {
     const code = generateGameRoomCode();
@@ -164,11 +184,11 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         white: currentUser,
         black: opponent,
         timeControl,
-        whiteTime: timeControl.initialMinutes * 60 * 1000,
-        blackTime: timeControl.initialMinutes * 60 * 1000,
+        whiteTime: timeControl.initialSeconds * 1000,
+        blackTime: timeControl.initialSeconds * 1000,
         activeColor: 'w',
         fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-        pgn: `[Event "Private Game"]\n[Site "Chesskys Demo"]\n[Date "${new Date().toISOString().split('T')[0]}"]\n[Round "1"]\n[White "${currentUser.name}"]\n[Black "${opponent.name}"]\n[Result "*"]\n[TimeControl "${timeControl.initialMinutes * 60}+${timeControl.incrementSeconds}"]\n\n*`,
+        pgn: `[Event "Private Game"]\n[Site "Chesskys Demo"]\n[Date "${new Date().toISOString().split('T')[0]}"]\n[Round "1"]\n[White "${currentUser.name}"]\n[Black "${opponent.name}"]\n[Result "*"]\n[TimeControl "${timeControl.initialSeconds}+${timeControl.incrementSeconds}"]\n\n*`,
         moves: [],
         status: 'in_progress',
       };
@@ -191,11 +211,11 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       white: opponent,
       black: currentUser,
       timeControl,
-      whiteTime: timeControl.initialMinutes * 60 * 1000,
-      blackTime: timeControl.initialMinutes * 60 * 1000,
+      whiteTime: timeControl.initialSeconds * 1000,
+      blackTime: timeControl.initialSeconds * 1000,
       activeColor: 'w',
       fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-      pgn: `[Event "Joined Game"]\n[Site "Chesskys Demo"]\n[Date "${new Date().toISOString().split('T')[0]}"]\n[Round "1"]\n[White "${opponent.name}"]\n[Black "${currentUser.name}"]\n[Result "*"]\n[TimeControl "${timeControl.initialMinutes * 60}+${timeControl.incrementSeconds}"]\n\n*`,
+      pgn: `[Event "Joined Game"]\n[Site "Chesskys Demo"]\n[Date "${new Date().toISOString().split('T')[0]}"]\n[Round "1"]\n[White "${opponent.name}"]\n[Black "${currentUser.name}"]\n[Result "*"]\n[TimeControl "${timeControl.initialSeconds}+${timeControl.incrementSeconds}"]\n\n*`,
       moves: [],
       status: 'in_progress',
     };
@@ -206,7 +226,7 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const endGame = useCallback((result: '1-0' | '0-1' | '1/2-1/2', reason: string) => {
     if (!currentGame) return;
-    const finalGame = { ...currentGame, status: reason === 'checkmate' ? 'checkmate' : reason === 'timeout' ? 'timeout' : reason === 'resigned' ? 'resigned' : 'draw', result };
+    const finalGame: GameState = { ...currentGame, status: reason === 'checkmate' ? 'checkmate' : reason === 'timeout' ? 'timeout' : reason === 'resigned' ? 'resigned' : 'draw', result };
     setCurrentGame(finalGame);
     setViewMode('replay');
     addChatMessage({ senderId: 'system', senderName: 'System', message: `Game over: ${reason}`, isSystem: true });
@@ -239,16 +259,18 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     pendingPromotion,
     setPendingPromotion,
     showSettings,
-    setShowSettings,
+    // These buttons mean "open that screen", so they navigate instead of setting a flag nothing reads
+    setShowSettings: (show: boolean) => { if (show) setViewMode('settings'); },
     showLeaderboard,
     setShowLeaderboard,
     showProfile,
     setShowProfile,
     showTournaments,
-    setShowTournaments,
+    setShowTournaments: (show: boolean) => { if (show) setViewMode('tournaments'); },
     showNotifications,
     setShowNotifications,
     startQuickMatch,
+    cancelSearch,
     createRoom,
     joinRoom,
     endGame,

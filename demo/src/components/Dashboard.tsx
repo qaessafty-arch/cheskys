@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { Play, Plus, Search, Trophy, Star, Settings } from 'lucide-react';
 import { TimeControl } from '../types/chess';
 import { DEMO_TIME_CONTROLS } from '../data/demoData';
+import { generateGameRoomCode } from '../utils/chessEngine';
 import { useDemo } from '../context/DemoContext';
 import { MatchmakingModal } from './MatchmakingModal';
 import { CreateRoomModal } from './CreateRoomModal';
@@ -20,6 +21,8 @@ export const Dashboard: React.FC = () => {
     createRoom,
     joinRoom,
     settings,
+    setShowSettings,
+    setShowTournaments,
     setViewMode: _setViewMode,
   } = useDemo();
 
@@ -54,22 +57,21 @@ export const Dashboard: React.FC = () => {
   const handleReviewGame = (game: typeof recentGames[0]) => {
     // Navigate to replay view with the game data
     // For demo, we'll just log it
-    console.log('Review game:', game);
     alert(`Reviewing game vs ${game.opponent} (${game.result})`);
   };
 
   return (
     <div className="min-h-screen pt-20 pb-8 px-4">
       {/* Header */}
-      <header className="max-w-7xl mx-auto mb-8 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <header className="max-w-7xl mx-auto mb-8 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-4 min-w-0">
           <UkhLogo variant="horizontal" size="lg" showText={true} />
-          <div>
-            <h1 className="text-3xl font-black text-[var(--text-main)]">Welcome back, {currentUser.name}</h1>
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-black text-[var(--text-main)] break-words">Welcome back, {currentUser.name}</h1>
             <p className="text-[var(--text-muted)] mt-1">Rating: <span className="text-[var(--primary-accent)] font-mono font-black">⚔️ {currentUser.elo}</span></p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
           <button onClick={() => setViewMode('features')} className="btn-secondary">
             <Star className="w-4 h-4 mr-1" />
             Features

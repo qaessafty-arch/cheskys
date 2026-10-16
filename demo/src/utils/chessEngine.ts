@@ -31,7 +31,7 @@ export function getGameStatus(game: Chess): { status: string; winner?: 'w' | 'b'
   if (game.isThreefoldRepetition()) {
     return { status: 'draw' };
   }
-  if (game.insufficientMaterial()) {
+  if (game.isInsufficientMaterial()) {
     return { status: 'draw' };
   }
   return { status: 'in_progress' };
@@ -91,7 +91,7 @@ export function getDemoBotMove(game: Chess, difficulty: 'easy' | 'medium' | 'har
 
 function evaluatePosition(game: Chess): number {
   if (game.isCheckmate()) return game.turn() === 'w' ? -10000 : 10000;
-  if (game.isDraw() || game.isStalemate() || game.isThreefoldRepetition() || game.insufficientMaterial()) return 0;
+  if (game.isDraw() || game.isStalemate() || game.isThreefoldRepetition() || game.isInsufficientMaterial()) return 0;
 
   const pieceValues: Record<string, number> = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
   let score = 0;

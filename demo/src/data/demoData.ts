@@ -1,4 +1,4 @@
-import { Player, TimeControl, Tournament, TournamentMatch, GameState, ChatMessage, Notification, DemoSettings } from '../types/chess';
+import { Player, TimeControl, Tournament, TournamentMatch, GameState, ChatMessage, Notification, DemoSettings, BoardThemeId, PieceThemeId } from '../types/chess';
 
 // Fictional players. Ratings follow a realistic club-to-titled spread, and the
 // flags match each player's country.

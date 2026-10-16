@@ -16,7 +16,6 @@ import { JoinRoomModal } from './components/JoinRoomModal';
 import { useDemo } from './context/DemoContext';
 
 const LoadingFallback: React.FC = () => {
-  console.log('LoadingFallback rendered');
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-[var(--app-bg)] z-50" style={{background: '#080B12'}}>
       <div className="text-center" style={{color: '#F8FAFC'}}>
@@ -48,7 +47,6 @@ const ErrorBoundary: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
 const ViewRouter: React.FC = () => {
   const { viewMode, matchmakingState, createdRoomCode } = useDemo();
-  console.log('ViewRouter: viewMode =', viewMode);
 
   const renderView = () => {
     switch (viewMode) {
@@ -86,7 +84,6 @@ const ViewRouter: React.FC = () => {
 };
 
 export const App: React.FC = () => {
-  console.log('App: Rendering');
   return (
     <ErrorBoundary>
       <DemoProvider>

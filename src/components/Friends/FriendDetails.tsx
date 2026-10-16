@@ -109,7 +109,7 @@ export const FriendDetails: React.FC<FriendDetailsProps> = ({
               <span>Respect</span>
             </div>
             <div className="text-base font-black font-mono text-[#F5C453] mt-0.5">
-              {friend.respectPoints || 100}
+              {friend.respectPoints ?? 100}
             </div>
           </div>
         </div>
