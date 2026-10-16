@@ -79,10 +79,10 @@ const ChessClockInner = React.memo<ChessClockProps>(({
           : 'bg-white/5 border-white/5 opacity-85'
       }`}
     >
-      <div className="flex items-center justify-between px-3.5 py-2.5 sm:px-4 sm:py-3">
+      <div className="flex items-center justify-between gap-2 px-3 py-2.5 sm:px-4 sm:py-3">
         {/* Player Identity */}
-        <div className="flex items-center gap-3">
-          <div className="relative">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="relative shrink-0">
             <div
               className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-lg border transition-all duration-300 ${
                 isActive
@@ -104,9 +104,9 @@ const ChessClockInner = React.memo<ChessClockProps>(({
             </span>
           </div>
 
-          <div>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className={`text-xs sm:text-sm font-black tracking-tight transition-colors duration-200 ${
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className={`min-w-0 truncate text-xs sm:text-sm font-black tracking-tight transition-colors duration-200 ${
                 isActive ? 'text-[#F5C453]' : 'text-white/90'
               }`}>
                 {playerName}
@@ -142,8 +142,8 @@ const ChessClockInner = React.memo<ChessClockProps>(({
 
               <div className="w-[1px] h-2.5 bg-white/15" />
 
-              {/* Small win/loss/draw stat counters */}
-              <div className="flex items-center gap-1.5 text-[9px] font-mono text-white/50">
+              {/* Small win/loss/draw stat counters (hidden on phones to keep the timer visible) */}
+              <div className="hidden sm:flex items-center gap-1.5 text-[9px] font-mono text-white/50">
                 <span className="text-emerald-400 font-bold" title="Wins">W:{wins}</span>
                 <span>•</span>
                 <span className="text-rose-400 font-bold" title="Losses">L:{losses}</span>
@@ -155,7 +155,7 @@ const ChessClockInner = React.memo<ChessClockProps>(({
         </div>
 
         {/* Circular Progress + Countdown Clock Display */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {/* Circular Progress Ring */}
           {!isUnlimited && (
             <div className="relative w-9 h-9 flex items-center justify-center shrink-0">

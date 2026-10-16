@@ -15,10 +15,13 @@ interface GameOverModalProps {
   pgn?: string;
   rematchState?: 'none' | 'offered_by_me' | 'offered_by_opponent';
   onAcceptRematch?: () => void;
+  // Set only for rated online games, from the server's authoritative result.
+  ratingChange?: { delta: number; after: number } | null;
 }
 
 export const GameOverModal: React.FC<GameOverModalProps> = ({
   result,
+  ratingChange,
   onRematch,
   onNewGame,
   onAnalyze,
@@ -80,9 +83,18 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
         <h2 className="text-2xl sm:text-3xl font-black text-white mb-2 tracking-tight uppercase">
           {title}
         </h2>
-        <p className="text-xs font-black text-[#94A3B8] uppercase tracking-[0.2em] mb-8 opacity-80">
+        <p className="text-xs font-black text-[#94A3B8] uppercase tracking-[0.2em] mb-4 opacity-80">
           {result.reason}
         </p>
+        {ratingChange && (
+          <p className="text-sm font-black font-mono text-white mb-8" data-testid="rating-change">
+            Rating {ratingChange.after}{' '}
+            <span className={ratingChange.delta >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+              ({ratingChange.delta >= 0 ? '+' : ''}{ratingChange.delta})
+            </span>
+          </p>
+        )}
+        {!ratingChange && <div className="mb-8" />}
         {/* Action Buttons */}
         <div className="space-y-3">
 

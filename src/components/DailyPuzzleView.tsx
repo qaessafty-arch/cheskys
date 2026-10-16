@@ -231,11 +231,10 @@ export const DailyPuzzleView: React.FC<DailyPuzzleViewProps> = ({
           const updated = saveDailyProgress(selectedDateKey, true);
           setDailyProgress(updated);
 
-          // Reward Respect points (+25 Respect, +15 Elo)
+          // Reward Respect points (+25 Respect). Rating is not changed by puzzles.
           if (updateRespectMetrics) {
             updateRespectMetrics({
               respectPoints: 25,
-              elo: 15,
               wins: 1
             });
           }
@@ -700,7 +699,7 @@ export const DailyPuzzleView: React.FC<DailyPuzzleViewProps> = ({
 
             <div className="p-2.5 rounded-2xl bg-white/[0.03] border border-white/5">
               <div className="text-base sm:text-lg font-black text-[#F5C453] font-mono">
-                {profile?.respectPoints || 100}
+                {profile?.respectPoints ?? 100}
               </div>
               <div className="text-[10px] text-[#DFD0B0]/60 uppercase font-semibold">Respect Points</div>
             </div>

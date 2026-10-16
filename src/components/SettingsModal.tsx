@@ -313,7 +313,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       setEditingTheme(null);
                       setIsCustomModalOpen(true);
                     }}
-                    className="flex items-center gap-1.5 py-1.5 px-3 rounded-xl bg-[#52673A] text-white text-xs font-bold shadow-md shadow-[#52673A]/30 border border-[#F5C453]/40 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+                    className="shrink-0 whitespace-nowrap flex items-center gap-1.5 py-1.5 px-3 rounded-xl bg-[#52673A] text-white text-xs font-bold shadow-md shadow-[#52673A]/30 border border-[#F5C453]/40 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5 text-[#F5C453]" />
                     <span>{t('settingsModal.createCustom')}</span>

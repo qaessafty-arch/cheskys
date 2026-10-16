@@ -59,14 +59,14 @@ export const GameControls: React.FC<GameControlsProps> = ({
       initial="hidden"
       animate="visible"
       variants={containerVariants}
-      className={`grid ${onOpenShortcuts ? 'grid-cols-4 sm:grid-cols-8' : 'grid-cols-4 sm:grid-cols-7'} gap-2 p-3 bg-[var(--glass-panel)] backdrop-blur-xl rounded-[2rem] border border-[var(--glass-border)] shadow-2xl`}
+      className="grid grid-cols-4 gap-1.5 sm:gap-2 p-2 sm:p-3 bg-[var(--glass-panel)] backdrop-blur-xl rounded-[2rem] border border-[var(--glass-border)] shadow-2xl"
     >
       <motion.div variants={itemVariants} className="h-full">
         <GlassButton
           id="btn-new-game"
           onClick={onNewGame}
           variant="primary"
-          className="flex-col w-full h-full !rounded-2xl !p-3 shadow-[0_0_20px_rgba(245,158,11,0.2)]"
+          className="flex-col w-full h-full !rounded-2xl !px-1 !py-2.5 shadow-[0_0_20px_rgba(245,158,11,0.2)]"
           ariaLabel="Start a new chess match"
           title="New Game (Hotkey: N)"
         >
@@ -80,7 +80,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
           id="btn-flip-board"
           onClick={onFlipBoard}
           variant="default"
-          className="flex-col w-full h-full !rounded-2xl !p-3"
+          className="flex-col w-full h-full !rounded-2xl !px-1 !py-2.5"
           ariaLabel="Flip board orientation"
           title="Flip Board Orientation (Hotkey: F)"
         >
@@ -95,7 +95,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
           onClick={onUndo}
           disabled={!canUndo}
           variant="default"
-          className="flex-col w-full h-full !rounded-2xl !p-3"
+          className="flex-col w-full h-full !rounded-2xl !px-1 !py-2.5"
           ariaLabel="Take back last move"
           title="Undo Move (Hotkey: U or Ctrl+Z)"
         >
@@ -110,7 +110,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
           onClick={onRedo}
           disabled={!canRedo}
           variant="default"
-          className="flex-col w-full h-full !rounded-2xl !p-3"
+          className="flex-col w-full h-full !rounded-2xl !px-1 !py-2.5"
           ariaLabel="Redo move"
           title="Redo Move (Hotkey: Y or Ctrl+Y)"
         >
@@ -124,7 +124,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
           id="btn-get-hint"
           onClick={onHint}
           variant="secondary"
-          className="flex-col w-full h-full !rounded-2xl !p-3 shadow-lg"
+          className="flex-col w-full h-full !rounded-2xl !px-1 !py-2.5 shadow-lg"
           ariaLabel="Request engine tactical hint"
           title="Tactical Hint (Hotkey: H)"
         >
@@ -138,7 +138,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
           id="btn-toggle-sound"
           onClick={onToggleSound}
           variant={soundEnabled ? "secondary" : "default"}
-          className="flex-col w-full h-full !rounded-2xl !p-3"
+          className="flex-col w-full h-full !rounded-2xl !px-1 !py-2.5"
           ariaLabel={soundEnabled ? 'Mute audio' : 'Enable audio'}
           title="Toggle Sound (Hotkey: S or M)"
         >
@@ -152,7 +152,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
           id="btn-resign-game"
           onClick={onResign}
           variant="red"
-          className="flex-col w-full h-full !rounded-2xl !p-3"
+          className="flex-col w-full h-full !rounded-2xl !px-1 !py-2.5"
           ariaLabel="Resign current match"
           title="Resign Match (Hotkey: Shift + R)"
         >
@@ -167,7 +167,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
             id="btn-shortcuts-dialog"
             onClick={onOpenShortcuts}
             variant="default"
-            className="flex-col w-full h-full !rounded-2xl !p-3"
+            className="flex-col w-full h-full !rounded-2xl !px-1 !py-2.5"
             ariaLabel="View keyboard shortcuts guide"
             title="Keyboard Shortcuts (Hotkey: ?)"
           >

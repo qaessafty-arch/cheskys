@@ -22,6 +22,7 @@ import crypto from 'crypto';
 import cookieParser from 'cookie-parser';
 import csrf from 'csurf';
 import { registerUser, loginUser, logoutUser, socketAuthMiddleware } from './auth.js';
+import { calculateRatingChanges, scoreForWinner, DEFAULT_RATING } from './elo.js';
 import apiRouter from './routes.js';
 import { AntiCheatService } from './antiCheat.js';
 import { SocialService } from './social.js';
@@ -388,22 +389,84 @@ export function parseTimeControl(tc) {
   };
 }
 
-// Standard ELO Calculation (K = 32)
-export function calculateNewRatings(whiteRating, blackRating, scoreWhite) {
-  const K = 32;
-  const expectedWhite = 1 / (1 + Math.pow(10, (blackRating - whiteRating) / 400));
-  const expectedBlack = 1 - expectedWhite;
-  const scoreBlack = 1 - scoreWhite;
+// Reads a registered player's current rating. Guests (no account) play at the default rating
+// and are never rated.
+async function loadPlayerRating(userId) {
+  const guest = { rating: DEFAULT_RATING, games: 0, registered: false };
+  if (!userId) return guest;
+  try {
+    const { rows } = await db.query('SELECT elo_rating, games_played FROM users WHERE id = $1', [userId]);
+    if (!rows[0]) return guest;
+    return {
+      rating: rows[0].elo_rating ?? DEFAULT_RATING,
+      games: rows[0].games_played ?? 0,
+      registered: true
+    };
+  } catch (err) {
+    logger.error('Failed to load player rating', { error: err.message });
+    return guest;
+  }
+}
 
-  const newWhite = Math.round(whiteRating + K * (scoreWhite - expectedWhite));
-  const newBlack = Math.round(blackRating + K * (scoreBlack - expectedBlack));
+// Applies a rated result to both players in one transaction. Both rows are locked first,
+// so two games that finish at the same moment can't both start from the same old rating.
+async function applyRatedResult({ whiteId, blackId, winner }) {
+  const outcome = winner === 'white' || winner === 'black' ? winner : 'draw';
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      'SELECT id, elo_rating, games_played FROM users WHERE id = ANY($1::uuid[]) ORDER BY id FOR UPDATE',
+      [[whiteId, blackId]]
+    );
+    const white = rows.find(r => r.id === whiteId);
+    const black = rows.find(r => r.id === blackId);
+    if (!white || !black) {
+      await client.query('ROLLBACK');
+      return null;
+    }
 
-  return {
-    newWhiteRating: Math.max(100, newWhite),
-    newBlackRating: Math.max(100, newBlack),
-    whiteDelta: newWhite - whiteRating,
-    blackDelta: newBlack - blackRating
-  };
+    const change = calculateRatingChanges({
+      whiteRating: white.elo_rating,
+      blackRating: black.elo_rating,
+      whiteGames: white.games_played,
+      blackGames: black.games_played,
+      scoreWhite: scoreForWinner(outcome)
+    });
+
+    const update = `UPDATE users
+      SET elo_rating = $1,
+          peak_rating = GREATEST(peak_rating, $1),
+          games_played = games_played + 1,
+          games_won = games_won + $2,
+          games_drawn = games_drawn + $3,
+          games_lost = games_lost + $4
+      WHERE id = $5`;
+    const stats = (side) => ({
+      won: outcome === side ? 1 : 0,
+      drawn: outcome === 'draw' ? 1 : 0,
+      lost: outcome !== side && outcome !== 'draw' ? 1 : 0
+    });
+
+    const w = stats('white');
+    const b = stats('black');
+    await client.query(update, [change.newWhiteRating, w.won, w.drawn, w.lost, whiteId]);
+    await client.query(update, [change.newBlackRating, b.won, b.drawn, b.lost, blackId]);
+    await client.query('COMMIT');
+
+    return {
+      newWhiteRating: change.newWhiteRating,
+      newBlackRating: change.newBlackRating,
+      whiteDelta: change.whiteDelta,
+      blackDelta: change.blackDelta
+    };
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    logger.error('Failed to apply rated result', { error: err.message });
+    return null;
+  } finally {
+    client.release();
+  }
 }
 
 // ==========================================
@@ -1056,10 +1119,13 @@ io.on('connection', (socket) => {
         variant
       });
 
+      const ownRating = await loadPlayerRating(currentUserId);
       const playerInfo = {
         id: currentUserId || socket.id,
         username: socket.handshake.auth?.username || 'Player 1',
-        rating: 1200,
+        rating: ownRating.rating,
+        games: ownRating.games,
+        registered: ownRating.registered,
         socketId: socket.id
       };
 
@@ -1118,10 +1184,13 @@ io.on('connection', (socket) => {
         return socket.emit('error', { code: 'GAME_ALREADY_STARTED', message: 'This game has already commenced' });
       }
 
+      const ownRating = await loadPlayerRating(currentUserId);
       const playerInfo = {
         id: currentUserId || socket.id,
         username: socket.handshake.auth?.username || 'Player 2',
-        rating: 1200,
+        rating: ownRating.rating,
+        games: ownRating.games,
+        registered: ownRating.registered,
         socketId: socket.id
       };
 
@@ -1175,7 +1244,7 @@ io.on('connection', (socket) => {
   });
 
   // 3. 'quickMatch'
-  socket.on('quickMatch', ({ timeControl = '10+0' }) => {
+  socket.on('quickMatch', async ({ timeControl = '10+0' }) => {
     if (!checkSocketEventRateLimit(currentUserId || socket.id, 'quickMatch', WS_EVENT_LIMITS.quickMatch)) {
       socket.emit('error', { code: 'RATE_LIMITED', message: 'Too many quick match requests' });
       return;
@@ -1184,10 +1253,13 @@ io.on('connection', (socket) => {
       quickMatchQueue.set(timeControl, []);
     }
     const queue = quickMatchQueue.get(timeControl);
+    const ownRating = await loadPlayerRating(currentUserId);
     const playerInfo = {
       id: currentUserId || socket.id,
       username: socket.handshake.auth?.username || 'Guest',
-      rating: 1200,
+      rating: ownRating.rating,
+      games: ownRating.games,
+      registered: ownRating.registered,
       socket
     };
 
@@ -1614,29 +1686,18 @@ io.on('connection', (socket) => {
 
 // Game Over Finalizer
 async function handleGameOver(session, { result, reason, winner }) {
+  // Timeouts, resignations and draw offers can race for the same game. Only the first one counts.
+  if (session.status === 'completed') return;
   session.status = 'completed';
   session.stopTimer();
 
+  // Guests have no account row, so they are never rated and never stored as a player.
+  const whiteId = session.white?.registered ? session.white.id : null;
+  const blackId = session.black?.registered ? session.black.id : null;
+
   let ratingChanges = null;
-  if (session.rated && session.white?.id && session.black?.id) {
-    const scoreWhite = winner === 'white' ? 1 : (winner === 'black' ? 0 : 0.5);
-    const whiteRating = session.white.rating || 1200;
-    const blackRating = session.black.rating || 1200;
-
-    ratingChanges = calculateNewRatings(whiteRating, blackRating, scoreWhite);
-
-    // Update player ratings in database
-    await db.query(
-      `UPDATE users SET elo_rating = $1, games_played = games_played + 1,
-       games_won = games_won + $2, games_drawn = games_drawn + $3 WHERE id = $4`,
-      [ratingChanges.newWhiteRating, winner === 'white' ? 1 : 0, winner === 'draw' ? 1 : 0, session.white.id]
-    ).catch(() => {});
-
-    await db.query(
-      `UPDATE users SET elo_rating = $1, games_played = games_played + 1,
-       games_won = games_won + $2, games_drawn = games_drawn + $3 WHERE id = $4`,
-      [ratingChanges.newBlackRating, winner === 'black' ? 1 : 0, winner === 'draw' ? 1 : 0, session.black.id]
-    ).catch(() => {});
+  if (session.rated && whiteId && blackId) {
+    ratingChanges = await applyRatedResult({ whiteId, blackId, winner });
   }
 
   // Save game to PostgreSQL
@@ -1648,8 +1709,8 @@ async function handleGameOver(session, { result, reason, winner }) {
     [
       session.id,
       session.gameCode,
-      session.white?.id || null,
-      session.black?.id || null,
+      whiteId,
+      blackId,
       winner,
       reason,
       session.chess.pgn(),
