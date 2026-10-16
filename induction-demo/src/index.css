@@ -1,0 +1,153 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --app-bg: #080B12;
+    --panel-bg: #10151F;
+    --panel-hover: #181F2A;
+    --primary-accent: #F5B83D;
+    --secondary-accent: #6EE7B7;
+    --tertiary-accent: #60A5FA;
+    --danger: #FB7185;
+    --text-main: #F8FAFC;
+    --text-muted: #94A3B8;
+    --text-dim: #64748B;
+    --glass-bg: rgba(255,255,255,0.04);
+    --glass-bg-hover: rgba(255,255,255,0.08);
+    --glass-border: rgba(255,255,255,0.1);
+    --glass-border-strong: rgba(255,255,255,0.15);
+    --board-light: #EEEED2;
+    --board-dark: #769656;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body, #root {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background-color: #080B12;
+    background-color: var(--app-bg);
+    color: #F8FAFC;
+    color: var(--text-main);
+    font-family: 'DM Sans', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background-color: var(--primary-accent);
+    color: var(--app-bg);
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--panel-bg);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--glass-border);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--glass-border-strong);
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-[var(--glass-bg)] backdrop-blur-md border border-[var(--glass-border)] rounded-2xl;
+  }
+
+  .glass-panel-hover {
+    @apply glass-panel hover:bg-[var(--glass-bg-hover)] hover:border-[var(--glass-border-strong)] transition-all duration-200;
+  }
+
+  .glass-card {
+    @apply glass-panel p-6 shadow-[0_4px_24px_rgba(0,0,0,0.4),0_0_0_1px_rgba(255,255,255,0.05)];
+  }
+
+  .btn-primary {
+    @apply px-6 py-3 bg-[var(--primary-accent)] text-[var(--app-bg)] font-black rounded-xl hover:bg-yellow-400 active:scale-[0.98] transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[var(--primary-accent)] focus:ring-offset-2 focus:ring-offset-[var(--app-bg)];
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 bg-[var(--glass-bg)] text-[var(--text-main)] font-bold rounded-xl border border-[var(--glass-border)] hover:bg-[var(--glass-bg-hover)] hover:border-[var(--glass-border-strong)] active:scale-[0.98] transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[var(--tertiary-accent)] focus:ring-offset-2 focus:ring-offset-[var(--app-bg)];
+  }
+
+  .btn-danger {
+    @apply px-6 py-3 bg-[var(--danger)] text-white font-bold rounded-xl hover:bg-red-500 active:scale-[0.98] transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[var(--danger)] focus:ring-offset-2 focus:ring-offset-[var(--app-bg)];
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 bg-[var(--panel-bg)] border border-[var(--glass-border)] rounded-xl text-[var(--text-main)] placeholder-[var(--text-dim)] focus:outline-none focus:border-[var(--primary-accent)] focus:ring-2 focus:ring-[var(--primary-accent)]/20 transition-all duration-200;
+  }
+
+  .stat-card {
+    @apply glass-panel-hover p-4 text-center min-w-[80px];
+  }
+
+  .stat-value {
+    @apply text-2xl sm:text-3xl font-black text-[var(--text-main)] font-mono;
+  }
+
+  .stat-label {
+    @apply text-[10px] uppercase tracking-widest font-black text-[var(--text-muted)] mt-1;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+  }
+
+  .animate-pulse-slow {
+    animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .bg-glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+  }
+
+  .border-glass {
+    border-color: var(--glass-border);
+  }
+}
+
+/* Board theme variables - updated dynamically */
+:root {
+  --square-light: var(--board-light);
+  --square-dark: var(--board-dark);
+  --square-light-text: var(--board-dark);
+  --square-dark-text: var(--board-light);
+  --board-border: #4a6333;
+  --board-glow: rgba(118, 150, 86, 0.25);
+  --move-marker: rgba(110, 231, 183, 0.3);
+  --capture-ring: rgba(251, 113, 133, 0.8);
+  --last-move: rgba(56, 189, 248, 0.4);
+  --check-glow: rgba(251, 113, 133, 0.6);
+  --selection-ring: rgba(245, 184, 61, 0.9);
+}
