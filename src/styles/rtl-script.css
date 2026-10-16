@@ -1,0 +1,44 @@
+/* Arabic-script languages: Sorani Kurdish (ckb) and Arabic (ar).
+ * App.tsx sets <html dir="rtl" lang="...">. None of the Latin fonts the UI uses
+ * has Arabic-script glyphs, so without this the browser falls back to whatever
+ * system font it has. Vazirmatn (loaded in index.html) covers every Sorani
+ * letter, including ڕ ڵ ۆ ێ ە ڤ.
+ */
+html[dir='rtl'] body,
+html[dir='rtl'] body *:not(svg, svg *) {
+  font-family: 'Vazirmatn', 'Noto Sans Arabic', Tahoma, sans-serif !important;
+}
+
+/* Monospace labels: a Latin monospace font would give Kurdish words its very
+ * wide space glyph, so they use Vazirmatn with fixed-width digits instead */
+html[dir='rtl'] :is(.font-mono, code, pre, kbd) {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Letter-spacing pulls joined letters apart, so the Latin-style tracking used
+ * on labels (tracking-widest, tracking-[0.2em] ...) is turned off */
+html[dir='rtl'] body * {
+  letter-spacing: 0 !important;
+}
+
+/* Arabic script needs more room than Latin at small sizes: lift the tiny
+ * label sizes and loosen line-heights that would clip dots and marks */
+html[dir='rtl'] :is(.text-\[8px\], .text-\[9px\]) {
+  font-size: 11px;
+}
+
+html[dir='rtl'] .text-\[10px\] {
+  font-size: 11.5px;
+}
+
+html[dir='rtl'] .text-\[11px\] {
+  font-size: 12.5px;
+}
+
+html[dir='rtl'] .text-xs {
+  font-size: 13px;
+}
+
+html[dir='rtl'] :is(.leading-none, .leading-tight, [class*='leading-[0'], [class*='leading-[1]']) {
+  line-height: 1.45;
+}

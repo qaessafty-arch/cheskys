@@ -322,8 +322,6 @@ export default function App() {
     const isRtl = i18n.language === 'ckb' || i18n.language === 'ar';
     document.documentElement.dir = isRtl ? 'rtl' : 'ltr';
     document.documentElement.lang = i18n.language;
-    if (isRtl) document.body.classList.add('font-vazirmatn');
-    else document.body.classList.remove('font-vazirmatn');
   }, [i18n.language]);
 
   const displayGame = React.useMemo(() => {
