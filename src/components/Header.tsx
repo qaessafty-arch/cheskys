@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { GameMode, RespectProfile, Notification } from '../types/chess';
 import { Menu, X, User, Crown, Shield, Bell, Swords, UserPlus, Trophy, Info, Check } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -46,6 +46,33 @@ export const Header: React.FC<HeaderProps> = ({
   respectProfile
 }) => {
   const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
+
+  // Sidebar "Celestial Messages" dispatches 'open-notifications' to open this panel
+  useEffect(() => {
+    const handleOpenNotifications = () => setIsNotifOpen(true);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsNotifOpen(false);
+    };
+    window.addEventListener('open-notifications', handleOpenNotifications);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('open-notifications', handleOpenNotifications);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
+  // Close on any click outside the bell and panel. A fixed full-screen backdrop
+  // cannot do this: the header's backdrop-filter makes it the containing block,
+  // so the backdrop would only cover the header strip.
+  useEffect(() => {
+    if (!isNotifOpen) return;
+    const handlePointerDown = (e: PointerEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setIsNotifOpen(false);
+    };
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [isNotifOpen]);
 
   const { user, profile } = useAuth();
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotification();
@@ -109,83 +136,88 @@ export const Header: React.FC<HeaderProps> = ({
           </span>
         </div>
 
-        {/* Notification Bell */}
-        {user && (
-          <div className="relative">
-            <button
-              id="header-notif-bell-btn"
-              type="button"
-              onClick={() => setIsNotifOpen(!isNotifOpen)}
-              className={`w-10 h-10 glass-button flex items-center justify-center hover:border-[var(--secondary-accent)]/30 transition-all relative interactive-btn ${isNotifOpen ? 'text-[var(--secondary-accent)] border-[var(--secondary-accent)]/30' : 'text-[var(--text-muted)]'}`}
-              aria-label="View Notifications"
-            >
-              <Bell className="w-5 h-5" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#EF4444] text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-[var(--app-bg)] animate-pulse">
-                  {unreadCount}
-                </span>
-              )}
-            </button>
+        {/* Notification Bell - rendered for guests too so Celestial Messages always opens */}
+        <div className="relative" ref={notifRef}>
+          <button
+            id="header-notif-bell-btn"
+            type="button"
+            onClick={() => setIsNotifOpen(!isNotifOpen)}
+            className={`w-10 h-10 glass-button flex items-center justify-center hover:border-[var(--secondary-accent)]/30 transition-all relative interactive-btn ${isNotifOpen ? 'text-[var(--secondary-accent)] border-[var(--secondary-accent)]/30' : 'text-[var(--text-muted)]'}`}
+            aria-label="View Notifications"
+          >
+            <Bell className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#EF4444] text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-[var(--app-bg)] animate-pulse">
+                {unreadCount}
+              </span>
+            )}
+          </button>
 
-            <AnimatePresence>
-              {isNotifOpen && (
-                <>
-                  <motion.div
-                    initial={{ opacity: 0, y: 8, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 8, scale: 0.96 }}
-                    transition={{ duration: 0.18, ease: 'easeOut' }}
-                    className="absolute right-0 mt-3 w-[320px] sm:w-[380px] bg-[var(--glass-panel)] border border-[var(--glass-border)] backdrop-blur-xl rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 overflow-hidden"
-                  >
-                    {/* Header */}
-                    <div className="p-4 border-b border-[var(--glass-border)] flex items-center justify-between bg-[var(--app-bg)]/50">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-black text-white uppercase tracking-widest">Celestial Messages</span>
-                        {unreadCount > 0 && (
-                          <span className="px-1.5 py-0.5 rounded bg-[var(--secondary-accent)] text-[var(--app-bg)] text-[9px] font-black shadow-sm">{unreadCount}</span>
+          <AnimatePresence>
+            {isNotifOpen && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                  transition={{ duration: 0.18, ease: 'easeOut' }}
+                  className="absolute right-0 mt-3 w-[min(320px,calc(100vw-2rem))] sm:w-[380px] bg-[var(--app-bg)] [background-image:linear-gradient(var(--glass-panel),var(--glass-panel))] border border-[var(--glass-border)] rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 overflow-hidden"
+                >
+                  {/* Header */}
+                  <div className="p-4 border-b border-[var(--glass-border)] flex items-center justify-between bg-[var(--app-bg)]/50">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-black text-white uppercase tracking-widest">Celestial Messages</span>
+                      {unreadCount > 0 && (
+                        <span className="px-1.5 py-0.5 rounded bg-[var(--secondary-accent)] text-[var(--app-bg)] text-[9px] font-black shadow-sm">{unreadCount}</span>
+                      )}
+                    </div>
+                    {unreadCount > 0 && (
+                      <button 
+                        onClick={() => markAllAsRead()}
+                        className="text-[10px] font-black text-[var(--secondary-accent)] hover:text-white uppercase tracking-tighter transition-colors"
+                      >
+                        Mark all as read
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Scrollable List */}
+                  <div className="max-h-[420px] overflow-y-auto no-scrollbar py-1">
+                    {notifications.length > 0 ? (
+                      notifications.map(notif => (
+                        <NotificationListItem 
+                          key={notif.id} 
+                          notification={notif} 
+                          onRead={() => markAsRead(notif.id)}
+                          onDelete={() => deleteNotification(notif.id)}
+                        />
+                      ))
+                    ) : (
+                      <div className="p-12 flex flex-col items-center justify-center text-center gap-4">
+                        <div className="w-16 h-16 rounded-3xl bg-[var(--app-bg)] border border-[var(--glass-border)] flex items-center justify-center text-3xl shadow-inner">
+                          ☀️
+                        </div>
+                        <div>
+                          <p className="text-sm font-black text-white uppercase tracking-tight">{user ? 'System Status: All Clear' : 'No Messages Yet'}</p>
+                          <p className="text-[10px] text-[var(--text-muted)] font-mono mt-1 opacity-60">{user ? 'The astral planes are silent' : 'Sign in to receive challenges, friend requests and room invites'}</p>
+                        </div>
+                        {!user && onOpenLogin && (
+                          <button
+                            type="button"
+                            onClick={() => { setIsNotifOpen(false); onOpenLogin(); }}
+                            className="px-4 py-2 rounded-xl bg-[var(--secondary-accent)] text-[var(--app-bg)] text-xs font-black uppercase tracking-wider hover:scale-105 active:scale-95 transition-all"
+                          >
+                            Sign In
+                          </button>
                         )}
                       </div>
-                      {unreadCount > 0 && (
-                        <button 
-                          onClick={() => markAllAsRead()}
-                          className="text-[10px] font-black text-[var(--secondary-accent)] hover:text-white uppercase tracking-tighter transition-colors"
-                        >
-                          Mark all as read
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Scrollable List */}
-                    <div className="max-h-[420px] overflow-y-auto no-scrollbar py-1">
-                      {notifications.length > 0 ? (
-                        notifications.map(notif => (
-                          <NotificationListItem 
-                            key={notif.id} 
-                            notification={notif} 
-                            onRead={() => markAsRead(notif.id)}
-                            onDelete={() => deleteNotification(notif.id)}
-                          />
-                        ))
-                      ) : (
-                        <div className="p-12 flex flex-col items-center justify-center text-center gap-4">
-                          <div className="w-16 h-16 rounded-3xl bg-[var(--app-bg)] border border-[var(--glass-border)] flex items-center justify-center text-3xl shadow-inner">
-                            ☀️
-                          </div>
-                          <div>
-                            <p className="text-sm font-black text-white uppercase tracking-tight">System Status: All Clear</p>
-                            <p className="text-[10px] text-[var(--text-muted)] font-mono mt-1 opacity-60">The astral planes are silent</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
-                  {/* Backdrop */}
-                  <div className="fixed inset-0 z-40 bg-black/5" onClick={() => setIsNotifOpen(false)} />
-                </>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
+                    )}
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+        </div>
 
         <button
           type="button"

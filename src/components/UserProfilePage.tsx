@@ -124,6 +124,7 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
   const [friendStatus, setFriendStatus] = useState<'add' | 'sent' | 'friends'>('add');
   const [copiedLink, setCopiedLink] = useState(false);
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
+  const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null);
 
   // Analytics & History Filters
   const [timeRange, setTimeRange] = useState<TimeRangeFilter>('1M');
@@ -142,19 +143,39 @@ export const UserProfilePage: React.FC<UserProfilePageProps> = ({
       </div>
     );
   }
-const displayName = profile?.displayName || user?.displayName || 'Grandmaster Qays';
-  const username = profile?.username || 'peshmerga_gm';
+const displayName = profile?.displayName || user?.displayName || 'Guest';
+  const username = profile?.username || 'guest';
   const countryFlag = profile?.flag || '☀️';
   const countryName = profile?.country || 'Kurdistan';
-  const avatarUrl = profile?.photoURL || (isSkyAccount 
-    ? 'https://images.unsplash.com/photo-1557925923-cd4648e211a0?w=200&auto=format&fit=crop&q=80' 
-    : user?.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80');
+  // Only real photos: the old stock hotlinks (images.unsplash.com) are unreachable and rendered a broken <img>.
+  const avatarUrl = profile?.photoURL || user?.photoURL || null;
+  const avatarInitials = displayName.trim().split(/\s+/).map(w => w.match(/[\p{L}\p{N}]/u)?.[0] ?? '').join('').slice(0, 2).toUpperCase() || '♚';
+  const renderAvatar = (className: string, initialsClassName: string) =>
+    avatarUrl && avatarUrl !== failedAvatarUrl ? (
+      <img
+        src={avatarUrl}
+        alt={displayName}
+        className={className}
+        referrerPolicy="no-referrer"
+        onError={() => setFailedAvatarUrl(avatarUrl)}
+      />
+    ) : (
+      <div
+        role="img"
+        aria-label={displayName}
+        className={`${className} bg-gradient-to-br from-[#52673A] to-[#8C2425] flex items-center justify-center font-black text-white select-none ${initialsClassName}`}
+      >
+        {avatarInitials}
+      </div>
+    );
 
-  const baseElo = typeof profile?.elo === 'number' ? (isNaN(profile.elo) ? 2240 : profile.elo) : 2240;
+  // Single rating source for cards, header badge and chart: the profile's real Elo (may be stored as a string), 1200 for a guest.
+  const parsedElo = Number(profile?.elo);
+  const baseElo = Number.isFinite(parsedElo) && parsedElo > 0 ? Math.round(parsedElo) : 1200;
 
   // Time Control Rating Metrics
   const ratingsData: Record<string, RatingCategory> = useMemo(() => {
-    return {
+    const categories: Record<string, RatingCategory> = {
       rapid: {
         title: 'Rapid (Primary)',
         time: '10-15 min',
@@ -206,11 +227,16 @@ const displayName = profile?.displayName || user?.displayName || 'Grandmaster Qa
         badgeBg: 'bg-purple-500/10 text-purple-300 border-purple-500/20'
       }
     };
+    if ((profile?.gamesPlayed || 0) > 0) return categories;
+    // No rated games yet (e.g. guest): every pool shows the profile's real starting rating, not invented offsets
+    return Object.fromEntries(
+      Object.entries(categories).map(([key, c]) => [key, { ...c, current: baseElo, peak: baseElo }])
+    );
   }, [baseElo, profile?.gamesPlayed]);
 
   // Generate Interactive Rating Chart Data
   const chartData = useMemo(() => {
-    if (profile?.gamesPlayed === 0) return [];
+    if (!profile?.gamesPlayed) return [];
     
     const pointsCount = timeRange === '1W' ? 7 : timeRange === '1M' ? 30 : timeRange === '1Y' ? 52 : 70;
     const now = new Date();
@@ -237,7 +263,11 @@ const displayName = profile?.displayName || user?.displayName || 'Grandmaster Qa
       });
     }
     return data;
-  }, [timeRange, baseElo]);
+  }, [timeRange, baseElo, profile?.gamesPlayed]);
+
+  // Trend derived from the plotted series (replaces the hardcoded "+48 past 30 days")
+  const ratingTrend = chartData.length > 1 ? chartData[chartData.length - 1].rating - chartData[0].rating : 0;
+  const trendRangeLabel = { '1W': 'past 7 days', '1M': 'past 30 days', '1Y': 'past year', ALL: 'all time' }[timeRange];
 
   // Chart SVG Coordinates Math
   const minRating = chartData.length > 0 ? Math.min(...chartData.map(d => isNaN(d.rating) ? 1200 : d.rating)) - 25 : 0;
@@ -267,7 +297,8 @@ const displayName = profile?.displayName || user?.displayName || 'Grandmaster Qa
 
   // Recent Match History List
   const allMatches: MatchItem[] = useMemo(() => {
-    const rawLogs = getLocalGameLogs();
+    // loggingService seeds 'log-sample-*' entries for the Battle Logs demo; they are not this player's games
+    const rawLogs = getLocalGameLogs().filter(l => !String(l.id).startsWith('log-sample-'));
     const formattedFromLogs: MatchItem[] = rawLogs.slice(0, 10).map((l, idx) => ({
       id: l.id || `log-${idx}`,
       opponentName: l.opponentName || 'Peshmerga Tactician',
@@ -427,8 +458,11 @@ const displayName = profile?.displayName || user?.displayName || 'Grandmaster Qa
       }
     ];
 
+    // A player with no games (e.g. a fresh guest) has no history: showing sample wins
+    // next to "0 games" and a 1200 rating would contradict the rating cards.
+    if (formattedFromLogs.length === 0 && !profile?.gamesPlayed) return [];
     return [...formattedFromLogs, ...fallbackMatches].slice(0, 10);
-  }, []);
+  }, [profile?.gamesPlayed]);
 
   // Filtered Matches
   const filteredMatches = useMemo(() => {
@@ -550,12 +584,7 @@ const displayName = profile?.displayName || user?.displayName || 'Grandmaster Qa
           className="flex items-center gap-2.5 min-w-0 cursor-pointer active:opacity-80 py-1"
         >
           <div className="relative shrink-0">
-            <img
-              src={avatarUrl}
-              alt={displayName}
-              className="w-9 h-9 rounded-xl object-cover border-2 border-[#F5C453] shadow-sm"
-              referrerPolicy="no-referrer"
-            />
+            {renderAvatar('w-9 h-9 rounded-xl object-cover border-2 border-[#F5C453] shadow-sm', 'text-xs')}
             <span 
               className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-slate-900 ${
                 onlineStatus === 'online'
@@ -589,7 +618,7 @@ const displayName = profile?.displayName || user?.displayName || 'Grandmaster Qa
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 cursor-pointer shadow-sm"
           >
             <Clock className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            <span className="text-xs font-black font-mono tracking-tight">{isNaN(baseElo) ? 2240 : baseElo}</span>
+            <span className="text-xs font-black font-mono tracking-tight">{baseElo}</span>
           </div>
 
           <button
@@ -614,12 +643,7 @@ const displayName = profile?.displayName || user?.displayName || 'Grandmaster Qa
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 text-center sm:text-left">
             {/* Avatar */}
             <div className="relative group shrink-0">
-              <img
-                src={avatarUrl}
-                alt={displayName}
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-2 border-[#F5C453] shadow-lg shadow-black/40"
-                referrerPolicy="no-referrer"
-              />
+              {renderAvatar('w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-2 border-[#F5C453] shadow-lg shadow-black/40', 'text-2xl sm:text-3xl')}
               <button
                 type="button"
                 onClick={() => setIsAvatarModalOpen(true)}
@@ -834,12 +858,12 @@ const displayName = profile?.displayName || user?.displayName || 'Grandmaster Qa
                     </div>
                     <div className="text-sm font-bold text-slate-300">{item.title}</div>
                     <div className="text-2xl sm:text-3xl font-black font-mono text-white tracking-tight my-1">
-                      {item.games > 0 ? item.current : 'Unrated'}
+                      {item.current}
                     </div>
                   </div>
 
                   <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400 font-mono">
-                    <span>Peak <strong className="text-slate-200">{item.games > 0 ? item.peak : '—'}</strong></span>
+                    <span>Peak <strong className="text-slate-200">{item.peak}</strong></span>
                     <span>{item.games} g</span>
                   </div>
                 </div>
@@ -871,6 +895,11 @@ const displayName = profile?.displayName || user?.displayName || 'Grandmaster Qa
 
                   {/* Mini Sparkline Curve */}
                   <div className="relative w-full h-32 pt-2">
+                    {chartData.length === 0 ? (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <p className="text-slate-400 text-sm">Play your first game to see your rating graph.</p>
+                      </div>
+                    ) : (
                     <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-full overflow-visible">
                       <defs>
                         <linearGradient id="miniGradient" x1="0" y1="0" x2="0" y2="1">
@@ -881,11 +910,12 @@ const displayName = profile?.displayName || user?.displayName || 'Grandmaster Qa
                       <path d={areaD} fill="url(#miniGradient)" />
                       <path d={pathD} fill="none" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" />
                     </svg>
+                    )}
                   </div>
 
                   <div className="flex items-center justify-between text-xs sm:text-sm text-slate-400 font-mono pt-2 border-t border-slate-800">
                     <span>Current: <strong className="text-white">{baseElo} Elo</strong></span>
-                    <span>Trend: <strong className="text-emerald-400">+48 past 30 days</strong></span>
+                    <span>Trend: <strong className={ratingTrend >= 0 ? 'text-emerald-400' : 'text-rose-400'}>{chartData.length > 1 ? `${ratingTrend >= 0 ? '+' : ''}${ratingTrend} ${trendRangeLabel}` : 'No rated games yet'}</strong></span>
                   </div>
                 </div>
 
@@ -952,6 +982,9 @@ const displayName = profile?.displayName || user?.displayName || 'Grandmaster Qa
                   </div>
 
                   <div className="space-y-2.5">
+                    {allMatches.length === 0 && (
+                      <p className="p-4 text-center text-sm text-slate-400">No games yet. Your last three games will show here.</p>
+                    )}
                     {allMatches.slice(0, 3).map(m => (
                       <div 
                         key={m.id}
@@ -1198,7 +1231,7 @@ const displayName = profile?.displayName || user?.displayName || 'Grandmaster Qa
 
               {/* SVG Interactive Line Chart Container */}
               <div className="relative w-full overflow-hidden pt-2">
-                {profile?.gamesPlayed === 0 ? (
+                {chartData.length === 0 ? (
                   <div className="w-full h-48 sm:h-64 flex items-center justify-center border-t border-slate-800">
                     <p className="text-slate-400 text-sm">Play your first game to see your rating graph.</p>
                   </div>
@@ -1554,12 +1587,7 @@ const displayName = profile?.displayName || user?.displayName || 'Grandmaster Qa
             {/* Profile Hero Inside Drawer */}
             <div className="flex items-center gap-4">
               <div className="relative shrink-0">
-                <img
-                  src={avatarUrl}
-                  alt={displayName}
-                  className="w-16 h-16 rounded-2xl object-cover border-2 border-[#F5C453] shadow-md"
-                  referrerPolicy="no-referrer"
-                />
+                {renderAvatar('w-16 h-16 rounded-2xl object-cover border-2 border-[#F5C453] shadow-md', 'text-xl')}
                 <button
                   type="button"
                   onClick={() => {

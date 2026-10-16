@@ -10,7 +10,7 @@ import {
   orderBy,
   limit
 } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType, safeAddDoc, safeSetDoc, safeUpdateDoc, safeDeleteDoc } from '../utils/firebase';
+import { auth, db, handleFirestoreError, OperationType, safeAddDoc, safeSetDoc, safeUpdateDoc, safeDeleteDoc } from '../utils/firebase';
 import { FriendUser, FriendRequestItem, UserRole } from '../types/chess';
 import { UserProfileData } from '../context/AuthContext';
 
@@ -237,7 +237,12 @@ export const listenToFriendsList = (
   userId: string,
   callback: (friends: FriendUser[]) => void
 ) => {
-  if (!userId) return () => {};
+  // Guests / local-only profiles are not Firebase-authenticated, so Firestore rules
+  // (request.auth != null) reject this read. Resolve immediately with an empty list.
+  if (!userId || !auth.currentUser) {
+    callback([]);
+    return () => {};
+  }
 
   try {
     const friendsSubColl = collection(db, `users/${userId}/friends`);
@@ -276,11 +281,13 @@ export const listenToFriendsList = (
       callback(friendsData);
     }, err => {
       console.warn('Friends list listener error:', err);
+      callback([]);
     });
 
     return unsub;
   } catch (e) {
     console.error('Failed to listen to friends list:', e);
+    callback([]);
     return () => {};
   }
 };

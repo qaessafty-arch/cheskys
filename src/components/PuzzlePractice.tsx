@@ -90,7 +90,14 @@ export const PuzzlePractice: React.FC<PuzzlePracticeProps> = ({ settings, onNavi
           setRating(Math.round(rating + kFactor * (1 - expectedScore)));
           
         } else {
-          setMoveStep(s => s + 1);
+          // Auto-play the opponent's scripted reply so the player only moves their own side
+          const replyGame = new Chess(gameCopy.fen());
+          replyGame.move(currentPuzzle.solutionMoves[moveStep + 1]);
+          setMoveStep(s => s + 2);
+          setTimeout(() => {
+            setGame(prev => (prev === gameCopy ? replyGame : prev));
+            soundManager.playMove();
+          }, 400);
         }
         return true;
       } else {
@@ -115,7 +122,7 @@ export const PuzzlePractice: React.FC<PuzzlePracticeProps> = ({ settings, onNavi
   if (!currentPuzzle || !game) return null;
 
   return (
-    <div className="w-full h-full max-h-[100dvh] flex flex-col md:flex-row bg-[var(--app-bg)] text-white overflow-hidden p-2 md:p-6 gap-6 relative">
+    <div className="w-full h-full md:max-h-[100dvh] flex flex-col md:flex-row bg-[var(--app-bg)] text-white overflow-x-hidden md:overflow-hidden p-2 md:p-6 gap-6 relative">
       
       {/* Background elements */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none" />
@@ -275,25 +282,27 @@ export const PuzzlePractice: React.FC<PuzzlePracticeProps> = ({ settings, onNavi
           )}
         </AnimatePresence>
 
-        {/* The Board */}
-        <div className="w-full max-w-[60vh] aspect-square shadow-2xl relative rounded-xl overflow-hidden ring-1 ring-white/10">
-          <ChessBoard 
-            game={game}
-            isFlipped={currentPuzzle.playerColor === 'b'}
-            boardTheme={settings.boardTheme}
-            pieceTheme={settings.pieceTheme}
-            showCoordinates={settings.showCoordinates}
-            highlightLastMove={settings.highlightLastMove}
-            showLegalMoves={settings.showLegalMoves}
-            onMove={handleMove}
-            disabled={puzzleState !== 'playing'}
-          />
-          
-          {puzzleState === 'playing' && (
-            <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-xs font-bold flex items-center gap-2 text-emerald-400 shadow-xl">
-              Your Turn ({currentPuzzle.playerColor === 'w' ? 'White' : 'Black'})
-            </div>
-          )}
+        {/* The Board, with the turn badge above it so it never covers a piece */}
+        <div className="w-full max-w-[60vh] flex flex-col items-center gap-3">
+          <div
+            className={`bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-xs font-bold flex items-center gap-2 text-emerald-400 shadow-xl ${puzzleState === 'playing' ? '' : 'invisible'}`}
+            aria-hidden={puzzleState !== 'playing'}
+          >
+            Your Turn ({currentPuzzle.playerColor === 'w' ? 'White' : 'Black'})
+          </div>
+          <div className="w-full aspect-square shadow-2xl relative rounded-xl overflow-hidden ring-1 ring-white/10">
+            <ChessBoard 
+              game={game}
+              isFlipped={currentPuzzle.playerColor === 'b'}
+              boardTheme={settings.boardTheme}
+              pieceTheme={settings.pieceTheme}
+              showCoordinates={settings.showCoordinates}
+              highlightLastMove={settings.highlightLastMove}
+              showLegalMoves={settings.showLegalMoves}
+              onMove={handleMove}
+              disabled={puzzleState !== 'playing'}
+            />
+          </div>
         </div>
 
       </div>

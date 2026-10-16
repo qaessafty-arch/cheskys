@@ -60,12 +60,15 @@ export const MoveHistory: React.FC<MoveHistoryProps> = ({
     // Smooth auto-scroll so the latest move or currently selected move is always visible
     const timer = requestAnimationFrame(() => {
       const targetElement = activeMoveRef.current || latestMoveRef.current || endAnchorRef.current;
-      if (targetElement) {
-        targetElement.scrollIntoView({
-          behavior: 'smooth',
-          block: 'nearest',
-          inline: 'nearest'
-        });
+      const container = scrollRef.current;
+      if (targetElement && container) {
+        // Scroll the move list only. scrollIntoView would also scroll the page,
+        // which on phones jumped the whole layout down to the list on load.
+        const box = container.getBoundingClientRect();
+        const item = targetElement.getBoundingClientRect();
+        const top = item.top < box.top ? item.top - box.top : item.bottom > box.bottom ? item.bottom - box.bottom : 0;
+        const left = item.left < box.left ? item.left - box.left : item.right > box.right ? item.right - box.right : 0;
+        if (top || left) container.scrollBy({ top, left, behavior: 'smooth' });
       } else if (scrollRef.current) {
         scrollRef.current.scrollTo({
           top: scrollRef.current.scrollHeight,

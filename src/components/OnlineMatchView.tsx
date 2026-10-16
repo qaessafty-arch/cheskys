@@ -1254,7 +1254,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
               </div>
             </div>
 
-            <div className={`relative p-2.5 sm:p-3.5 rounded-3xl bg-[#10140e] border-2 border-[#F5C453]/30 shadow-2xl ${settings.boardTheme === 'one-piece' ? 'one-piece-board-bg' : ''}`}>
+            <div className={`relative w-full max-w-[560px] p-2.5 sm:p-3.5 rounded-3xl bg-[#10140e] border-2 border-[#F5C453]/30 shadow-2xl ${settings.boardTheme === 'one-piece' ? 'one-piece-board-bg' : ''}`}>
               <AnimatePresence>
                 {socketStatus !== 'connected' && (
                   <motion.div
