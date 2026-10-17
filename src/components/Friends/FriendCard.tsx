@@ -40,7 +40,7 @@ export const FriendCard: React.FC<FriendCardProps> = ({
             />
           ) : (
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#52673A] to-[#8C2425] border-2 border-[#F5C453] flex items-center justify-center text-sm font-black text-white shadow-md">
-              {friend.displayName ? friend.displayName.charAt(0).toUpperCase() : 'T'}
+              {friend.displayName ? friend.displayName.charAt(0).toUpperCase() : 'P'}
             </div>
           )}
           <div className="absolute -bottom-0.5 -right-0.5">
@@ -51,7 +51,7 @@ export const FriendCard: React.FC<FriendCardProps> = ({
         <div className="min-w-0">
           <div className="flex items-center gap-1.5 truncate">
             <span className="text-xs font-black text-white truncate max-w-[120px] sm:max-w-[150px]">
-              {friend.displayName || 'Tactician'}
+              {friend.displayName || 'Player'}
             </span>
             {friend.username && (
               <span className="text-[10px] font-mono text-[#F5C453]/80 shrink-0">
@@ -76,7 +76,7 @@ export const FriendCard: React.FC<FriendCardProps> = ({
           type="button"
           onClick={() => onChat(friend)}
           className="p-1.5 rounded-xl bg-white/5 hover:bg-white/15 text-white/80 hover:text-white transition-all cursor-pointer"
-          title="Direct Chat"
+          title="Chat"
         >
           <MessageSquare className="w-3.5 h-3.5 text-blue-400" />
         </button>
@@ -85,7 +85,7 @@ export const FriendCard: React.FC<FriendCardProps> = ({
           type="button"
           onClick={() => onChallenge(friend)}
           className="p-1.5 rounded-xl bg-[#8C2425]/60 hover:bg-[#8C2425] text-white border border-[#F5C453]/30 transition-all cursor-pointer"
-          title="Challenge Match"
+          title="Challenge to a Game"
         >
           <Swords className="w-3.5 h-3.5 text-[#F5C453]" />
         </button>

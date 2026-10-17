@@ -26,7 +26,7 @@ export const JoinRoomModal: React.FC<JoinRoomModalProps> = ({ isOpen, onClose })
     setError(null);
     try {
       await joinRoomWithContext(cleanCode);
-      toast.success('Connected to the Astral Sanctum!');
+      toast.success('Joined the room!');
       onClose();
     } catch (err: any) {
       setError(err?.message || 'Match room not found or already full.');
@@ -61,10 +61,10 @@ export const JoinRoomModal: React.FC<JoinRoomModalProps> = ({ isOpen, onClose })
 
             <div className="text-center space-y-2 mb-8">
               <h3 className="text-2xl font-black text-white uppercase tracking-wider">
-                Summon via Code
+                Join by Code
               </h3>
               <p className="text-xs text-white/60">
-                Enter the 6-character astral code provided by the host.
+                Enter the 6-character room code from the host.
               </p>
             </div>
 
@@ -97,7 +97,7 @@ export const JoinRoomModal: React.FC<JoinRoomModalProps> = ({ isOpen, onClose })
                 ) : (
                   <ArrowRight className="w-4 h-4" />
                 )}
-                <span>{isJoining ? 'Connecting...' : 'Ascend & Begin Trial'}</span>
+                <span>{isJoining ? 'Connecting...' : 'Join Room'}</span>
               </button>
             </div>
           </motion.div>

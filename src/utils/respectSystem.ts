@@ -3,13 +3,13 @@ import { RespectProfile, RespectLeaderboardEntry } from '../types/chess';
 const RESPECT_STORAGE_KEY = 'chesskys_respect_profile_v1';
 
 export const HONOR_RANKS = [
-  { minRespect: 0, title: 'Mountain Recruit', badge: '🌾', description: 'Fresh warrior learning the terrain of the board' },
-  { minRespect: 25, title: 'Desert Scout', badge: '🗡️', description: 'Agile scout maneuvering through hostile lines' },
-  { minRespect: 75, title: 'Zagros Vanguard', badge: '🛡️', description: 'Stalwart defender of the mountain passes' },
-  { minRespect: 150, title: 'Peshmerga Guardian', badge: '🌿', description: 'Disciplined fighter with high battlefield chivalry' },
-  { minRespect: 300, title: 'Eagle of Kurdistan', badge: '🦅', description: 'Strategic visionary soaring over tactical defenses' },
-  { minRespect: 500, title: 'Lion of Kurdistan', badge: '🦁', description: 'Ferocious grandmaster feared in battle, revered in honor' },
-  { minRespect: 1000, title: 'Supreme Peshmerga Grandmaster', badge: '☀️', description: 'Living legend bearing the 21-ray Kurdish Sun of glory' }
+  { minRespect: 0, title: 'Mountain Recruit', badge: '🌾', description: 'New player learning the basics' },
+  { minRespect: 25, title: 'Desert Scout', badge: '🗡️', description: 'Getting comfortable with the game' },
+  { minRespect: 75, title: 'Zagros Vanguard', badge: '🛡️', description: 'A steady, reliable player' },
+  { minRespect: 150, title: 'Peshmerga Guardian', badge: '🌿', description: 'Plays fair and shows good sportsmanship' },
+  { minRespect: 300, title: 'Eagle of Kurdistan', badge: '🦅', description: 'Strong player with good planning' },
+  { minRespect: 500, title: 'Lion of Kurdistan', badge: '🦁', description: 'Top player, respected by everyone' },
+  { minRespect: 1000, title: 'Supreme Peshmerga Grandmaster', badge: '☀️', description: 'The highest rank on Chesskys' }
 ];
 
 export function getHonorRank(respectPoints: number | string): { title: string; badge: string; nextRank?: { title: string; pointsNeeded: number } } {

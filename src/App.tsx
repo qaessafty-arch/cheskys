@@ -357,7 +357,7 @@ export default function App() {
     }
     if (currentGame.isCheckmate()) {
       const winner = currentGame.turn() === 'w' ? 'b' : 'w';
-      return { winner, reason: `Checkmate! ${winner === 'w' ? 'White' : 'Black'} delivers tactical checkmate.` };
+      return { winner, reason: `Checkmate! ${winner === 'w' ? 'White' : 'Black'} wins by checkmate.` };
     }
     if (currentGame.isDraw()) {
       return { winner: 'draw', reason: 'Game drawn.' };
@@ -591,7 +591,7 @@ export default function App() {
       const best = findBestMove(game, 12, isWhite, 700);
       if (best.move) {
         soundManager.playCheck();
-        setHintMessage(`💡 Engine Recommendation: Play ${best.move.san} (${best.move.from} to ${best.move.to})`);
+        setHintMessage(`💡 Hint: Play ${best.move.san} (${best.move.from} to ${best.move.to})`);
         setTimeout(() => setHintMessage(null), 5000);
       }
     } catch {}
@@ -680,7 +680,7 @@ export default function App() {
         e.preventDefault();
         const nextFlip = !settingsRef.current.flipBoard;
         setSettings(s => ({ ...s, flipBoard: nextFlip }));
-        toast.info(nextFlip ? 'Board perspective: Flipped (Black)' : 'Board perspective: Standard (White)', {
+        toast.info(nextFlip ? 'Board flipped (Black at the bottom)' : 'Board reset (White at the bottom)', {
           icon: '🔄',
           duration: 1600
         });
@@ -709,7 +709,7 @@ export default function App() {
           handleResignRef.current();
           toast.error('Match resigned', { icon: '🏳️', duration: 2500 });
         } else {
-          toast.info('Use the in-game forfeit button for multiplayer matches', { icon: '🏳️', duration: 2000 });
+          toast.info('Use the Resign button in online games', { icon: '🏳️', duration: 2000 });
         }
         return;
       }
@@ -739,7 +739,7 @@ export default function App() {
       if (code === 'KeyN' || key.toLowerCase() === 'n') {
         e.preventDefault();
         setIsNewGameModalOpen(true);
-        toast.info('New game dialog', { icon: '♟️', duration: 1200 });
+        toast.info('New Game', { icon: '♟️', duration: 1200 });
         return;
       }
 
@@ -939,7 +939,7 @@ export default function App() {
                     <div className="px-1 flex items-center justify-between">
                       <CapturedPieces pieces={isBoardFlipped ? capturedMaterial.capturedByBlack : capturedMaterial.capturedByWhite} pieceTheme={settings.pieceTheme} colorOfCapturedPieces={isBoardFlipped ? 'w' : 'b'} materialAdvantage={isBoardFlipped ? (capturedMaterial.materialDifference < 0 ? Math.abs(capturedMaterial.materialDifference) : 0) : (capturedMaterial.materialDifference > 0 ? capturedMaterial.materialDifference : 0)} />
                       {isAiThinking && !isBoardFlipped && (
-                        <div className="flex items-center gap-2 text-[10px] text-[var(--secondary-accent)] font-black uppercase tracking-widest animate-pulse px-3 py-1 rounded-full bg-[var(--app-bg)] border border-[var(--secondary-accent)]/30 shadow-lg"><span className="w-1.5 h-1.5 rounded-full bg-[var(--secondary-accent)] animate-ping" /><span>Calculating Path...</span></div>
+                        <div className="flex items-center gap-2 text-[10px] text-[var(--secondary-accent)] font-black uppercase tracking-widest animate-pulse px-3 py-1 rounded-full bg-[var(--app-bg)] border border-[var(--secondary-accent)]/30 shadow-lg"><span className="w-1.5 h-1.5 rounded-full bg-[var(--secondary-accent)] animate-ping" /><span>Thinking...</span></div>
                       )}
                     </div>
                   </div>
@@ -959,7 +959,7 @@ export default function App() {
                     <div className="px-1 flex items-center justify-between">
                       <CapturedPieces pieces={isBoardFlipped ? capturedMaterial.capturedByWhite : capturedMaterial.capturedByBlack} pieceTheme={settings.pieceTheme} colorOfCapturedPieces={isBoardFlipped ? 'b' : 'w'} materialAdvantage={isBoardFlipped ? (capturedMaterial.materialDifference > 0 ? capturedMaterial.materialDifference : 0) : (capturedMaterial.materialDifference < 0 ? Math.abs(capturedMaterial.materialDifference) : 0)} />
                       {isAiThinking && isBoardFlipped && (
-                        <div className="flex items-center gap-2 text-[10px] text-[#FFD700] font-black uppercase tracking-widest animate-pulse px-3 py-1 rounded-full bg-white/5 border border-[#FFD700]/30 shadow-lg backdrop-blur-md"><span className="w-1.5 h-1.5 rounded-full bg-[#FFD700] animate-ping" /><span>Calculating Path...</span></div>
+                        <div className="flex items-center gap-2 text-[10px] text-[#FFD700] font-black uppercase tracking-widest animate-pulse px-3 py-1 rounded-full bg-white/5 border border-[#FFD700]/30 shadow-lg backdrop-blur-md"><span className="w-1.5 h-1.5 rounded-full bg-[#FFD700] animate-ping" /><span>Thinking...</span></div>
                       )}
                     </div>
                     <GlassCard intensity="low" className="p-3 !rounded-2xl border-white/10">
@@ -978,12 +978,12 @@ export default function App() {
                       <button onClick={() => setActiveTacticalTab('moves')} className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-2xl text-xs font-black uppercase tracking-wider transition-all relative min-w-0 ${activeTacticalTab === 'moves' ? 'text-black' : 'text-[#94A3B8] hover:text-white'}`}>
                         {activeTacticalTab === 'moves' && <motion.div layoutId="tactical-tab-bg" className="absolute inset-0 bg-[var(--secondary-accent)] rounded-2xl shadow-lg shadow-[var(--secondary-accent)]/20" transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }} />}
                         <Layers className="w-3.5 h-3.5 relative z-10" />
-                        <span className="relative z-10">Battle Log</span>
+                        <span className="relative z-10">Moves</span>
                       </button>
                       <button onClick={() => setActiveTacticalTab('chat')} className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-2xl text-xs font-black uppercase tracking-wider transition-all relative min-w-0 ${activeTacticalTab === 'chat' ? 'text-black' : 'text-[#94A3B8] hover:text-white'}`}>
                         {activeTacticalTab === 'chat' && <motion.div layoutId="tactical-tab-bg" className="absolute inset-0 bg-[var(--secondary-accent)] rounded-2xl shadow-lg shadow-[var(--secondary-accent)]/20" transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }} />}
                         <MessageSquare className="w-3.5 h-3.5 relative z-10" />
-                        <span className="relative z-10">Match Chat</span>
+                        <span className="relative z-10">Chat</span>
                         {unreadChatCount > 0 && activeTacticalTab !== 'chat' && (
                           <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center animate-bounce shadow-lg border-2 border-[var(--app-bg)] relative z-20">{unreadChatCount}</span>
                         )}
@@ -1013,8 +1013,8 @@ export default function App() {
                   <div className="flex items-center gap-3">
                     <div className="w-2.5 h-2.5 rounded-full bg-[var(--secondary-accent)] gold-glow" />
                     <div className="flex flex-col">
-                      <span className="text-[10px] font-black text-white uppercase tracking-widest leading-none">{activeMode === 'ai' ? `VS ${currentBot.name}` : 'Local Session'}</span>
-                      <span className="text-[9px] font-mono text-[#94A3B8] mt-1">Active Simulation • 60 FPS</span>
+                      <span className="text-[10px] font-black text-white uppercase tracking-widest leading-none">{activeMode === 'ai' ? `VS ${currentBot.name}` : 'Local Game'}</span>
+                      <span className="text-[9px] font-mono text-[#94A3B8] mt-1">Game in progress</span>
                     </div>
                   </div>
                   <div className="px-3 py-1.5 rounded-lg bg-[var(--app-bg)] border border-[var(--glass-border)] text-[10px] font-black text-[var(--secondary-accent)] uppercase tracking-tighter">{timeControl.name}</div>

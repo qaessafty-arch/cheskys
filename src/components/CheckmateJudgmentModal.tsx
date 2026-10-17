@@ -16,7 +16,7 @@ export const CheckmateJudgmentModal: React.FC<CheckmateJudgmentModalProps> = ({
   onExecute,
   onMercy,
   onClose,
-  winnerName = 'Commander',
+  winnerName = 'Player',
   opponentName = 'Opponent'
 }) => {
   const triggerConfetti = (colors: string[]) => {
@@ -66,14 +66,14 @@ export const CheckmateJudgmentModal: React.FC<CheckmateJudgmentModalProps> = ({
         </div>
 
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EF4444]/10 border border-[#EF4444]/30 text-[#EF4444] text-[10px] font-black uppercase tracking-widest mb-4">
-          <span>⚔️ Tactical Superiority Verified</span>
+          <span>⚔️ Checkmate!</span>
         </div>
 
         <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight mb-2 uppercase">
-          Final Judgment
+          You Won. Choose an Ending
         </h2>
         <p className="text-[11px] font-black text-[#94A3B8] uppercase tracking-[0.2em] mb-8 opacity-70 max-w-sm mx-auto leading-relaxed">
-          Opponent <strong className="text-white">{opponentName}</strong> has been cornered. Deliver the strike or show supreme restraint.
+          Opponent <strong className="text-white">{opponentName}</strong> is checkmated. Choose Execute or Show Mercy.
         </p>
 
         {/* Dual Choice Grid */}
@@ -90,19 +90,19 @@ export const CheckmateJudgmentModal: React.FC<CheckmateJudgmentModalProps> = ({
                   <Sword className="w-5 h-5" />
                 </span>
                 <span className="text-[10px] font-black text-[#EF4444] bg-[#EF4444]/10 px-2 py-0.5 rounded-lg border border-[#EF4444]/20">
-                  DECISIVE
+                  MORE RATING
                 </span>
               </div>
               <h3 className="font-black text-xs text-white group-hover:text-[#EF4444] transition-colors uppercase tracking-wider">
                 Execute
               </h3>
               <p className="text-[10px] font-black text-[#94A3B8] mt-1 leading-normal uppercase opacity-60">
-                Cold, decisive. Full rating swing. No honor.
+                Take the full win. More rating, no Respect.
               </p>
             </div>
             <div className="w-full mt-4 pt-3 border-t border-[#1F293D] flex items-center justify-between text-[9px] font-black uppercase tracking-tighter">
               <span className="text-[#94A3B8]">Reward</span>
-              <span className="text-[#EF4444]">+15 ELO · +0 Honor</span>
+              <span className="text-[#EF4444]">+15 ELO · +0 Respect</span>
             </div>
           </GlassButton>
 
@@ -118,19 +118,19 @@ export const CheckmateJudgmentModal: React.FC<CheckmateJudgmentModalProps> = ({
                   <HeartHandshake className="w-5 h-5" />
                 </span>
                 <span className="text-[10px] font-black text-[#10B981] bg-[#10B981]/10 px-2 py-0.5 rounded-lg border border-[#10B981]/20">
-                  LEGENDARY
+                  MORE RESPECT
                 </span>
               </div>
               <h3 className="font-black text-xs text-white group-hover:text-[#10B981] transition-colors uppercase tracking-wider">
                 Show Mercy
               </h3>
               <p className="text-[10px] font-black text-[#94A3B8] mt-1 leading-normal uppercase opacity-60">
-                Spare opponent. Modest rating, high honor.
+                Spare your opponent. Less rating, more Respect.
               </p>
             </div>
             <div className="w-full mt-4 pt-3 border-t border-[#1F293D] flex items-center justify-between text-[9px] font-black uppercase tracking-tighter">
               <span className="text-[#94A3B8]">Bonus</span>
-              <span className="text-[#F59E0B]">+5 ELO · +12 Honor</span>
+              <span className="text-[#F59E0B]">+5 ELO · +12 Respect</span>
             </div>
           </GlassButton>
         </div>

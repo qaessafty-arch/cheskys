@@ -32,7 +32,7 @@ export const FriendDetails: React.FC<FriendDetailsProps> = ({
         </div>
         <h4 className="text-sm font-bold text-white">Select a Friend</h4>
         <p className="text-xs text-[#DFD0B0]/60 max-w-xs">
-          Click any tactician from your list on the left to inspect their Elo ratings, alliance rank, and challenge them to a live match.
+          Click a friend in your list to see their rating and rank, or challenge them to a game.
         </p>
       </div>
     );
@@ -53,7 +53,7 @@ export const FriendDetails: React.FC<FriendDetailsProps> = ({
               />
             ) : (
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#52673A] to-[#8C2425] border-2 border-[#F5C453] flex items-center justify-center text-xl font-black text-white shadow-lg">
-                {friend.displayName ? friend.displayName.charAt(0).toUpperCase() : 'T'}
+                {friend.displayName ? friend.displayName.charAt(0).toUpperCase() : 'P'}
               </div>
             )}
             <div className="absolute -bottom-1 -right-1">
@@ -63,7 +63,7 @@ export const FriendDetails: React.FC<FriendDetailsProps> = ({
 
           <div className="min-w-0 flex-1">
             <h3 className="text-base font-black text-white truncate">
-              {friend.displayName || 'Tactician'}
+              {friend.displayName || 'Player'}
             </h3>
             {friend.username && (
               <p className="text-xs font-mono text-[#F5C453]">

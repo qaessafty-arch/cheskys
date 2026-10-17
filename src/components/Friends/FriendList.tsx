@@ -37,7 +37,7 @@ export const FriendList: React.FC<FriendListProps> = ({
         </div>
         <h4 className="text-sm font-bold text-white">No Friends Found</h4>
         <p className="text-xs text-[#DFD0B0]/60 max-w-xs">
-          Your social realm is empty or no player matched your filter. Invite other tacticians to join your alliance!
+          You have no friends here yet, or no one matches your search. Add friends to play with them!
         </p>
         <button
           type="button"

@@ -88,7 +88,7 @@ export const ModernSpectatorWidget: React.FC<ModernSpectatorWidgetProps> = ({
           {isFollowing ? (
             <>
               <Check className="w-3 h-3 text-emerald-400" />
-              <span>Subscribed</span>
+              <span>Following</span>
             </>
           ) : (
             <>

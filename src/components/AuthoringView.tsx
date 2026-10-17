@@ -360,7 +360,7 @@ export const AuthoringView: React.FC<AuthoringViewProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-xl sm:text-2xl font-black font-heading text-white tracking-tight">
-                Chesskys Creator Studio
+                Chesskys Theme Editor
               </h2>
               <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#8C2425] text-white border border-[#F5C453]/40 uppercase tracking-wider">
                 Authoring Hub
@@ -712,7 +712,7 @@ export const AuthoringView: React.FC<AuthoringViewProps> = ({
               {/* Description / Tactical Clue */}
               <div className="space-y-1.5">
                 <label htmlFor="authoring-description" className="text-xs font-bold text-[#DFD0B0] block">
-                  Description &amp; Tactical Lore
+                  Description &amp; Notes
                 </label>
                 <textarea
                   id="authoring-description"

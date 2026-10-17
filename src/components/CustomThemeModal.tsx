@@ -198,21 +198,21 @@ export const CustomThemeModal: React.FC<CustomThemeModalProps> = ({
               </div>
               <h2 className="text-xl font-bold text-white font-heading">
                 {isPresetCloned
-                  ? 'Duplicate & Customize Theme'
+                  ? 'Copy and Edit Theme'
                   : initialTheme
                   ? 'Edit Custom Theme'
-                  : 'Theme Creator'}
+                  : 'Theme Editor'}
               </h2>
             </div>
             <p className="text-xs text-white/60">
-              Personalize colors, ambient glows, buttons, and chessboard styling
+              Change the app colors, buttons and board colors
             </p>
           </div>
 
           <button
             onClick={handleRandomize}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.08] hover:bg-white/[0.14] text-white/90 text-xs font-semibold border border-white/15 transition-all shadow-sm active:scale-95"
-            title="Generate harmonious palette"
+            title="Pick random colors that go well together"
           >
             <Wand2 className="w-3.5 h-3.5 text-yellow-400" />
             <span>Randomize</span>
@@ -224,8 +224,8 @@ export const CustomThemeModal: React.FC<CustomThemeModalProps> = ({
           <div className="mb-4 p-3 rounded-2xl bg-[#52673A]/20 border border-[#F5C453]/40 flex items-center gap-2.5 text-xs text-[#DFD0B0]">
             <span className="text-base">🔒</span>
             <div className="leading-tight">
-              <strong className="text-[#F5C453] font-bold">Protected Master Theme: </strong>
-              The original preset remains permanent and untouched. You can modify any colors below and save this as your own custom edition.
+              <strong className="text-[#F5C453] font-bold">Built-in Theme: </strong>
+              The original theme will not change. Edit the colors below and save it as your own copy.
             </div>
           </div>
         )}
@@ -362,8 +362,8 @@ export const CustomThemeModal: React.FC<CustomThemeModalProps> = ({
           <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-md">
             <div className="flex items-center justify-between mb-2">
               <div>
-                <span className="text-xs font-bold text-white block">Primary Accent</span>
-                <span className="text-[11px] text-white/50">Used for main buttons, glows, highlights</span>
+                <span className="text-xs font-bold text-white block">Main Color</span>
+                <span className="text-[11px] text-white/50">Used for main buttons and highlights</span>
               </div>
               <div className="flex items-center gap-2">
                 <input
@@ -401,8 +401,8 @@ export const CustomThemeModal: React.FC<CustomThemeModalProps> = ({
           <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-md">
             <div className="flex items-center justify-between mb-2">
               <div>
-                <span className="text-xs font-bold text-white block">Secondary Accent</span>
-                <span className="text-[11px] text-white/50">Used for gradient transitions & secondary glows</span>
+                <span className="text-xs font-bold text-white block">Second Color</span>
+                <span className="text-[11px] text-white/50">Used for color blends and smaller highlights</span>
               </div>
               <div className="flex items-center gap-2">
                 <input
@@ -440,8 +440,8 @@ export const CustomThemeModal: React.FC<CustomThemeModalProps> = ({
           <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-md">
             <div className="flex items-center justify-between mb-2">
               <div>
-                <span className="text-xs font-bold text-white block">App Background Base</span>
-                <span className="text-[11px] text-white/50">Deep dark canvas background</span>
+                <span className="text-xs font-bold text-white block">App Background</span>
+                <span className="text-[11px] text-white/50">The color behind everything</span>
               </div>
               <div className="flex items-center gap-2">
                 <input
@@ -479,8 +479,8 @@ export const CustomThemeModal: React.FC<CustomThemeModalProps> = ({
           <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-md">
             <div className="flex items-center justify-between mb-3">
               <div>
-                <span className="text-xs font-bold text-white block">Chessboard Squares & Border</span>
-                <span className="text-[11px] text-white/50">Coordinate board tones with your theme</span>
+                <span className="text-xs font-bold text-white block">Board Colors</span>
+                <span className="text-[11px] text-white/50">Pick board colors that match your theme</span>
               </div>
             </div>
 
@@ -585,7 +585,7 @@ export const CustomThemeModal: React.FC<CustomThemeModalProps> = ({
             <textarea
               value={importExportJson}
               onChange={e => setImportExportJson(e.target.value)}
-              placeholder="Paste Theme JSON configuration here..."
+              placeholder="Paste theme JSON here..."
               rows={4}
               className="w-full p-2.5 rounded-xl bg-black/60 border border-white/10 font-mono text-[11px] text-white/90 focus:outline-none focus:border-blue-400 mb-2"
             />
@@ -600,7 +600,7 @@ export const CustomThemeModal: React.FC<CustomThemeModalProps> = ({
                 onClick={handleImportJson}
                 className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white"
               >
-                Apply Imported JSON
+                Use This JSON
               </button>
             </div>
           </div>
@@ -612,7 +612,7 @@ export const CustomThemeModal: React.FC<CustomThemeModalProps> = ({
             <button
               onClick={handleExportJson}
               className="py-2.5 px-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-xs font-semibold text-white/80 hover:text-white flex items-center gap-1.5 transition-all"
-              title="Export theme configuration as JSON"
+              title="Copy or paste this theme as JSON"
             >
               <Download className="w-3.5 h-3.5 text-blue-400" />
               <span className="hidden sm:inline">Export / Import</span>

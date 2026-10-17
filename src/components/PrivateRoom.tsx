@@ -85,14 +85,14 @@ export const PrivateRoom: React.FC<PrivateRoomProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl sm:text-2xl font-black uppercase tracking-wider text-white">
-                Private Arena
+                Private Room
               </h1>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-[#F5C453]/20 text-[#F5C453] border border-[#F5C453]/30">
-                1v1 Duel
+                1v1 Game
               </span>
             </div>
             <p className="text-xs sm:text-sm text-white/50 mt-1">
-              Host custom battles with room codes or challenge allies directly.
+              Create a room and share the code, or invite a friend to play.
             </p>
           </div>
         </div>
@@ -128,7 +128,7 @@ export const PrivateRoom: React.FC<PrivateRoomProps> = ({
           >
             <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-[#F5C453]">
               <Sparkles className="w-4 h-4" />
-              <span>Pending Direct Challenges ({incomingInvites.length})</span>
+              <span>Game Invites ({incomingInvites.length})</span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {incomingInvites.map((invite) => (
@@ -158,17 +158,17 @@ export const PrivateRoom: React.FC<PrivateRoomProps> = ({
               <Crown className="w-6 h-6" />
             </div>
             <h3 className="text-lg font-black uppercase tracking-wider text-white">
-              Host a Battle
+              Create Room
             </h3>
             <p className="text-xs text-white/60 leading-relaxed">
-              Create a custom private room, pick your desired time controls, preferred side, and rated status. Share your 6-digit code or invite friends from your social roster.
+              Create a private room and choose the time control, your color, and rated or casual. Share the 6-character code or invite a friend from your friends list.
             </p>
           </div>
 
           <div className="space-y-3 pt-2">
             <div className="flex items-center gap-3 text-xs text-white/50 font-mono">
               <span className="flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-[#F5C453]" /> 1m - 30m formats
+                <Clock className="w-3.5 h-3.5 text-[#F5C453]" /> 1 to 30 minute games
               </span>
               <span>·</span>
               <span className="flex items-center gap-1">
@@ -180,7 +180,7 @@ export const PrivateRoom: React.FC<PrivateRoomProps> = ({
               onClick={() => setIsCreateOpen(true)}
               className="w-full py-3.5 rounded-xl bg-[#F5C453] text-[#05070A] text-xs font-black uppercase tracking-widest hover:brightness-110 shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
             >
-              <span>Setup Waiting Room</span>
+              <span>Create Room</span>
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
@@ -193,18 +193,18 @@ export const PrivateRoom: React.FC<PrivateRoomProps> = ({
               <LogIn className="w-6 h-6" />
             </div>
             <h3 className="text-lg font-black uppercase tracking-wider text-white">
-              Join with Code
+              Join by Code
             </h3>
             <p className="text-xs text-white/60 leading-relaxed">
-              Have a friend waiting for you? Enter their unique 6-character room code to instantly connect and take your seat as the challenger.
+              Got a code from a friend? Enter their 6-character room code to join their game.
             </p>
           </div>
 
           <div className="space-y-3 pt-2">
             <div className="flex items-center gap-3 text-xs text-white/50 font-mono">
-              <span>Instant synchronization</span>
+              <span>Join instantly</span>
               <span>·</span>
-              <span>Sub-second match startup</span>
+              <span>Game starts right away</span>
             </div>
             <button
               type="button"

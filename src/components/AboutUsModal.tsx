@@ -29,9 +29,9 @@ interface AboutUsModalProps {
 
 const FALLBACK_CONFIG: AboutUsConfig = {
   appName: "Chesskys PRO",
-  tagline: "The Ultimate Kurdish Chess Experience",
-  founderNote: "Forged in the heart of the Zagros mountains, Chesskys PRO is more than just a game—it's a tribute to the enduring spirit of the Peshmerga and the intellectual heritage of Kurdistan.",
-  visionParagraphs: "Our vision is to unite the global Kurdish diaspora through the royal game. We combine cutting-edge engine technology with cultural lore to create a battlefield where honor and intelligence reign supreme.",
+  tagline: "Kurdish Chess, Online",
+  founderNote: "Made in Kurdistan, Chesskys PRO is a chess app that celebrates Kurdish culture, the Peshmerga and the Zagros mountains.",
+  visionParagraphs: "We want to bring Kurdish players around the world together through chess. The app mixes a strong chess engine with Kurdish themes and stories, and rewards fair play.",
   socialLinks: {
     discord: "https://discord.gg/chesskys",
     github: "https://github.com/qayssafty",
@@ -39,7 +39,7 @@ const FALLBACK_CONFIG: AboutUsConfig = {
     telegram: "https://t.me/chesskys"
   },
   credits: "Developed with passion by Qays Safty. Special thanks to the Peshmerga Vanguard community for their continuous support and testing.",
-  announcementBanner: "Welcome to the Grand Arena of Kurdistan!"
+  announcementBanner: "Welcome to Chesskys!"
 };
 
 export const AboutUsModal: React.FC<AboutUsModalProps> = ({ isOpen, onClose }) => {
@@ -151,7 +151,7 @@ export const AboutUsModal: React.FC<AboutUsModalProps> = ({ isOpen, onClose }) =
                 </div>
                 <div>
                   <div className="text-xs text-slate-500 font-bold uppercase">Security</div>
-                  <div className="text-sm text-slate-200">Military Grade</div>
+                  <div className="text-sm text-slate-200">Secure Sign-In</div>
                 </div>
               </div>
               <div className="p-4 bg-[#0B0F19] border border-[#1F293D] rounded-xl flex items-center gap-3">
@@ -160,7 +160,7 @@ export const AboutUsModal: React.FC<AboutUsModalProps> = ({ isOpen, onClose }) =
                 </div>
                 <div>
                   <div className="text-xs text-slate-500 font-bold uppercase">Community</div>
-                  <div className="text-sm text-slate-200">Kurdish Vanguard</div>
+                  <div className="text-sm text-slate-200">Kurdish Players</div>
                 </div>
               </div>
             </div>
@@ -209,7 +209,7 @@ export const AboutUsModal: React.FC<AboutUsModalProps> = ({ isOpen, onClose }) =
             <section className="pt-6 border-t border-[#1F293D]">
                <div className="flex items-center gap-2 text-slate-500 mb-2">
                  <Code size={16} />
-                 <span className="text-xs font-bold uppercase tracking-widest">Architectural Credits</span>
+                 <span className="text-xs font-bold uppercase tracking-widest">Credits</span>
                </div>
                <p className="text-slate-500 text-sm italic">
                  {config.credits}
@@ -221,13 +221,13 @@ export const AboutUsModal: React.FC<AboutUsModalProps> = ({ isOpen, onClose }) =
           <div className="p-6 bg-[#0B0F19]/50 border-t border-[#1F293D] flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span className="text-xs text-slate-500 font-medium">Systems Nominal</span>
+              <span className="text-xs text-slate-500 font-medium">All Systems Working</span>
             </div>
             <button
               onClick={onClose}
               className="px-6 py-2 bg-gradient-to-r from-amber-500 to-[#F59E0B] rounded-lg text-black font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-transform"
             >
-              Back to Arena
+              Close
             </button>
           </div>
         </motion.div>

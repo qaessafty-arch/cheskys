@@ -141,7 +141,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
 
       const configRef = doc(db, 'system_configs', 'aboutUs');
       await safeSetDoc(configRef, sanitized);
-      showSuccess("About Us CMS Published Successfully!");
+      showSuccess("About Us page saved!");
     } catch (err) {
       console.error("CMS Save error:", err);
     } finally {
@@ -268,14 +268,14 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                  Developer Command Center <span className="text-[#F5C453] font-mono">[Dev Set]</span>
+                  Developer Settings <span className="text-[#F5C453] font-mono">[Dev Set]</span>
                 </h2>
                 <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-[10px] font-black border border-amber-400/40 uppercase">
-                  👑 Founder #0 Access
+                  👑 Owner Access
                 </span>
               </div>
               <p className="text-xs text-[#DFD0B0]/70">
-                Owner Account: <span className="text-[#F5C453] font-mono font-bold">qayssafty@gmail.com</span> • Roles & Badge Number Engine (#0 Dev, #1-#9 VIP/Admin, #10+ Users)
+                Owner Account: <span className="text-[#F5C453] font-mono font-bold">qayssafty@gmail.com</span> • Roles and badge numbers (#0 Owner, #1-#9 VIP/Admin, #10+ Players)
               </p>
             </div>
           </div>
@@ -287,7 +287,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
               title="Refresh Data"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loadingUsers ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Sync Cloud</span>
+              <span className="hidden sm:inline">Refresh</span>
             </button>
           </div>
         </div>
@@ -311,7 +311,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
             }`}
           >
             <Shield className="w-4 h-4" />
-            <span>1. User Permissions & Roles</span>
+            <span>1. Users and Roles</span>
           </button>
 
           <button
@@ -323,7 +323,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
             }`}
           >
             <Sparkles className="w-4 h-4" />
-            <span>2. About Us CMS</span>
+            <span>2. About Us Page</span>
           </button>
 
           <button
@@ -335,7 +335,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
             }`}
           >
             <Database className="w-4 h-4" />
-            <span>3. System & Maintenance</span>
+            <span>3. Tools</span>
           </button>
         </div>
 
@@ -351,7 +351,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                 <div className="flex items-center gap-2">
                   <Award className="w-4 h-4 text-[#F5C453]" />
                   <h3 className="text-xs font-black uppercase tracking-wider text-[#F5C453]">
-                    Official Badge Number & Role Protocol
+                    How Badge Numbers Work
                   </h3>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
@@ -361,7 +361,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                       <span className="text-[10px] px-1.5 rounded bg-amber-400/20 text-amber-300">LOCKED</span>
                     </div>
                     <p className="text-[11px] text-[#DFD0B0]/70 mt-0.5">
-                      Reserved exclusively for Founder & Developer (<span className="text-[#F5C453] font-mono font-bold">qayssafty@gmail.com</span>). Complete master control.
+                      Only for the owner and developer (<span className="text-[#F5C453] font-mono font-bold">qayssafty@gmail.com</span>). Full access.
                     </p>
                   </div>
 
@@ -371,7 +371,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                       <span className="text-[10px] px-1.5 rounded bg-purple-400/20 text-purple-300">DEV ASSIGNED</span>
                     </div>
                     <p className="text-[11px] text-[#DFD0B0]/70 mt-0.5">
-                      Elite Admin & VIP slots that the developer can grant to trusted admins, grandmasters, or champions.
+                      Admin and VIP badges the developer can give to trusted players.
                     </p>
                   </div>
 
@@ -381,7 +381,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                       <span className="text-[10px] px-1.5 rounded bg-sky-400/20 text-sky-300">AUTO-INCREMENT</span>
                     </div>
                     <p className="text-[11px] text-[#DFD0B0]/70 mt-0.5">
-                      All new accounts automatically receive sequential warrior badges (#10, #11, #12...) upon joining.
+                      New accounts get the next badge number (#10, #11, #12...) when they join.
                     </p>
                   </div>
                 </div>
@@ -394,7 +394,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                     <div className="flex items-center gap-2">
                       <Edit3 className="w-4 h-4 text-[#F5C453]" />
                       <h4 className="text-sm font-black text-white">
-                        Configure Permissions for: <span className="text-[#F5C453]">{selectedUser.displayName}</span>
+                        Edit User: <span className="text-[#F5C453]">{selectedUser.displayName}</span>
                       </h4>
                     </div>
                     <button
@@ -408,18 +408,18 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <label className="text-[11px] text-[#DFD0B0]/80 font-bold block mb-1">
-                        Role Assignment
+                        Role
                       </label>
                       <select
                         value={editRole}
                         onChange={(e) => setEditRole(e.target.value as UserRole)}
                         className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-xs font-bold outline-none focus:border-[#F5C453]"
                       >
-                        <option value="owner" className="bg-[#161c12]">👑 Owner (Founder / Supreme)</option>
-                        <option value="admin" className="bg-[#161c12]">🛡️ Admin (System Moderator)</option>
-                        <option value="grandmaster" className="bg-[#161c12]">⚡ Grandmaster / Champion</option>
+                        <option value="owner" className="bg-[#161c12]">👑 Owner</option>
+                        <option value="admin" className="bg-[#161c12]">🛡️ Admin</option>
+                        <option value="grandmaster" className="bg-[#161c12]">⚡ Grandmaster</option>
                         <option value="moderator" className="bg-[#161c12]">⚔️ Moderator</option>
-                        <option value="member" className="bg-[#161c12]">☀️ Member / Warrior</option>
+                        <option value="member" className="bg-[#161c12]">☀️ Member</option>
                       </select>
                     </div>
 
@@ -454,7 +454,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                   {/* Preset Buttons for Badges #1 to #9 */}
                   <div className="pt-1">
                     <label className="text-[10px] text-[#DFD0B0]/60 font-bold uppercase block mb-1">
-                      Quick Grant Reserved VIP/Admin Badges (#1 to #9):
+                      Give an Admin Badge (#1 to #9):
                     </label>
                     <div className="flex flex-wrap gap-1.5">
                       {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
@@ -490,7 +490,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                       className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-[#52673A] hover:from-emerald-500 text-white text-xs font-bold border border-emerald-400 shadow-md flex items-center gap-1.5"
                     >
                       <Check className="w-3.5 h-3.5" />
-                      <span>Commit Permissions & Badge</span>
+                      <span>Save Changes</span>
                     </button>
                   </div>
                 </div>
@@ -514,18 +514,18 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                   <table className="w-full text-left text-xs text-white">
                     <thead className="bg-white/5 uppercase text-[10px] text-[#DFD0B0]/70 font-bold border-b border-white/10">
                       <tr>
-                        <th className="p-3">Player / Identity</th>
+                        <th className="p-3">Player</th>
                         <th className="p-3">Role</th>
                         <th className="p-3">Badge Number</th>
                         <th className="p-3">Rating / Respect</th>
-                        <th className="p-3 text-right">Developer Actions</th>
+                        <th className="p-3 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
                       {filteredUsers.length === 0 ? (
                         <tr>
                           <td colSpan={5} className="p-6 text-center text-[#DFD0B0]/60">
-                            No registered player records found.
+                            No players found.
                           </td>
                         </tr>
                       ) : (
@@ -544,7 +544,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                                   />
                                   <div>
                                     <div className="font-black text-white flex items-center gap-1.5">
-                                      <span>{u.displayName || 'Anonymous Warrior'}</span>
+                                      <span>{u.displayName || 'Anonymous Player'}</span>
                                       {isDevAccount && (
                                         <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[9px] font-black border border-amber-400/40">
                                           👑 OWNER #0
@@ -631,8 +631,8 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                       <Sparkles className="w-6 h-6" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-black text-white uppercase tracking-tight">System Lore Engine</h3>
-                      <p className="text-xs text-slate-400 uppercase tracking-widest font-mono">Dynamic About Us Editor</p>
+                      <h3 className="text-lg font-black text-white uppercase tracking-tight">About Us Page</h3>
+                      <p className="text-xs text-slate-400 uppercase tracking-widest font-mono">Edit the About Us page</p>
                     </div>
                   </div>
                   <button
@@ -648,14 +648,14 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                 {!aboutUsData || isCmsLoading ? (
                   <div className="py-20 text-center space-y-3">
                     <RefreshCw className="w-10 h-10 text-amber-500/30 animate-spin mx-auto" />
-                    <p className="text-slate-500 font-mono text-xs uppercase tracking-widest">Hydrating CMS Schema...</p>
+                    <p className="text-slate-500 font-mono text-xs uppercase tracking-widest">Loading...</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Editor Side */}
                     <div className="space-y-6">
                       <div className="space-y-4">
-                        <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-[0.2em]">Primary Identity</h4>
+                        <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-[0.2em]">Basic Info</h4>
                         <div className="space-y-3">
                            <input
                             type="text"
@@ -704,7 +704,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                         <div className="space-y-3">
                           <input
                             type="text"
-                            placeholder="Architectural Credits"
+                            placeholder="Credits"
                             value={aboutUsData.credits}
                             onChange={(e) => setAboutUsData({...aboutUsData, credits: e.target.value})}
                             className="w-full px-4 py-3 rounded-xl bg-[#0B0F19] border border-[#1F293D] text-slate-500 text-xs focus:border-amber-500/50 outline-none transition-all"
@@ -752,7 +752,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
 
                     {/* Preview Side */}
                     <div className="space-y-4">
-                      <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Live Preview Context</h4>
+                      <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Preview</h4>
                       <div className="rounded-3xl bg-[#0B0F19] border border-[#F59E0B]/20 p-6 shadow-2xl relative overflow-hidden pointer-events-none scale-[0.85] origin-top">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-[60px] rounded-full" />
                         <div className="relative space-y-6">
@@ -771,7 +771,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                             </div>
                           </div>
                           <div className="pt-4 border-t border-[#1F293D] flex items-center justify-between">
-                            <span className="text-[9px] font-mono text-slate-600 uppercase tracking-[0.2em]">CMS ACTIVE</span>
+                            <span className="text-[9px] font-mono text-slate-600 uppercase tracking-[0.2em]">PREVIEW</span>
                             <div className="flex gap-2 text-slate-700">
                               <Globe size={14} />
                               <Heart size={14} />
@@ -807,7 +807,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                     maintenanceSubTab === 'database' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20' : 'text-slate-500 hover:text-slate-300'
                   }`}
                 >
-                  Cloud DB Explorer
+                  Database
                 </button>
                 <button
                   onClick={() => setMaintenanceSubTab('switcher')}
@@ -815,7 +815,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                     maintenanceSubTab === 'switcher' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20' : 'text-slate-500 hover:text-slate-300'
                   }`}
                 >
-                  Persona Switcher
+                  Switch Account
                 </button>
                 <button
                   onClick={() => setMaintenanceSubTab('stickers')}
@@ -855,7 +855,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                   {filteredFeedbacks.length === 0 ? (
                     <div className="p-8 text-center rounded-2xl bg-white/[0.02] border border-white/10 space-y-2 mt-4">
                       <MessageSquare className="w-8 h-8 mx-auto text-[#DFD0B0]/40" />
-                      <p className="text-xs text-[#DFD0B0]/60">No feedback submissions found in this category.</p>
+                      <p className="text-xs text-[#DFD0B0]/60">No feedback here.</p>
                     </div>
                   ) : (
                     <div className="space-y-3 mt-4">
@@ -960,11 +960,11 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                   {/* Stats Overrider */}
                   <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3">
                     <h3 className="text-xs font-black uppercase tracking-wider text-[#F5C453]">
-                      Direct Rating & Honor Modifier
+                      Change Rating and Respect
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="text-[11px] text-[#DFD0B0]/80 font-bold block mb-1">Select Target Player</label>
+                        <label className="text-[11px] text-[#DFD0B0]/80 font-bold block mb-1">Choose a Player</label>
                         <select
                           value={targetUid}
                           onChange={(e) => {
@@ -978,7 +978,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                           <option value="">-- Choose User --</option>
                           {usersList.map(u => (
                             <option key={u.uid} value={u.uid} className="bg-[#161c12]">
-                              {u.displayName || 'Warrior'} ({u.email || u.uid})
+                              {u.displayName || 'Player'} ({u.email || u.uid})
                             </option>
                           ))}
                         </select>
@@ -1010,7 +1010,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                         disabled={!targetUid}
                         className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 text-white text-xs font-black border border-amber-400/40 shadow-lg disabled:opacity-40"
                       >
-                        Apply Stats Override
+                        Save Rating and Respect
                       </button>
                     </div>
                   </div>
@@ -1018,7 +1018,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                   {/* Persona Switcher */}
                   <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3">
                     <h3 className="text-xs font-black uppercase tracking-wider text-[#F5C453]">
-                      One-Click Persona Switcher
+                      Switch Account
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {/* Founder & Developer Persona */}
@@ -1079,14 +1079,14 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
             <span className="text-[11px] text-emerald-400 font-bold uppercase tracking-widest">
-              Security Protocol Level 4 Active
+              Developer Mode On
             </span>
           </div>
           <button
             onClick={onClose}
             className="px-6 py-2 rounded-xl bg-[#111827] border border-[#1F293D] text-slate-300 text-xs font-black uppercase tracking-widest hover:text-white hover:bg-[#1F293D] transition-all"
           >
-            Exit Console
+            Close
           </button>
         </div>
       </div>

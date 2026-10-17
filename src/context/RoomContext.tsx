@@ -227,7 +227,7 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 },
                 room.settings.color,
                 cleanCode,
-                { uid: room.opponentId || '', displayName: room.opponentName || 'Challenger', elo: room.opponentElo || 1200 }
+                { uid: room.opponentId || '', displayName: room.opponentName || 'Opponent', elo: room.opponentElo || 1200 }
               );
 
               await safeUpdateDoc(doc(db, 'rooms', cleanCode), {
@@ -377,8 +377,8 @@ export const RoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await safeAddDoc(collection(db, 'notifications'), {
       userId: friendUid,
       type: 'room_invite',
-      title: 'Celestial Invitation',
-      message: `You are invited to join a private trial in room ${roomCode}`,
+      title: 'Game Invite',
+      message: `You are invited to a private game in room ${roomCode}`,
       roomCode: roomCode,
       isRead: false,
       createdAt: serverTimestamp(),

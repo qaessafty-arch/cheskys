@@ -14,7 +14,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   onSearchChange,
   filterSort,
   onFilterSortChange,
-  placeholder = 'Search friends by name or @handle...'
+  placeholder = 'Search friends by name or @username...'
 }) => {
   return (
     <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">

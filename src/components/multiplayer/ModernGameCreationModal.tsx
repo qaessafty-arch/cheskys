@@ -168,7 +168,7 @@ export const ModernGameCreationModal: React.FC<ModernGameCreationModalProps> = (
                 </div>
                 <div>
                   <span className="text-xs font-bold text-white block">Rated Match</span>
-                  <span className="text-[10px] text-white/50 block">Results count toward global ELO & Respect points</span>
+                  <span className="text-[10px] text-white/50 block">Results change your Elo and Respect points</span>
                 </div>
               </div>
 
@@ -262,7 +262,7 @@ export const ModernGameCreationModal: React.FC<ModernGameCreationModalProps> = (
               {isCreating ? (
                 <>
                   <RefreshCw className="w-5 h-5 animate-spin" />
-                  <span>Provisioning Game Room...</span>
+                  <span>Creating Room...</span>
                 </>
               ) : (
                 <>

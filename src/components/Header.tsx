@@ -79,7 +79,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   const currentRespect = profile?.respectPoints ?? respectProfile?.respectPoints ?? 100;
   const currentElo = profile?.elo ?? respectProfile?.elo ?? 1200;
-  const userDisplayName = profile?.displayName || user?.displayName?.split(' ')[0] || (user ? 'Grandmaster' : 'Guest');
+  const userDisplayName = profile?.displayName || user?.displayName?.split(' ')[0] || (user ? 'Player' : 'Guest');
 
   return (
     <header
@@ -130,7 +130,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="flex items-center gap-3 sm:gap-6">
         {/* Connection Status - Hidden on mobile */}
         <div className="hidden sm:flex flex-col items-end">
-          <span className="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] leading-none">Global Rank</span>
+          <span className="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] leading-none">Rating</span>
           <span className="text-[11px] font-mono font-black text-white mt-1">
             {currentElo} <span className="text-[var(--secondary-accent)]">ELO</span>
           </span>
@@ -166,7 +166,7 @@ export const Header: React.FC<HeaderProps> = ({
                   {/* Header */}
                   <div className="p-4 border-b border-[var(--glass-border)] flex items-center justify-between bg-[var(--app-bg)]/50">
                     <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-black text-white uppercase tracking-widest">Celestial Messages</span>
+                      <span className="text-[11px] font-black text-white uppercase tracking-widest">Notifications</span>
                       {unreadCount > 0 && (
                         <span className="px-1.5 py-0.5 rounded bg-[var(--secondary-accent)] text-[var(--app-bg)] text-[9px] font-black shadow-sm">{unreadCount}</span>
                       )}
@@ -198,8 +198,8 @@ export const Header: React.FC<HeaderProps> = ({
                           ☀️
                         </div>
                         <div>
-                          <p className="text-sm font-black text-white uppercase tracking-tight">{user ? 'System Status: All Clear' : 'No Messages Yet'}</p>
-                          <p className="text-[10px] text-[var(--text-muted)] font-mono mt-1 opacity-60">{user ? 'The astral planes are silent' : 'Sign in to receive challenges, friend requests and room invites'}</p>
+                          <p className="text-sm font-black text-white uppercase tracking-tight">{user ? 'No New Notifications' : 'No Messages Yet'}</p>
+                          <p className="text-[10px] text-[var(--text-muted)] font-mono mt-1 opacity-60">{user ? "You're all caught up" : 'Sign in to receive challenges, friend requests and room invites'}</p>
                         </div>
                         {!user && onOpenLogin && (
                           <button
@@ -225,7 +225,7 @@ export const Header: React.FC<HeaderProps> = ({
           className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#52673A] to-[#8C2425] hover:brightness-110 text-white text-xs font-black uppercase tracking-wider border border-[#F5C453]/40 shadow-lg transition-all cursor-pointer"
         >
           <Swords className="w-3.5 h-3.5" />
-          Astral Sanctum
+          Private Room
         </button>
 
         <button
@@ -336,7 +336,7 @@ const NotificationListItem: React.FC<{
                     }}
                     className="px-3 py-1.5 rounded-lg bg-emerald-500 text-black text-xs font-black uppercase tracking-wider hover:bg-emerald-400 hover:scale-105 active:scale-95 transition-all"
                   >
-                    Ascend
+                    Accept
                   </button>
                   <button
                     onClick={(e) => {
@@ -357,7 +357,7 @@ const NotificationListItem: React.FC<{
                     }}
                     className="px-3 py-1.5 rounded-lg bg-red-500 text-white text-xs font-black uppercase tracking-wider hover:bg-red-400 hover:scale-105 active:scale-95 transition-all"
                   >
-                    Dismiss
+                    Decline
                   </button>
                 </>
               ) : (
@@ -365,7 +365,7 @@ const NotificationListItem: React.FC<{
                   onClick={(e) => { e.stopPropagation(); onRead(); }}
                   className="px-3 py-1.5 rounded-lg bg-[var(--secondary-accent)] text-[var(--app-bg)] text-xs font-black uppercase tracking-wider hover:scale-105 active:scale-95 transition-all"
                 >
-                  View Action
+                  View
                 </button>
               )}
               <button 

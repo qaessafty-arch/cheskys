@@ -78,9 +78,9 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
             </div>
             <div>
               <h3 className="text-lg font-black uppercase tracking-wider text-white">
-                Establish Astral Sanctum
+                Create Private Room
               </h3>
-              <p className="text-xs text-white/50">Open a celestial gateway for your rival</p>
+              <p className="text-xs text-white/50">Set up a game and invite a friend</p>
             </div>
           </div>
           <button
@@ -145,12 +145,12 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
             {creating ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Weaving Astral Threads...</span>
+                <span>Creating Room...</span>
               </>
             ) : (
               <>
                 <ShieldCheck className="w-4 h-4" />
-                <span>Establish Sanctum</span>
+                <span>Create Room</span>
               </>
             )}
           </button>

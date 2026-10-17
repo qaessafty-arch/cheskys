@@ -25,8 +25,8 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
   const categories: { id: UserFeedback['category']; label: string; icon: React.ReactNode; desc: string }[] = [
     { id: 'feature', label: 'Feature Request', icon: <Lightbulb className="w-4 h-4 text-amber-400" />, desc: 'Suggest new chess modes, puzzles, or visual tools' },
     { id: 'bug', label: 'Bug Report', icon: <Bug className="w-4 h-4 text-red-400" />, desc: 'Report gameplay glitches, move rule issues, or UI bugs' },
-    { id: 'chess_engine', label: 'Engine & Analysis', icon: <Compass className="w-4 h-4 text-sky-400" />, desc: 'Feedback on Stockfish AI depth, tactics, or evaluation' },
-    { id: 'theme_lore', label: 'Kurdish Lore & Themes', icon: <Sparkles className="w-4 h-4 text-[#F5C453]" />, desc: 'UKH Citadel, Peshmerga lore, audio, and custom themes' },
+    { id: 'chess_engine', label: 'Engine & Analysis', icon: <Compass className="w-4 h-4 text-sky-400" />, desc: 'Feedback on the computer opponent and game analysis' },
+    { id: 'theme_lore', label: 'Kurdish Content & Themes', icon: <Sparkles className="w-4 h-4 text-[#F5C453]" />, desc: 'Kurdish content, sounds, and themes' },
     { id: 'general', label: 'General Feedback', icon: <MessageSquare className="w-4 h-4 text-emerald-400" />, desc: 'General thoughts, praise, or questions for the developer' }
   ];
 
@@ -41,7 +41,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
         rating,
         title: title.trim(),
         message: message.trim(),
-        userName: profile?.displayName || user?.displayName || 'Peshmerga Tactician',
+        userName: profile?.displayName || user?.displayName || 'Anonymous Player',
         userEmail: contactEmail.trim() || null,
         userBadge: profile?.badgeNumber !== undefined ? `#${profile.badgeNumber}` : undefined,
         status: 'pending'
@@ -82,13 +82,13 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
           </div>
           <div>
             <h2 className="text-xl font-black text-[#FDFCF7] tracking-tight flex items-center gap-2">
-              <span>Send Developer Feedback</span>
+              <span>Send Feedback</span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#F5C453]/20 text-[#F5C453] border border-[#F5C453]/40 font-bold">
                 Direct to Developer
               </span>
             </h2>
             <p className="text-xs text-[#DFD0B0]/70">
-              Your feedback is sent directly to the developer panel (q.brz)
+              Your message goes straight to the developer (q.brz)
             </p>
           </div>
         </div>
@@ -98,9 +98,9 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
             <div className="w-16 h-16 mx-auto rounded-full bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center text-emerald-400 shadow-[0_0_20px_rgba(52,211,153,0.3)]">
               <CheckCircle2 className="w-9 h-9" />
             </div>
-            <h3 className="text-lg font-black text-white">Feedback Dispatched to Developer!</h3>
+            <h3 className="text-lg font-black text-white">Feedback Sent!</h3>
             <p className="text-xs text-[#DFD0B0]/80 max-w-sm mx-auto">
-              Thank you for honoring the Peshmerga chessboard. Your thoughts will be reviewed by the creator.
+              Thank you! The developer will read your message.
             </p>
           </div>
         ) : (
@@ -108,7 +108,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
             {/* Experience Rating */}
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-wider text-[#F5C453] mb-1.5">
-                Rating & Experience
+                Your Rating
               </label>
               <div className="flex items-center gap-2 p-2.5 rounded-2xl bg-white/[0.03] border border-white/10">
                 {[1, 2, 3, 4, 5].map((star) => (
@@ -130,10 +130,10 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
                   </button>
                 ))}
                 <span className="ml-2 text-xs font-bold text-white/90">
-                  {rating === 5 ? '⭐⭐⭐⭐⭐ Supreme (5/5)' :
+                  {rating === 5 ? '⭐⭐⭐⭐⭐ Excellent (5/5)' :
                    rating === 4 ? '⭐⭐⭐⭐ Great (4/5)' :
                    rating === 3 ? '⭐⭐⭐ Good (3/5)' :
-                   rating === 2 ? '⭐⭐ Needs Work (2/5)' : '⭐ Critical Fixes (1/5)'}
+                   rating === 2 ? '⭐⭐ Needs Work (2/5)' : '⭐ Poor (1/5)'}
                 </span>
               </div>
             </div>
@@ -168,7 +168,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
             {/* Title */}
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-wider text-[#F5C453] mb-1">
-                Summary / Title
+                Title
               </label>
               <input
                 type="text"
@@ -183,14 +183,14 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
             {/* Message Body */}
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-wider text-[#F5C453] mb-1">
-                Detailed Feedback / Suggestions
+                Details
               </label>
               <textarea
                 required
                 rows={4}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Describe your suggestion, encountered bug, or thoughts for the developer in detail..."
+                placeholder="Describe your idea, the bug you found, or anything else..."
                 className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/15 text-white text-xs placeholder:text-white/30 focus:border-[#F5C453] outline-none transition-colors resize-none"
               />
             </div>
@@ -198,7 +198,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
             {/* Contact Email */}
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-wider text-[#DFD0B0]/70 mb-1">
-                Your Email (Optional, for Developer reply)
+                Your Email (Optional, so we can reply)
               </label>
               <input
                 type="email"
@@ -224,7 +224,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
                 className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#52673A] to-[#8C2425] hover:from-[#5f7743] hover:to-[#a12b2c] text-white text-xs font-black shadow-lg border border-[#F5C453]/50 flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 <Send className="w-3.5 h-3.5 text-[#F5C453]" />
-                <span>{submitting ? 'Sending...' : 'Transmit Feedback'}</span>
+                <span>{submitting ? 'Sending...' : 'Send Feedback'}</span>
               </button>
             </div>
           </form>

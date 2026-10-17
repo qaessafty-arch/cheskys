@@ -73,7 +73,7 @@ export const FriendInvite: React.FC<FriendInviteProps> = ({ onClose, onInvited }
               <Users style={{ width: 16, height: 16, color: 'var(--room-gold)' }} />
             </div>
             <div>
-              <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--room-text)' }}>Invite allies</h3>
+              <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--room-text)' }}>Invite Friends</h3>
               <p style={{ fontSize: 12, color: 'var(--room-text-muted)' }}>Join room {currentRoom?.roomCode || '…'}</p>
             </div>
           </div>
@@ -84,11 +84,11 @@ export const FriendInvite: React.FC<FriendInviteProps> = ({ onClose, onInvited }
 
         <div className="flex-1 overflow-y-auto p-4 space-y-1">
           {loading ? (
-            <div className="room-empty"><span>Loading allies…</span></div>
+            <div className="room-empty"><span>Loading friends…</span></div>
           ) : friends.length === 0 ? (
             <div className="room-empty">
               <UserPlus style={{ width: 24, height: 24, color: 'var(--room-text-muted)', marginBottom: 12 }} />
-              <span>No allies found.</span>
+              <span>No friends found.</span>
             </div>
           ) : (
             <div className="flex flex-col gap-1">

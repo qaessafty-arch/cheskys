@@ -49,7 +49,7 @@ export const FriendChat: React.FC<FriendChatProps> = ({
     try {
       await sendDirectMessage(chatId, {
         senderId: profile.uid,
-        senderName: profile.displayName || 'Tactician',
+        senderName: profile.displayName || 'Player',
         senderAvatar: profile.photoURL || null,
         senderBadge: profile.rankBadge || '☀️',
         text: payload
@@ -76,7 +76,7 @@ export const FriendChat: React.FC<FriendChatProps> = ({
               />
             ) : (
               <div className="w-9 h-9 rounded-full bg-[#52673A] border border-[#F5C453] flex items-center justify-center font-black text-xs text-white">
-                {friend.displayName ? friend.displayName.charAt(0).toUpperCase() : 'T'}
+                {friend.displayName ? friend.displayName.charAt(0).toUpperCase() : 'P'}
               </div>
             )}
             <div className="absolute -bottom-0.5 -right-0.5">
@@ -99,7 +99,7 @@ export const FriendChat: React.FC<FriendChatProps> = ({
             type="button"
             onClick={() => onChallenge(friend)}
             className="p-1.5 rounded-xl bg-[#8C2425]/60 hover:bg-[#8C2425] text-white text-xs font-bold flex items-center gap-1 border border-[#F5C453]/30 cursor-pointer"
-            title="Challenge to Chess Match"
+            title="Challenge to a Game"
           >
             <Swords className="w-3.5 h-3.5 text-[#F5C453]" />
             <span className="hidden sm:inline">Play</span>
@@ -120,7 +120,7 @@ export const FriendChat: React.FC<FriendChatProps> = ({
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center text-white/40 space-y-2">
             <MessageSquare className="w-8 h-8 text-white/20" />
-            <p className="text-xs">No direct messages yet. Send a greeting or challenge to battle!</p>
+            <p className="text-xs">No messages yet. Say hi or challenge them to a game!</p>
           </div>
         ) : (
           messages.map(msg => {

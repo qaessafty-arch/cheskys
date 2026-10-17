@@ -167,7 +167,7 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
         crossoverEnabled: true
       });
     }
-    showSuccessFeedback(`Updated ${side === 'white' ? 'White' : 'Black'} faction!`);
+    showSuccessFeedback(`Updated ${side === 'white' ? 'White' : 'Black'} pieces!`);
   };
 
   const isCurrentMasterActive = (theme: typeof masterThemes[0]) => {
@@ -200,13 +200,13 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
-                <span>Theme Engine & Pieces</span>
+                <span>Themes and Pieces</span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[var(--secondary-accent)] text-[var(--app-bg)] font-black">
                   PRO
                 </span>
               </h2>
               <p className="text-xs text-[var(--text-muted)]">
-                Attack on Titan, Batman Gotham City, Classic, & Crossover Mode
+                Pick a theme, mix piece sets or change the board
               </p>
             </div>
           </div>
@@ -241,7 +241,7 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
             }`}
           >
             <Crown className="w-3.5 h-3.5" />
-            <span>4 Master Themes</span>
+            <span>Full Themes</span>
           </button>
 
           <button
@@ -254,7 +254,7 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
             }`}
           >
             <Shuffle className="w-3.5 h-3.5 text-purple-300" />
-            <span>Crossover Factions</span>
+            <span>Mix Piece Sets</span>
           </button>
 
           <button
@@ -342,11 +342,11 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
                       {/* Army Breakdown */}
                       <div className="mt-3 pt-2.5 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px]">
                         <div className="p-2 rounded-lg bg-black/30 text-white/80">
-                          <span className="font-bold text-amber-300">White Army: </span>
+                          <span className="font-bold text-amber-300">White Pieces: </span>
                           <span>{theme.whiteRoster}</span>
                         </div>
                         <div className="p-2 rounded-lg bg-black/30 text-white/80">
-                          <span className="font-bold text-rose-300">Black Army: </span>
+                          <span className="font-bold text-rose-300">Black Pieces: </span>
                           <span>{theme.blackRoster}</span>
                         </div>
                       </div>
@@ -387,9 +387,9 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
           {activeTab === 'crossover' && (
             <div className="space-y-4">
               <div className="p-3.5 rounded-2xl bg-purple-900/20 border border-purple-500/30 text-purple-200 text-xs">
-                <span className="font-bold">⚔️ Crossover Battle Mode: </span>
+                <span className="font-bold">⚔️ Mix Piece Sets: </span>
                 <span>
-                  Pit different factions against each other! For example, command the <strong>Scout Regiment (Attack on Titan)</strong> against the <strong>Arkham Rogues (Batman)</strong>, or pair the <strong>Bat-Family</strong> against the <strong>Nine Titans</strong>!
+                  Use a different piece set for each side. For example, play the <strong>Scout Regiment (Attack on Titan)</strong> against the <strong>Arkham Rogues (Batman)</strong>, or the <strong>Bat-Family</strong> against the <strong>Nine Titans</strong>.
                 </span>
               </div>
 
@@ -399,7 +399,7 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
                 <div className="p-4 rounded-2xl bg-black/40 border border-white/15 space-y-3">
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-black text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
-                      <span>⚪ White Faction</span>
+                      <span>⚪ White Pieces</span>
                     </h4>
                     <span className="text-[10px] px-2 py-0.5 rounded bg-white/10 text-white font-mono font-bold">
                       {settings.whitePieceTheme || settings.pieceTheme}
@@ -443,7 +443,7 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
                 <div className="p-4 rounded-2xl bg-black/40 border border-white/15 space-y-3">
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-black text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
-                      <span>⚫ Black Faction</span>
+                      <span>⚫ Black Pieces</span>
                     </h4>
                     <span className="text-[10px] px-2 py-0.5 rounded bg-white/10 text-white font-mono font-bold">
                       {settings.blackPieceTheme || settings.pieceTheme}
@@ -490,7 +490,7 @@ export const ThemeSelectorModal: React.FC<ThemeSelectorModalProps> = ({
           {activeTab === 'boards' && (
             <div className="space-y-3">
               <p className="text-xs text-[var(--text-muted)]">
-                Choose the background surface and textures for the 64-square battlefield:
+                Choose the colors and look of the board:
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

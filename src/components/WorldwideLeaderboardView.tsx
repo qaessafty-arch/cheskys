@@ -238,8 +238,8 @@ export const WorldwideLeaderboardView: React.FC = () => {
             </div>
           </div>
           <div>
-            <h1 className="text-2xl font-black text-white tracking-tight">Worldwide Leaderboard</h1>
-            <p className="text-sm text-[#DFD0B0]/70">Compete for glory. Climb the ranks.</p>
+            <h1 className="text-2xl font-black text-white tracking-tight">Leaderboard</h1>
+            <p className="text-sm text-[#DFD0B0]/70">See the top players and play rated games to move up.</p>
             {isOfflineLadder && (
               <p className="mt-1 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-[11px] font-bold text-amber-300">
                 Offline ladder: sample players, shown while the global ranking can't be reached

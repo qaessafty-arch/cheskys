@@ -489,7 +489,7 @@ const displayName = profile?.displayName || user?.displayName || 'Guest';
     {
       id: 'puzzles_100',
       name: '100 Puzzles Solved',
-      desc: 'Solved over 100 tactical puzzles with precision',
+      desc: 'Solved more than 100 puzzles',
       icon: '🧩',
       rarity: 'Epic',
       color: 'from-sky-500/20 to-blue-500/10 border-sky-400/40 text-sky-300'
@@ -497,7 +497,7 @@ const displayName = profile?.displayName || user?.displayName || 'Guest';
     {
       id: 'citadel_gm',
       name: 'Citadel Grandmaster',
-      desc: 'Attained supreme 2200+ Elo rating across all modes',
+      desc: 'Reached a 2200+ rating',
       icon: '👑',
       rarity: 'Mythic',
       color: 'from-purple-500/20 to-pink-500/10 border-purple-400/40 text-purple-300'
@@ -513,7 +513,7 @@ const displayName = profile?.displayName || user?.displayName || 'Guest';
     {
       id: 'peshmerga_sun',
       name: 'Peshmerga Sun of Glory',
-      desc: 'Awarded to defenders demonstrating supreme honor & respect',
+      desc: 'Earned by showing great respect to opponents',
       icon: '☀️',
       rarity: 'National Legend',
       color: 'from-emerald-500/20 to-amber-500/10 border-[#F5C453]/50 text-[#F5C453]'
@@ -625,7 +625,7 @@ const displayName = profile?.displayName || user?.displayName || 'Guest';
             type="button"
             onClick={() => setIsMobileDrawerOpen(true)}
             className="min-w-[44px] min-h-[44px] p-2 rounded-xl bg-slate-800 hover:bg-slate-750 active:bg-slate-700 text-[#F5C453] border border-slate-700/80 flex items-center justify-center transition-all cursor-pointer"
-            title="Open Profile Actions & Details"
+            title="Open profile menu"
             aria-label="Open Profile Details"
           >
             <SlidersHorizontal className="w-4 h-4" />
@@ -924,7 +924,7 @@ const displayName = profile?.displayName || user?.displayName || 'Guest';
                   <div className="flex items-center gap-2">
                     <PieChart className="w-5 h-5 text-emerald-400" />
                     <h3 className="text-sm font-black uppercase tracking-wider text-slate-200">
-                      Piece Performance & Win Rates
+                      Wins by Color
                     </h3>
                   </div>
 
@@ -1018,7 +1018,7 @@ const displayName = profile?.displayName || user?.displayName || 'Guest';
                     <div className="flex items-center gap-2">
                       <Award className="w-5 h-5 text-amber-400" />
                       <h3 className="text-sm font-black uppercase tracking-wider text-slate-200">
-                        Top Honors
+                        Top Badges
                       </h3>
                     </div>
                     <span className="text-xs font-mono text-emerald-400 font-bold">8 / 8 Badges</span>
@@ -1176,7 +1176,7 @@ const displayName = profile?.displayName || user?.displayName || 'Guest';
                           type="button"
                           onClick={() => onAnalyzeGame && onAnalyzeGame(match.pgn, match.fen)}
                           className="min-h-[44px] py-2 px-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-[#F5C453] hover:text-white text-xs sm:text-sm font-bold border border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer shrink-0 active:scale-95"
-                          title="Analyze move by move in Engine"
+                          title="Review this game move by move"
                         >
                           <Compass className="w-4 h-4" />
                           <span>Analyze</span>
@@ -1202,10 +1202,10 @@ const displayName = profile?.displayName || user?.displayName || 'Guest';
                   <TrendingUp className="w-5 h-5 text-emerald-400" />
                   <div>
                     <h3 className="text-sm font-black uppercase tracking-wider text-slate-200">
-                      Interactive Rating Trajectory
+                      Rating History
                     </h3>
                     <p className="text-xs text-slate-400">
-                      Touch or hover data points to inspect past games and Elo shifts
+                      Tap or hover a point to see that game and your rating change
                     </p>
                   </div>
                 </div>
@@ -1333,7 +1333,7 @@ const displayName = profile?.displayName || user?.displayName || 'Guest';
                 <div className="flex items-center gap-2">
                   <Layers className="w-5 h-5 text-sky-400" />
                   <h3 className="text-sm font-black uppercase tracking-wider text-slate-200">
-                    Opening Repertoire Mastery
+                    Best Openings
                   </h3>
                 </div>
 
@@ -1362,7 +1362,7 @@ const displayName = profile?.displayName || user?.displayName || 'Guest';
                 <div className="flex items-center gap-2">
                   <Target className="w-5 h-5 text-[#F5C453]" />
                   <h3 className="text-sm font-black uppercase tracking-wider text-slate-200">
-                    Game Precision & Blunder Rate
+                    Accuracy and Mistakes
                   </h3>
                 </div>
 
@@ -1455,7 +1455,7 @@ const displayName = profile?.displayName || user?.displayName || 'Guest';
               {/* Quick Status Setter */}
               <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2.5 text-sm">
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
-                  Set Broadcast Status
+                  Set Your Status
                 </span>
                 <div className="grid grid-cols-3 gap-2">
                   <button
@@ -1573,7 +1573,7 @@ const displayName = profile?.displayName || user?.displayName || 'Guest';
             <div className="flex items-center justify-between pb-2 border-b border-slate-800">
               <div className="w-12 h-1.5 rounded-full bg-slate-700 mx-auto absolute left-1/2 -translate-x-1/2 top-3" />
               <h2 className="text-sm font-black uppercase tracking-wider text-slate-200 mt-2">
-                Warrior Profile
+                Profile
               </h2>
               <button
                 type="button"
@@ -1630,7 +1630,7 @@ const displayName = profile?.displayName || user?.displayName || 'Guest';
             {/* Broadcast Status Selector */}
             <div className="space-y-1.5">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
-                Broadcast Status
+                Your Status
               </span>
               <div className="grid grid-cols-3 gap-2">
                 <button

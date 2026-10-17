@@ -233,7 +233,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
       photoURL: profilePhotoInput.trim() || null
     });
     setIsEditing(false);
-    setPhotoSuccessMessage('Profile and picture updated and saved to cloud!');
+    setPhotoSuccessMessage('Profile saved!');
     setTimeout(() => setPhotoSuccessMessage(''), 3500);
   };
 
@@ -261,7 +261,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
       setCustomPhotoUrlInput(downloadUrl);
       await updateProfilePhoto(downloadUrl);
 
-      setPhotoSuccessMessage('Profile picture uploaded to storage and saved successfully!');
+      setPhotoSuccessMessage('Profile picture saved!');
       setTimeout(() => setPhotoSuccessMessage(''), 3500);
     } catch (err: any) {
       alert(err?.message || 'Failed to process image file');
@@ -276,7 +276,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
     const trimmed = customPhotoUrlInput.trim();
     setProfilePhotoInput(trimmed);
     await updateProfilePhoto(trimmed);
-    setPhotoSuccessMessage('Profile picture URL saved and synchronized!');
+    setPhotoSuccessMessage('Profile picture saved!');
     setTimeout(() => setPhotoSuccessMessage(''), 3500);
   };
 
@@ -284,7 +284,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
     setProfilePhotoInput(presetUrl);
     setCustomPhotoUrlInput(presetUrl);
     await updateProfilePhoto(presetUrl);
-    setPhotoSuccessMessage('Preset avatar equipped and saved to cloud!');
+    setPhotoSuccessMessage('Avatar saved!');
     setTimeout(() => setPhotoSuccessMessage(''), 3500);
   };
 
@@ -316,7 +316,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
         await signUpWithEmail(emailInput, passwordInput, guestName || 'Peshmerga Tactician');
       }
     } catch (err: any) {
-      setAuthError(err?.message || 'Authentication error. Check email format or try again.');
+      setAuthError(err?.message || 'Could not sign in. Check your email and password and try again.');
     } finally {
       setAuthLoading(false);
     }
@@ -436,7 +436,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
               )}
             </div>
             <p className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.2em] opacity-60">
-              Identity & Cloud Command
+              Your account and profile
             </p>
           </div>
         </div>
@@ -539,10 +539,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
             {/* Header */}
             <div className="text-center space-y-1">
               <h3 className="text-base font-bold text-white">
-                Choose Your Authoring & Sign-In Method
+                Choose How to Sign In
               </h3>
               <p className="text-xs text-[#DFD0B0]/70 max-w-md mx-auto">
-                Sign in with Google, start an instant guest session, register with email, or unlock with the Developer Passkey.
+                Sign in with Google, play as a guest, or use your email.
               </p>
             </div>
 
@@ -625,7 +625,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
                   <span>Sign in with Google Account</span>
                 </button>
                 <p className="text-[11px] text-[#DFD0B0]/60">
-                  Syncs with Firebase Cloud, auto-allocates your warrior badge, and joins the global leaderboard.
+                  Saves your progress online and puts you on the leaderboard.
                 </p>
               </div>
             )}
@@ -649,7 +649,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
 
                   <div>
                     <label className="text-[11px] text-[#DFD0B0]/70 font-bold block mb-1">
-                      Country / Realm
+                      Country
                     </label>
                     <input
                       type="text"
@@ -666,10 +666,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
                   className="w-full py-2.5 rounded-xl bg-[#52673A] hover:bg-[#435433] text-white font-bold text-xs border border-[#F5C453]/40 shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all"
                 >
                   <UserCheck className="w-4 h-4 text-[#F5C453]" />
-                  <span>Enter Battlefield as Guest</span>
+                  <span>Play as Guest</span>
                 </button>
                 <p className="text-[11px] text-[#DFD0B0]/60 text-center">
-                  Instant local gameplay with full metrics tracking. You can link to Google anytime without losing honor points.
+                  Start playing right away. You can link a Google account later and keep your points.
                 </p>
               </form>
             )}
@@ -723,7 +723,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
                   className="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2"
                 >
                   <Mail className="w-4 h-4" />
-                  <span>{emailMode === 'login' ? 'Sign In with Email' : 'Register New Warrior Account'}</span>
+                  <span>{emailMode === 'login' ? 'Sign In with Email' : 'Create Account'}</span>
                 </button>
               </form>
             )}
@@ -734,7 +734,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
                 <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30">
                   <div className="flex items-center gap-2 text-xs font-black text-amber-300">
                     <Crown className="w-4 h-4 text-amber-400" />
-                    <span>Founder Direct Passkey Portal</span>
+                    <span>Founder Sign-In</span>
                   </div>
                   <p className="text-[11px] text-[#DFD0B0]/70 mt-1">
                     Instant access to <span className="text-[#F5C453] font-bold">qayssafty@gmail.com</span> Owner #0 credentials from any browser.
@@ -764,7 +764,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
                   className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-[#8C2425] hover:from-amber-500 text-white font-black text-xs border border-amber-400 shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all"
                 >
                   <Crown className="w-4 h-4 text-[#F5C453]" />
-                  <span>Authenticate as Founder #0</span>
+                  <span>Sign In as Founder</span>
                 </button>
               </form>
             )}
@@ -883,10 +883,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
                   type="button"
                   onClick={() => setIsAvatarStudioOpen(true)}
                   className="p-2 px-2.5 rounded-xl bg-gradient-to-r from-amber-600/30 to-amber-500/20 hover:from-amber-600/50 hover:to-amber-500/40 text-amber-300 hover:text-amber-200 border border-amber-400/40 text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
-                  title="Generate custom AI Chess Avatar based on Honor Rank"
+                  title="Make an AI avatar for your rank"
                 >
                   <Wand2 className="w-3.5 h-3.5 text-[#F5C453]" />
-                  <span>AI Studio</span>
+                  <span>AI Avatar</span>
                 </button>
 
                 {!isEditing ? (
@@ -918,7 +918,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
                   </div>
                   <div>
                     <h4 className="text-sm font-black text-white uppercase tracking-tight">Dev Control Center</h4>
-                    <p className="text-[10px] text-amber-400/70 font-mono uppercase tracking-widest">Master System Override</p>
+                    <p className="text-[10px] text-amber-400/70 font-mono uppercase tracking-widest">Admin tools</p>
                   </div>
                 </div>
                 <button
@@ -941,7 +941,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
                  </div>
                  <div className="text-left">
                    <h4 className="text-sm font-bold text-slate-200">About Chesskys PRO</h4>
-                   <p className="text-[10px] text-slate-500 uppercase tracking-widest">System Lore & Vision</p>
+                   <p className="text-[10px] text-slate-500 uppercase tracking-widest">About the app</p>
                  </div>
               </div>
               <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-amber-500 group-hover:translate-x-1 transition-all" />
@@ -970,7 +970,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
                         Update & Save Profile Picture
                       </h4>
                       <p className="text-[10px] text-[#DFD0B0]/70">
-                        Upload custom image, paste a web link, choose a Kurdish emblem, or forge with AI
+                        Upload a picture, paste a link, pick a ready-made avatar, or make one with AI
                       </p>
                     </div>
                   </div>
@@ -993,7 +993,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
                         <span>Upload From Device</span>
                       </span>
                       <p className="text-[10px] text-[#DFD0B0]/70 mt-1">
-                        Select any PNG, JPG or WEBP image. It will be compressed & saved immediately to your cloud account.
+                        Pick a PNG, JPG or WEBP image. It is saved to your account right away.
                       </p>
                     </div>
                     <button
@@ -1024,7 +1024,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
                         <span>Image Web Link (URL)</span>
                       </span>
                       <p className="text-[10px] text-[#DFD0B0]/70 mt-1">
-                        Paste any online image URL (e.g. from Unsplash, Imgur, Discord, etc.)
+                        Paste a link to any image online.
                       </p>
                     </div>
                     <div className="flex gap-1.5">
@@ -1052,7 +1052,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-bold text-[#F5C453] uppercase tracking-wider flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-[#F5C453]" />
-                      <span>Curated Emblem & Commander Avatars (1-Click Equip & Save)</span>
+                      <span>Ready-Made Avatars (Tap to Use)</span>
                     </span>
                     <button
                       type="button"
@@ -1060,7 +1060,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
                       className="text-[11px] text-[#F5C453] hover:underline flex items-center gap-1 cursor-pointer font-bold"
                     >
                       <Wand2 className="w-3 h-3" />
-                      <span>Open AI Studio</span>
+                      <span>Make AI Avatar</span>
                     </button>
                   </div>
                   <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-9 gap-2">
@@ -1109,7 +1109,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
                   <div className="flex items-center gap-2">
                     <Crown className="w-4 h-4 text-[#F5C453]" />
                     <h3 className="text-xs sm:text-sm font-black text-amber-300 uppercase tracking-wide">
-                      👑 Founder Badges & Prestige Statuses Workshop
+                      👑 Founder Badges and Statuses
                     </h3>
                   </div>
                   <button
@@ -1117,7 +1117,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
                     onClick={() => setShowOwnerCustomizer(!showOwnerCustomizer)}
                     className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-bold border border-amber-400/40 transition-all cursor-pointer"
                   >
-                    {showOwnerCustomizer ? 'Collapse Workshop' : 'Open Badges & Statuses'}
+                    {showOwnerCustomizer ? 'Hide' : 'Show Badges and Statuses'}
                   </button>
                 </div>
 
@@ -1132,7 +1132,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
                     {/* Preset Badges Matrix */}
                     <div>
                       <label className="text-[11px] text-[#DFD0B0]/80 font-bold block mb-1.5">
-                        Equip Royal Battlefield Badges (1-Click Apply):
+                        Pick a Badge:
                       </label>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                         {PRESET_BADGES.map(badge => {
@@ -1159,7 +1159,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
                     {/* Preset Status Quotes */}
                     <div>
                       <label className="text-[11px] text-[#DFD0B0]/80 font-bold block mb-1.5">
-                        Equip Master Status Battle Cries:
+                        Pick a Status:
                       </label>
                       <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
                         {PRESET_STATUSES.map((status, i) => {
@@ -1192,7 +1192,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
               <div className="p-4 rounded-2xl bg-black/50 border border-[#F5C453]/40 space-y-3 animate-in fade-in duration-150">
                 <div className="flex items-center justify-between">
                   <div className="text-xs font-bold text-[#F5C453] uppercase tracking-wider">
-                    Edit Battlefield Identity
+                    Edit Profile
                   </div>
                   <button
                     type="button"
@@ -1213,7 +1213,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
                     referrerPolicy="no-referrer"
                   />
                   <div className="flex-1 min-w-0">
-                    <label className="text-[11px] text-[#DFD0B0]/70 block mb-1">Avatar Image Source</label>
+                    <label className="text-[11px] text-[#DFD0B0]/70 block mb-1">Profile Picture</label>
                     <div className="flex gap-2">
                       <button
                         type="button"
@@ -1229,7 +1229,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
                         className="px-2.5 py-1 rounded-lg bg-[#52673A]/60 hover:bg-[#52673A] text-[#F5C453] text-[11px] font-bold border border-[#F5C453]/30 flex items-center gap-1.5 cursor-pointer"
                       >
                         <Sparkles className="w-3 h-3" />
-                        <span>Choose Preset / AI</span>
+                        <span>Pick Avatar / AI</span>
                       </button>
                     </div>
                   </div>
@@ -1237,7 +1237,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div>
-                    <label className="text-[11px] text-[#DFD0B0]/70 block mb-1">Warrior Nickname</label>
+                    <label className="text-[11px] text-[#DFD0B0]/70 block mb-1">Nickname</label>
                     <input
                       type="text"
                       value={displayName}
@@ -1246,7 +1246,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] text-[#DFD0B0]/70 block mb-1">Country / Realm</label>
+                    <label className="text-[11px] text-[#DFD0B0]/70 block mb-1">Country</label>
                     <input
                       type="text"
                       value={country}
@@ -1257,7 +1257,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
                 </div>
 
                 <div>
-                  <label className="text-[11px] text-[#DFD0B0]/70 block mb-1">Custom Status / Battle Cry</label>
+                  <label className="text-[11px] text-[#DFD0B0]/70 block mb-1">Status Message</label>
                   <input
                     type="text"
                     value={statusMessage}
@@ -1340,7 +1340,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
                   {isSkyAccount ? '🦋' : currentRank.badge}
                 </span>
                 <div>
-                  <span className="text-[10px] text-[#F5C453] uppercase font-bold tracking-wider">Current Honor Rank</span>
+                  <span className="text-[10px] text-[#F5C453] uppercase font-bold tracking-wider">Your Rank</span>
                   <h4 className="text-base font-black text-white">{isSkyAccount ? 'CELESTIAL TACTICIAN 🦋' : currentRank.title}</h4>
                 </div>
               </div>
@@ -1354,7 +1354,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
                   <span>Generate Avatar</span>
                 </button>
                 <span className="text-[11px] text-emerald-400 font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30">
-                  Cloud Synced ☁️
+                  Saved Online ☁️
                 </span>
               </div>
             </div>
@@ -1375,7 +1375,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
                       Send Feedback
                     </div>
                     <div className="text-[10px] text-[#DFD0B0]/60">
-                      Submit suggestions to creator
+                      Send ideas to the app maker
                     </div>
                   </div>
                 </div>
@@ -1396,7 +1396,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
                   </div>
                   <div>
                     <div className="text-xs font-black text-white group-hover:text-amber-300 transition-colors flex items-center gap-1.5">
-                      <span>Developer Setting</span>
+                      <span>Developer Settings</span>
                       <span className="text-[9px] px-1 rounded bg-amber-500/20 text-amber-300 font-mono border border-amber-400/40">
                         [Dev Set]
                       </span>

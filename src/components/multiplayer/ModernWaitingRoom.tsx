@@ -147,7 +147,7 @@ export const ModernWaitingRoom: React.FC<ModernWaitingRoomProps> = ({
           )}
         </div>
         <h3 className="text-2xl font-black tracking-tight text-white">
-          Game Room Active
+          Your Room Is Open
         </h3>
         <p className="text-xs text-white/60 max-w-sm mx-auto">
           {timeControlName} • {isRated ? 'Rated Match' : 'Casual Match'} • Playing as {playerSide === 'w' ? 'White ⚪' : playerSide === 'b' ? 'Black ⚫' : 'Random 🎲'}
@@ -157,7 +157,7 @@ export const ModernWaitingRoom: React.FC<ModernWaitingRoomProps> = ({
       {/* GIANT GAME CODE DISPLAY WITH GRADIENT */}
       <div className="p-5 rounded-2xl bg-black/40 border border-white/15 shadow-inner mb-6 relative group">
         <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-white/50 block mb-1">
-          Shareable 6-Character Code
+          Share This Code
         </span>
         <div className="font-mono text-4xl sm:text-5xl font-black tracking-[0.25em] bg-gradient-to-r from-[var(--secondary-accent)] via-purple-300 to-[var(--primary-accent)] bg-clip-text text-transparent my-2 select-all">
           {gameCode}
@@ -294,7 +294,7 @@ export const ModernWaitingRoom: React.FC<ModernWaitingRoomProps> = ({
           className="px-6 py-4 sm:py-2.5 rounded-xl bg-gradient-to-r from-[var(--primary-accent)] to-[var(--secondary-accent)] hover:brightness-110 text-white text-sm sm:text-xs font-black transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95 min-h-[44px]"
         >
           <Play className="w-4 h-4 fill-current" />
-          <span>Enter Board View</span>
+          <span>Go to Board</span>
         </button>
       </div>
 
