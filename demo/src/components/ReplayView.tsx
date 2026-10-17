@@ -27,9 +27,13 @@ const materialScore = (g: Chess) => {
 };
 
 export const ReplayView: React.FC = () => {
-  const { viewMode, setViewMode, settings, currentUser, currentGame } = useDemo();
-  // The game just played (if any) comes first, so it can be reviewed straight away
-  const replayGames: GameState[] = currentGame && currentGame.moves.length > 0 ? [currentGame, ...DEMO_GAMES] : DEMO_GAMES;
+  const { viewMode, setViewMode, settings, currentUser, currentGame, replayGame } = useDemo();
+  // A game picked from the dashboard comes first, then the game just played, then the samples
+  const replayGames: GameState[] = [
+    ...(replayGame ? [replayGame] : []),
+    ...(currentGame && currentGame.moves.length > 0 ? [currentGame] : []),
+    ...DEMO_GAMES,
+  ].filter((g, i, all) => all.findIndex(x => x.id === g.id) === i);
   const [selectedGame, setSelectedGame] = useState<GameState>(() => replayGames[0]);
   const [game, setGame] = useState<Chess>(() => new Chess());
   const [moveIndex, setMoveIndex] = useState(0);

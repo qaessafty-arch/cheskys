@@ -11,8 +11,6 @@ import { ProfileView } from './components/ProfileView';
 import { SettingsView } from './components/SettingsView';
 import { FeaturesShowcase } from './components/FeaturesShowcase';
 import { MatchmakingModal } from './components/MatchmakingModal';
-import { CreateRoomModal } from './components/CreateRoomModal';
-import { JoinRoomModal } from './components/JoinRoomModal';
 import { useDemo } from './context/DemoContext';
 
 const LoadingFallback: React.FC = () => {
@@ -26,27 +24,49 @@ const LoadingFallback: React.FC = () => {
   );
 };
 
-const ErrorBoundary: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [error] = React.useState<Error | null>(null);
+// A real error boundary: if one screen throws, show a recovery panel instead of a blank page
+class ErrorBoundary extends React.Component<{ children: React.ReactNode; onRecover?: () => void }, { error: Error | null }> {
+  state: { error: Error | null } = { error: null };
 
-  if (error) {
-    console.error('ErrorBoundary caught:', error);
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('ErrorBoundary caught:', error, info.componentStack);
+  }
+
+  render() {
+    if (!this.state.error) return this.props.children;
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-[var(--app-bg)] z-50" style={{background: '#080B12', color: '#F8FAFC'}}>
-        <div className="p-8 text-center">
-          <h1 style={{color: '#FB7185'}}>Error</h1>
-          <pre style={{textAlign: 'left', background: '#10151F', padding: '16px', borderRadius: '8px', color: '#FB7185'}}>{error.message}</pre>
-          <pre style={{textAlign: 'left', background: '#10151F', padding: '16px', borderRadius: '8px', color: '#94A3B8', fontSize: '12px'}}>{error.stack}</pre>
+      <div className="fixed inset-0 flex items-center justify-center bg-[var(--app-bg)] z-50 p-6" style={{ background: '#080B12', color: '#F8FAFC' }}>
+        <div className="max-w-md text-center">
+          <h1 className="text-2xl font-black mb-3">Something went wrong on this screen</h1>
+          <p className="text-sm mb-6" style={{ color: '#94A3B8' }}>The rest of the demo is fine. Go back to the dashboard, or reload the page.</p>
+          <div className="flex gap-3 justify-center">
+            {this.props.onRecover && (
+              <button className="btn-primary" onClick={() => { this.setState({ error: null }); this.props.onRecover?.(); }}>Back to dashboard</button>
+            )}
+            <button className="btn-secondary" onClick={() => window.location.reload()}>Reload</button>
+          </div>
         </div>
       </div>
     );
   }
+}
 
-  return <>{children}</>;
+// Each view gets its own boundary (keyed by view), so a crash on one screen never blocks the others
+const RoutedViews: React.FC = () => {
+  const { viewMode, setViewMode } = useDemo();
+  return (
+    <ErrorBoundary key={viewMode} onRecover={() => setViewMode('dashboard')}>
+      <ViewRouter />
+    </ErrorBoundary>
+  );
 };
 
 const ViewRouter: React.FC = () => {
-  const { viewMode, matchmakingState, createdRoomCode } = useDemo();
+  const { viewMode, matchmakingState } = useDemo();
 
   const renderView = () => {
     switch (viewMode) {
@@ -77,8 +97,6 @@ const ViewRouter: React.FC = () => {
     <>
       {renderView()}
       <MatchmakingModal isOpen={matchmakingState !== 'idle'} onClose={() => {}} onStart={() => {}} />
-      <CreateRoomModal isOpen={!!createdRoomCode} onClose={() => {}} onCreate={() => {}} />
-      <JoinRoomModal isOpen={false} onClose={() => {}} onJoin={() => {}} />
     </>
   );
 };
@@ -90,7 +108,7 @@ export const App: React.FC = () => {
         <div className="min-h-screen bg-[var(--app-bg)]" style={{background: '#080B12'}}>
           <Header />
           <Suspense fallback={<LoadingFallback />}>
-            <ViewRouter />
+            <RoutedViews />
           </Suspense>
         </div>
       </DemoProvider>

@@ -41,8 +41,11 @@ interface DemoContextType {
   setShowNotifications: (show: boolean) => void;
   startQuickMatch: (timeControl: TimeControl, difficulty: 'easy' | 'medium' | 'hard') => Promise<void>;
   cancelSearch: () => void;
-  createRoom: (timeControl: TimeControl) => void;
+  createRoom: (timeControl: TimeControl, code?: string) => void;
+  cancelRoom: () => void;
   joinRoom: (code: string, timeControl: TimeControl) => void;
+  replayGame: GameState | null;
+  setReplayGame: (game: GameState | null) => void;
   endGame: (result: '1-0' | '0-1' | '1/2-1/2', reason: string) => void;
 }
 
@@ -57,7 +60,10 @@ export const useDemo = () => {
 export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [settings, setSettings] = useState<DemoSettings>(() => {
     const saved = localStorage.getItem('chesskys-demo-settings');
-    return saved ? { ...DEFAULT_DEMO_SETTINGS, ...JSON.parse(saved) } : DEFAULT_DEMO_SETTINGS;
+    const base: DemoSettings = saved ? { ...DEFAULT_DEMO_SETTINGS, ...JSON.parse(saved) } : DEFAULT_DEMO_SETTINGS;
+    // ?presentation=true opens straight into presentation mode (used by the features page link)
+    const forced = new URLSearchParams(window.location.search).get('presentation') === 'true';
+    return forced ? { ...base, presentationMode: true } : base;
   });
 
   const [currentUser] = useState<Player>(DEMO_PLAYERS[0]);
@@ -67,6 +73,8 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [matchmakingState, setMatchmakingState] = useState<'idle' | 'searching' | 'found' | 'error'>('idle');
   const [matchmakingOpponent, setMatchmakingOpponent] = useState<Player | null>(null);
   const [createdRoomCode, setCreatedRoomCode] = useState<string | null>(null);
+  const roomTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [replayGame, setReplayGame] = useState<GameState | null>(null);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'play' | 'replay' | 'leaderboard' | 'tournaments' | 'profile' | 'settings' | 'landing'>('landing');
   const [viewMode, setViewMode] = useState<'landing' | 'dashboard' | 'game' | 'replay' | 'leaderboard' | 'tournaments' | 'profile' | 'settings' | 'features'>('landing');
   const [pendingPromotion, setPendingPromotion] = useState<{ from: string; to: string; game: GameState } | null>(null);
@@ -173,11 +181,17 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, 1500);
   }, [currentUser, addChatMessage]);
 
-  const createRoom = useCallback((timeControl: TimeControl) => {
-    const code = generateGameRoomCode();
+  const cancelRoom = useCallback(() => {
+    if (roomTimerRef.current) clearTimeout(roomTimerRef.current);
+    roomTimerRef.current = null;
+    setCreatedRoomCode(null);
+  }, []);
+
+  const createRoom = useCallback((timeControl: TimeControl, code: string = generateGameRoomCode()) => {
     setCreatedRoomCode(code);
-    // Simulate opponent joining after 3-5 seconds
-    setTimeout(() => {
+    // A real player usually takes a few seconds to open a shared code: simulate that
+    if (roomTimerRef.current) clearTimeout(roomTimerRef.current);
+    roomTimerRef.current = setTimeout(() => {
       const opponent = getMockOpponent(settings.difficulty);
       const newGame: GameState = {
         id: `game-${Date.now()}`,
@@ -196,6 +210,7 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setViewMode('game');
       setCreatedRoomCode(null);
       addChatMessage({ senderId: 'system', senderName: 'System', message: `${opponent.name} joined the game!`, isSystem: true });
+      roomTimerRef.current = null;
     }, 3000 + Math.random() * 2000);
   }, [currentUser, settings.difficulty, addChatMessage]);
 
@@ -272,7 +287,10 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     startQuickMatch,
     cancelSearch,
     createRoom,
+    cancelRoom,
     joinRoom,
+    replayGame,
+    setReplayGame,
     endGame,
   };
 

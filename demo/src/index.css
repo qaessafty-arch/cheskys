@@ -81,15 +81,15 @@
   }
 
   .btn-primary {
-    @apply px-6 py-3 bg-[var(--primary-accent)] text-[var(--app-bg)] font-black rounded-xl hover:bg-yellow-400 active:scale-[0.98] transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[var(--primary-accent)] focus:ring-offset-2 focus:ring-offset-[var(--app-bg)];
+    @apply px-6 py-3 inline-flex items-center justify-center gap-2 bg-[var(--primary-accent)] text-[var(--app-bg)] font-black rounded-xl hover:bg-yellow-400 active:scale-[0.98] transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[var(--primary-accent)] focus:ring-offset-2 focus:ring-offset-[var(--app-bg)];
   }
 
   .btn-secondary {
-    @apply px-6 py-3 bg-[var(--glass-bg)] text-[var(--text-main)] font-bold rounded-xl border border-[var(--glass-border)] hover:bg-[var(--glass-bg-hover)] hover:border-[var(--glass-border-strong)] active:scale-[0.98] transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[var(--tertiary-accent)] focus:ring-offset-2 focus:ring-offset-[var(--app-bg)];
+    @apply px-6 py-3 inline-flex items-center justify-center gap-2 bg-[var(--glass-bg)] text-[var(--text-main)] font-bold rounded-xl border border-[var(--glass-border)] hover:bg-[var(--glass-bg-hover)] hover:border-[var(--glass-border-strong)] active:scale-[0.98] transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[var(--tertiary-accent)] focus:ring-offset-2 focus:ring-offset-[var(--app-bg)];
   }
 
   .btn-danger {
-    @apply px-6 py-3 bg-[var(--danger)] text-white font-bold rounded-xl hover:bg-red-500 active:scale-[0.98] transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[var(--danger)] focus:ring-offset-2 focus:ring-offset-[var(--app-bg)];
+    @apply px-6 py-3 inline-flex items-center justify-center gap-2 bg-[var(--danger)] text-white font-bold rounded-xl hover:bg-red-500 active:scale-[0.98] transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[var(--danger)] focus:ring-offset-2 focus:ring-offset-[var(--app-bg)];
   }
 
   .input-field {
