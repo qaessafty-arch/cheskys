@@ -11,278 +11,147 @@ import { UkhLogo } from './UkhLogo';
 import { useDemo } from '../context/DemoContext';
 import { ArrowLeft } from 'lucide-react';
 
+// Every feature says whether this demo shows it (live: true, with what to try) or whether
+// it belongs to the full platform (live: false). Nothing is claimed as working that is not.
 const FEATURE_CATEGORIES = [
   {
-    id: 'core',
-    title: 'Core Gameplay',
+    id: 'play',
+    title: 'Playing',
     icon: Zap,
     color: 'var(--primary-accent)',
     features: [
       {
-        name: 'Sub-20ms Real-time Multiplayer',
-        desc: 'WebSocket sync with drift-free clocks, 500ms tick intervals',
+        name: 'Quick Match vs a bot',
+        desc: 'Pick a time control and start a game in one click. Three bot strengths, from Beginner to Expert.',
         icon: Zap,
-        demo: 'Live clock sync'
+        live: true,
+        demo: 'Dashboard → Quick Match',
       },
       {
-        name: 'Drift-free Chess Clock System',
-        desc: 'High-resolution timestamp deltas, Fischer increment per move, pause/resume sync',
-        icon: Clock,
-        demo: 'Interactive clock'
+        name: 'Private rooms with a 6-character code',
+        desc: 'Create a room, send the code to a friend, and join a room with a code.',
+        icon: Users,
+        live: true,
+        demo: 'Dashboard → Create Room, then Join by Code',
       },
       {
-        name: 'Complete Rule Engine (chess.js)',
-        desc: 'Legal moves, check/checkmate, stalemate, 3-fold repetition, 50-move rule, insufficient material',
+        name: 'Real chess rules',
+        desc: 'Legal moves only, check and checkmate, stalemate, pawn promotion and draws are all enforced by the rules engine.',
         icon: ShieldCheck,
-        demo: 'Try illegal move'
+        live: true,
+        demo: 'Try an illegal move on the board',
       },
       {
-        name: 'Pawn Promotion Dialog',
-        desc: 'Queen/Rook/Bishop/Knight selection with 5s auto-queen timer',
-        icon: Crown,
-        demo: 'Promote pawn'
+        name: 'Chess clocks with increment',
+        desc: 'Bullet, blitz, rapid and classical controls, with the increment added after each move.',
+        icon: Clock,
+        live: true,
+        demo: 'Start a Blitz 3+2 game',
       },
-      {
-        name: 'Draw & Resignation System',
-        desc: 'Offer/accept/decline draws, takebacks, resign confirmation',
-        icon: HeartHandshake,
-        demo: 'Offer draw'
-      },
-      {
-        name: 'Time Controls: Bullet → Classical',
-        desc: '1+0, 3+0, 3+2, 5+3, 10+0, 15+10 with increment support',
-        icon: Target,
-        demo: 'Select time control'
-      },
-    ]
+    ],
   },
   {
-    id: 'fairplay',
-    title: 'Fair Play & Anti-Cheat',
-    icon: Shield,
+    id: 'review',
+    title: 'After the game',
+    icon: BarChart2,
     color: 'var(--secondary-accent)',
     features: [
       {
-        name: 'Move Timing Analysis',
-        desc: 'Detects robotic play: avg <200ms AND variance <50ms across 10+ moves',
-        icon: Brain,
-        demo: 'Timing graph'
-      },
-      {
-        name: 'Engine Correlation Detection',
-        desc: 'Flags superhuman accuracy >90% AND best-move rate >85%',
-        icon: Cpu,
-        demo: 'Accuracy meter'
-      },
-      {
-        name: 'ELO-Adaptive Thresholds',
-        desc: 'Relaxes detection for lower-rated players (95%/92% vs 90%/85%)',
-        icon: Target,
-        demo: 'Threshold slider'
-      },
-      {
-        name: 'Flag Escalation System',
-        desc: '3 flags → monitor, 5 flags → 7-day auto-suspension',
-        icon: Flag,
-        demo: 'Flag counter'
-      },
-      {
-        name: 'Audit Trail & Moderator Alerts',
-        desc: 'All flags logged to PostgreSQL + Redis (24hr TTL), WebSocket moderator notifications',
-        icon: Shield,
-        demo: 'Audit log'
-      },
-    ]
-  },
-  {
-    id: 'social',
-    title: 'Social & Community',
-    icon: Users,
-    color: '#F97316',
-    features: [
-      {
-        name: 'Friend System',
-        desc: 'Send/accept/decline requests with messages, online status, direct challenges',
-        icon: Users,
-        demo: 'Friend list'
-      },
-      {
-        name: 'In-Game Chat',
-        desc: 'Real-time messages with /resign, /draw, /takeback slash commands, typing indicators',
-        icon: MessageSquare,
-        demo: 'Chat demo'
-      },
-      {
-        name: 'Notifications Center',
-        desc: 'Bell icon with unread badge: challenges, friend requests, achievements, tournament invites',
-        icon: Bell,
-        demo: 'Notification panel'
-      },
-      {
-        name: 'Player Profiles',
-        desc: 'Custom avatars, display name, country, badges, privacy settings',
-        icon: Award,
-        demo: 'Profile editor'
-      },
-      {
-        name: 'Respect & Honor System',
-        desc: 'Cultural gamification beyond ELO: respect points, honor ranks, immortal status',
-        icon: HeartHandshake,
-        demo: 'Honor meter'
-      },
-    ]
-  },
-  {
-    id: 'tournaments',
-    title: 'Tournament System',
-    icon: Trophy,
-    color: '#8B5CF6',
-    features: [
-      {
-        name: 'Swiss System Pairing',
-        desc: 'Score-based pairing, prevents repeat matchups, bye for odd counts',
-        icon: Brain,
-        demo: 'Pairing engine'
-      },
-      {
-        name: 'Round Robin (Berger Tables)',
-        desc: 'Polygon rotation tables for everyone-plays-everyone',
-        icon: RotateCcw,
-        demo: 'Round robin view'
-      },
-      {
-        name: 'Single/Double Elimination',
-        desc: 'Bracket generation with proper seeding',
+        name: 'Rating change after every rated game',
+        desc: 'The result screen shows the rating change for both players.',
         icon: Trophy,
-        demo: 'Bracket demo'
+        live: true,
+        demo: 'Finish a game, then read the result',
       },
       {
-        name: 'Arena Format',
-        desc: 'Time-limited continuous play, join anytime, point streaks',
-        icon: Zap,
-        demo: 'Arena timer'
-      },
-      {
-        name: 'Sonneborn-Berger Tiebreaks',
-        desc: 'Defeated opponents\' scores + ½ drawn opponents\' scores',
-        icon: Target,
-        demo: 'Tiebreak calc'
-      },
-    ]
-  },
-  {
-    id: 'analytics',
-    title: 'Analytics & Leaderboards',
-    icon: BarChart2,
-    color: '#06B6D4',
-    features: [
-      {
-        name: 'Multi-Time-Control Ratings',
-        desc: 'Separate ELO for Bullet, Blitz, Rapid, Classical with Glicko-2 support',
-        icon: BarChart2,
-        demo: 'Rating cards'
-      },
-      {
-        name: 'Global & UKH Leaderboards',
-        desc: 'Top 100 per time control, medals 🥇🥈🥉, win rate, country filter',
-        icon: Globe,
-        demo: 'Leaderboard view'
-      },
-      {
-        name: '30-Day Rating Graph',
-        desc: 'Interactive ELO progression chart with hover details',
-        icon: BarChart2,
-        demo: 'Rating chart'
-      },
-      {
-        name: 'Post-Game Analysis',
-        desc: 'Move-by-move replay, FEN copy, Stockfish eval placeholder, PGN download',
-        icon: Brain,
-        demo: 'Replay mode'
-      },
-      {
-        name: 'Accuracy & Classification',
-        desc: 'Best moves, blunders, mistakes, inaccuracies with centipawn loss',
-        icon: Target,
-        demo: 'Accuracy meter'
-      },
-    ]
-  },
-  {
-    id: 'customization',
-    title: 'Customization & Themes',
-    icon: Palette,
-    color: '#EC4899',
-    features: [
-      {
-        name: '10 Board Themes',
-        desc: 'UKH Chancellor, Peshmerga Tactical, Wall Maria, Emerald, Wood, Ocean, Midnight, Marble, Classic, Custom',
+        name: 'Replay any game',
+        desc: 'Step through the moves, or jump to the start or the end, from the move list.',
         icon: Layers,
-        demo: 'Theme switcher'
+        live: true,
+        demo: 'Dashboard → Review on a recent game',
       },
       {
-        name: '9 Piece Sets',
-        desc: 'Peshmerga Royal, UKH Chancellor, Attack on Titan, Crystal Neon, FIDE 3D, Classic, Vintage, Neo Azure, Custom Upload',
-        icon: Crown,
-        demo: 'Piece picker'
+        name: 'Live rated multiplayer',
+        desc: 'Play real opponents across the country in real time, with ratings that update on the server.',
+        icon: Globe,
+        live: false,
       },
       {
-        name: 'Instant CSS-Variable Theme Switching',
-        desc: 'Zero-reload theme changes via CSS custom properties',
-        icon: Sparkles,
-        demo: 'Live switch'
+        name: 'Post-game engine analysis',
+        desc: 'Accuracy scores and the best move for each position, calculated by an engine.',
+        icon: Brain,
+        live: false,
       },
-      {
-        name: 'Custom Theme Builder',
-        desc: 'Create personalized color palettes with live preview',
-        icon: Palette,
-        demo: 'Theme editor'
-      },
-      {
-        name: 'Custom Piece Upload',
-        desc: 'Upload SVG/PNG piece sets with automatic processing',
-        icon: Upload,
-        demo: 'Upload demo'
-      },
-    ]
+    ],
   },
   {
-    id: 'accessibility',
-    title: 'Accessibility & Polish',
-    icon: Shield,
-    color: '#84CC16',
+    id: 'community',
+    title: 'Community and tournaments',
+    icon: Trophy,
+    color: 'var(--primary-accent)',
     features: [
       {
-        name: 'WCAG 2.1 AA Compliant',
-        desc: '4.5:1 contrast, focus rings, keyboard nav, screen reader support',
-        icon: Shield,
-        demo: 'A11y audit'
+        name: 'UKH Cup tournament listing',
+        desc: 'Upcoming events, registration and the current bracket for the UKH Cup.',
+        icon: Trophy,
+        live: true,
+        demo: 'Dashboard → Tournaments',
       },
       {
-        name: 'Reduced Motion Support',
-        desc: 'Respects prefers-reduced-motion, disables non-essential animations',
+        name: 'Leaderboard',
+        desc: 'Players ranked by rating, with the top players at the top.',
+        icon: Crown,
+        live: true,
+        demo: 'Open Leaderboard from the menu',
+      },
+      {
+        name: 'Friends and accounts',
+        desc: 'Sign in, add friends and see their games.',
+        icon: HeartHandshake,
+        live: false,
+      },
+      {
+        name: 'Swiss and arena tournaments',
+        desc: 'Automatic pairing for tournaments with hundreds of players.',
+        icon: Target,
+        live: false,
+      },
+    ],
+  },
+  {
+    id: 'look',
+    title: 'Look and feel',
+    icon: Palette,
+    color: 'var(--secondary-accent)',
+    features: [
+      {
+        name: 'Board and piece themes',
+        desc: 'Six board themes and four piece sets, including the UKH set. Changes apply at once.',
+        icon: Palette,
+        live: true,
+        demo: 'Settings → Board',
+      },
+      {
+        name: 'Presentation mode',
+        desc: 'Hides the extra panels and enlarges the board, for projectors and talks.',
         icon: Eye,
-        demo: 'Motion toggle'
+        live: true,
+        demo: 'Header → presentation icon',
       },
       {
-        name: 'High Contrast Mode',
-        desc: 'Pure B&W + gold palette override for visibility',
-        icon: Shield,
-        demo: 'Contrast toggle'
+        name: 'Sound effects',
+        desc: 'Short tones for moves, captures, check and the end of the game.',
+        icon: Volume2,
+        live: true,
+        demo: 'Settings → Sounds',
       },
       {
-        name: 'Presentation Mode',
-        desc: '?presentation=true - 30% larger board, auto-demo opponent, simplified nav',
-        icon: Play,
-        demo: 'Try ?presentation=true'
+        name: 'Custom themes and piece uploads',
+        desc: 'Build your own board colours and upload your own piece set.',
+        icon: Palette,
+        live: false,
       },
-      {
-        name: 'PWA Ready',
-        desc: 'Service worker, offline play, installable, push notifications',
-        icon: Download,
-        demo: 'Install prompt'
-      },
-    ]
+    ],
   },
 ];
 
@@ -308,10 +177,16 @@ const FeatureCard: React.FC<FeatureCardProps> = ({ feature, index, color }) => (
     </div>
     <h3 className="font-black text-[var(--text-main)] mb-2">{feature.name}</h3>
     <p className="text-[var(--text-dim)] text-sm mb-4">{feature.desc}</p>
-    <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider" style={{ color }}>
-      <feature.icon className="w-4 h-4" />
-      <span>DEMO: {feature.demo}</span>
-    </div>
+    {feature.live ? (
+      <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider" style={{ color }}>
+        <feature.icon className="w-4 h-4" />
+        <span>Try it: {feature.demo}</span>
+      </div>
+    ) : (
+      <span className="inline-flex items-center text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border border-[var(--glass-border)] text-[var(--text-dim)]">
+        Full platform
+      </span>
+    )}
   </motion.div>
 );
 
@@ -412,8 +287,8 @@ export const FeaturesShowcase: React.FC = () => {
             transition={{ duration: 0.6, delay: 0.3 }}
             className="text-lg sm:text-xl text-[var(--text-muted)] max-w-3xl mx-auto mb-12 leading-relaxed"
           >
-            A production-grade competitive chess platform with enterprise-grade architecture,
-            Kurdish cultural heritage, and features that redefine digital chess.
+            A chess platform built with Kurdish heritage at its core. This page shows what the demo
+            does today, and which parts belong to the full platform.
           </motion.p>
 
           <motion.div
@@ -423,13 +298,13 @@ export const FeaturesShowcase: React.FC = () => {
             className="flex flex-wrap items-center justify-center gap-4"
           >
             <span className="px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest bg-[var(--primary-accent)]/20 text-[var(--primary-accent)] border border-[var(--primary-accent)]/30">
-              7 CATEGORIES
+              4 AREAS
             </span>
             <span className="px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest bg-[var(--secondary-accent)]/20 text-[var(--secondary-accent)] border border-[var(--secondary-accent)]/30">
-              40+ FEATURES
+              {FEATURE_CATEGORIES.reduce((n, c) => n + c.features.filter(f => f.live).length, 0)} IN THE DEMO
             </span>
             <span className="px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest bg-[var(--tertiary-accent)]/20 text-[var(--tertiary-accent)] border border-[var(--tertiary-accent)]/30">
-              PRODUCTION READY
+              {FEATURE_CATEGORIES.reduce((n, c) => n + c.features.filter(f => !f.live).length, 0)} FULL PLATFORM ONLY
             </span>
           </motion.div>
         </div>
@@ -461,8 +336,8 @@ export const FeaturesShowcase: React.FC = () => {
           <div className="max-w-3xl mx-auto text-center glass-panel p-12 rounded-3xl border border-[var(--primary-accent)]/30">
             <h2 className="text-3xl font-black text-[var(--text-main)] mb-4">Ready to Experience It?</h2>
             <p className="text-[var(--text-muted)] mb-8 max-w-xl mx-auto">
-              All features are live in the demo. Start a match, explore tournaments,
-              check leaderboards, customize themes — everything works.
+              Everything marked “Try it” works in this demo. Start a match, open a room,
+              review a game, or change the board. The rest belongs to the full platform.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4">
               <a href="/" className="btn-primary px-10 py-4 text-lg">

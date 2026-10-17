@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Play, Plus, Search, Trophy, Star, Settings } from 'lucide-react';
 import { TimeControl } from '../types/chess';
-import { DEMO_TIME_CONTROLS } from '../data/demoData';
-import { generateGameRoomCode } from '../utils/chessEngine';
+import { DEMO_TIME_CONTROLS, DEMO_GAMES } from '../data/demoData';
 import { useDemo } from '../context/DemoContext';
 import { MatchmakingModal } from './MatchmakingModal';
 import { CreateRoomModal } from './CreateRoomModal';
@@ -15,7 +14,6 @@ export const Dashboard: React.FC = () => {
     currentUser,
     viewMode,
     setViewMode,
-    createdRoomCode,
     matchmakingState,
     startQuickMatch,
     createRoom,
@@ -24,6 +22,8 @@ export const Dashboard: React.FC = () => {
     setShowSettings,
     setShowTournaments,
     setViewMode: _setViewMode,
+    cancelRoom,
+    setReplayGame,
   } = useDemo();
 
   const [recentGames] = useState([
@@ -35,17 +35,16 @@ export const Dashboard: React.FC = () => {
   ]);
 
   const [selectedQuickTime, setSelectedQuickTime] = useState<TimeControl>(DEMO_TIME_CONTROLS[2]);
-  const [selectedTimeControl, setSelectedTimeControl] = useState<TimeControl>(DEMO_TIME_CONTROLS[2]);
-  const [selectedSide, setSelectedSide] = useState<'white' | 'black' | 'random'>('random');
-  const [rated, setRated] = useState(true);
-  const [roomCode, setRoomCode] = useState(() => generateGameRoomCode());
-  const [copiedCode, setCopiedCode] = useState(false);
-  const [joinCode, setJoinCode] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
 
-  const handleCreateRoom = (timeControl: TimeControl, side: 'white' | 'black' | 'random', rated: boolean) => {
-    createRoom(timeControl);
+  // The modal shows the room code and waits; createRoom starts the game when a friend joins
+  const handleCreateRoom = (timeControl: TimeControl, _side: 'white' | 'black' | 'random', _rated: boolean, code: string) => {
+    createRoom(timeControl, code);
+  };
+
+  const handleCancelRoom = () => {
+    cancelRoom();
     setShowCreateModal(false);
   };
 
@@ -55,9 +54,10 @@ export const Dashboard: React.FC = () => {
   };
 
   const handleReviewGame = (game: typeof recentGames[0]) => {
-    // Navigate to replay view with the game data
-    // For demo, we'll just log it
-    alert(`Reviewing game vs ${game.opponent} (${game.result})`);
+    // Open the replay on this game when we have its moves, otherwise the newest sample game
+    const match = DEMO_GAMES.find(g => g.white.name === game.opponent || g.black.name === game.opponent);
+    setReplayGame(match ?? DEMO_GAMES[0]);
+    setViewMode('replay');
   };
 
   return (
@@ -72,6 +72,10 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center gap-3 shrink-0">
+          <button onClick={() => setViewMode('leaderboard')} className="btn-secondary">
+            <Trophy className="w-4 h-4 mr-1" />
+            Leaderboard
+          </button>
           <button onClick={() => setViewMode('features')} className="btn-secondary">
             <Star className="w-4 h-4 mr-1" />
             Features
@@ -131,7 +135,7 @@ export const Dashboard: React.FC = () => {
           desc="Private room with 6-char code"
           onClick={() => setShowCreateModal(true)}
         >
-          <button className="btn-primary w-full mt-4" onClick={() => setShowCreateModal(true)}>
+          <button className="btn-primary w-full mt-4 inline-flex items-center justify-center gap-2" onClick={() => setShowCreateModal(true)}>
             <Plus className="w-5 h-5 mr-2" />
             Create Room
           </button>
@@ -143,7 +147,7 @@ export const Dashboard: React.FC = () => {
           desc="Enter friend's room code"
           onClick={() => setShowJoinModal(true)}
         >
-          <button className="btn-secondary w-full mt-4" onClick={() => setShowJoinModal(true)}>
+          <button className="btn-secondary w-full mt-4 inline-flex items-center justify-center gap-2" onClick={() => setShowJoinModal(true)}>
             <Search className="w-5 h-5 mr-2" />
             Join Room
           </button>
@@ -155,7 +159,7 @@ export const Dashboard: React.FC = () => {
           desc="UKH Cup registration open"
           onClick={() => setShowTournaments(true)}
         >
-          <button className="btn-secondary w-full mt-4" onClick={() => setShowTournaments(true)}>
+          <button className="btn-secondary w-full mt-4 inline-flex items-center justify-center gap-2" onClick={() => setShowTournaments(true)}>
             <Trophy className="w-5 h-5 mr-2" />
             Browse
           </button>
@@ -195,7 +199,7 @@ export const Dashboard: React.FC = () => {
       >
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-black uppercase tracking-tight text-[var(--text-main)]">Recent Games</h2>
-          <button className="btn-secondary text-sm">View All</button>
+          <button className="btn-secondary text-sm" onClick={() => { setReplayGame(null); setViewMode('replay'); }}>View All</button>
         </div>
         <div className="glass-panel rounded-2xl overflow-hidden">
           <div className="grid grid-cols-12 gap-4 p-4 border-b border-[var(--glass-border)] text-[11px] font-black uppercase tracking-wider text-[var(--text-dim)]">
@@ -228,7 +232,7 @@ export const Dashboard: React.FC = () => {
               <div className="col-span-2 text-[var(--primary-accent)] font-mono">{game.result === 'W' ? '+12' : game.result === 'L' ? '-10' : '+2'}</div>
               <div className="col-span-2 text-[var(--text-dim)]">{game.date}</div>
               <div className="col-span-2">
-                <button className="text-[var(--text-dim)] hover:text-[var(--primary-accent)] text-sm font-medium">Review</button>
+                <button onClick={() => handleReviewGame(game)} className="text-[var(--text-dim)] hover:text-[var(--primary-accent)] text-sm font-medium">Review</button>
               </div>
             </div>
           ))}
@@ -237,8 +241,17 @@ export const Dashboard: React.FC = () => {
 
       {/* Modals */}
       <MatchmakingModal isOpen={matchmakingState !== 'idle'} onClose={() => {}} onStart={startQuickMatch} />
-      <CreateRoomModal isOpen={!!createdRoomCode} onClose={() => {}} onCreate={createRoom} />
-      <JoinRoomModal isOpen={false} onClose={() => {}} onJoin={joinRoom} />
+      <CreateRoomModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onCreate={handleCreateRoom}
+        onCancel={handleCancelRoom}
+      />
+      <JoinRoomModal
+        isOpen={showJoinModal}
+        onClose={() => setShowJoinModal(false)}
+        onJoin={handleJoinRoom}
+      />
     </div>
   );
 };

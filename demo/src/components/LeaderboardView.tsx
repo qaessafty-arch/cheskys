@@ -247,7 +247,7 @@ export const LeaderboardView: React.FC = () => {
 
 const LegendItem: React.FC<{ color: string; label: string; icon: React.ReactNode | React.ComponentType }> = ({ color, label, icon }) => (
   <div className="flex items-center gap-2" style={{ color }}>
-    {typeof icon === 'function' ? React.createElement(icon as React.ComponentType<{ className?: string }>, { className: 'w-4 h-4' }) : icon}
+    {React.isValidElement(icon) || icon == null || typeof icon === 'string' ? icon : React.createElement(icon as React.ElementType, { className: 'w-4 h-4' })}
     <span>{label}</span>
   </div>
 );
