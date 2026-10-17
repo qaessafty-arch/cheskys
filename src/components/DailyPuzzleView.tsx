@@ -307,19 +307,19 @@ export const DailyPuzzleView: React.FC<DailyPuzzleViewProps> = ({
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-lg sm:text-2xl font-black font-heading text-white tracking-tight">
-                  Daily Tactical Challenge
+                  Daily Puzzle
                 </h1>
                 <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-[#F5C453]/20 text-[#F5C453] border border-[#F5C453]/40 uppercase tracking-wide">
-                  24-Hour Cycle
+                  New Every Day
                 </span>
                 {isLoadingLive && (
                   <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
-                    <RefreshCw className="w-3 h-3 animate-spin" /> Syncing Arena...
+                    <RefreshCw className="w-3 h-3 animate-spin" /> Loading...
                   </span>
                 )}
               </div>
               <p className="text-xs text-[#DFD0B0]/80 mt-0.5">
-                New master puzzle every 24 hours. Solve daily to build your tactical streak and earn Peshmerga Respect.
+                A new puzzle every 24 hours. Solve it each day to keep your streak and earn Respect points.
               </p>
             </div>
           </div>
@@ -331,7 +331,7 @@ export const DailyPuzzleView: React.FC<DailyPuzzleViewProps> = ({
               <Clock className="w-4 h-4 text-[#F5C453] animate-pulse" />
               <div>
                 <div className="text-[10px] uppercase font-bold text-[#DFD0B0]/60 leading-none">
-                  Next Challenge In
+                  Next Puzzle In
                 </div>
                 <div className="text-xs sm:text-sm font-mono font-black text-white tracking-wide">
                   {timeUntilReset.formatted}
@@ -356,10 +356,10 @@ export const DailyPuzzleView: React.FC<DailyPuzzleViewProps> = ({
             <button
               onClick={() => setIsCalendarOpen(true)}
               className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 text-white text-xs font-bold transition-all hover:scale-105 cursor-pointer shadow-sm"
-              title="Open Daily Puzzle Archive Calendar"
+              title="Open past puzzles calendar"
             >
               <Calendar className="w-4 h-4 text-[#F5C453]" />
-              <span className="hidden sm:inline">Archive</span>
+              <span className="hidden sm:inline">Past Puzzles</span>
             </button>
           </div>
         </div>
@@ -397,15 +397,15 @@ export const DailyPuzzleView: React.FC<DailyPuzzleViewProps> = ({
                 </div>
 
                 <span className="text-[10px] font-black uppercase tracking-widest text-[#F5C453] bg-[#F5C453]/15 px-2.5 py-0.5 rounded-full border border-[#F5C453]/30 mb-1">
-                  Tactical Victory
+                  Solved
                 </span>
 
                 <h3 className="text-xl sm:text-2xl font-black font-heading text-white tracking-tight">
-                  Master Combination Solved!
+                  Puzzle Solved!
                 </h3>
 
                 <p className="text-xs text-[#DFD0B0]/80 max-w-xs mt-1 mb-3">
-                  You successfully found every grandmaster defense and mate sequence.
+                  You found every correct move.
                 </p>
 
                 {/* Reward metrics badges */}
@@ -429,7 +429,7 @@ export const DailyPuzzleView: React.FC<DailyPuzzleViewProps> = ({
                   <button
                     onClick={triggerCelebrationEffects}
                     className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-[#F5C453] to-amber-500 hover:brightness-110 text-black font-black text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md hover:scale-105"
-                    title="Trigger celebratory confetti again"
+                    title="Show confetti again"
                   >
                     <Sparkles className="w-3.5 h-3.5 text-black" />
                     <span>Confetti</span>
@@ -444,7 +444,7 @@ export const DailyPuzzleView: React.FC<DailyPuzzleViewProps> = ({
                   <button
                     onClick={() => setShowCelebrationBanner(false)}
                     className="py-2 px-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs transition-all cursor-pointer"
-                    title="Inspect board position"
+                    title="Analyze this position"
                   >
                     Inspect
                   </button>
@@ -535,7 +535,7 @@ export const DailyPuzzleView: React.FC<DailyPuzzleViewProps> = ({
             {dailyPuzzle.loreContext && (
               <div className="p-3.5 rounded-2xl bg-white/[0.04] border border-[#F5C453]/25 text-xs text-[#DFD0B0]/90 space-y-1">
                 <div className="flex items-center gap-1.5 font-bold text-[#F5C453]">
-                  <span>🏔️ Zagros Tactical Heritage</span>
+                  <span>🏔️ Did You Know?</span>
                 </div>
                 <p className="text-[11px] leading-relaxed text-[#DFD0B0]/80">{dailyPuzzle.loreContext}</p>
               </div>
@@ -548,7 +548,7 @@ export const DailyPuzzleView: React.FC<DailyPuzzleViewProps> = ({
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="w-5 h-5 text-emerald-400" />
                     <div>
-                      <h4 className="font-black text-sm text-white">Daily Tactical Victory!</h4>
+                      <h4 className="font-black text-sm text-white">Puzzle Solved!</h4>
                       <p className="text-[11px] text-emerald-300/80">+25 Respect Points & +15 Tactics Rating awarded</p>
                     </div>
                   </div>
@@ -563,7 +563,7 @@ export const DailyPuzzleView: React.FC<DailyPuzzleViewProps> = ({
 
                 {dailyPuzzle.solutionExplanation && (
                   <div className="pt-2 border-t border-emerald-500/20 text-[11px] text-white/90 leading-relaxed">
-                    <strong className="text-[#F5C453] block mb-0.5">Grandmaster Analysis:</strong>
+                    <strong className="text-[#F5C453] block mb-0.5">Explanation:</strong>
                     {dailyPuzzle.solutionExplanation}
                   </div>
                 )}
@@ -575,8 +575,8 @@ export const DailyPuzzleView: React.FC<DailyPuzzleViewProps> = ({
               <div className="p-3.5 rounded-2xl bg-rose-950/60 border border-rose-500/50 text-rose-300 flex items-center gap-2.5 animate-in zoom-in-95">
                 <XCircle className="w-5 h-5 text-rose-400 shrink-0" />
                 <div className="text-xs">
-                  <strong className="block font-bold">Tactical Inaccuracy</strong>
-                  <span>That was not the master move. Regroup and calculate the defense!</span>
+                  <strong className="block font-bold">Wrong Move</strong>
+                  <span>That was not the best move. Try again!</span>
                 </div>
               </div>
             )}
@@ -586,10 +586,10 @@ export const DailyPuzzleView: React.FC<DailyPuzzleViewProps> = ({
               <div className="p-3.5 rounded-2xl bg-amber-500/15 border border-amber-500/40 text-amber-200 text-xs space-y-1 animate-in fade-in">
                 <div className="flex items-center gap-1.5 font-bold text-amber-300">
                   <Lightbulb className="w-4 h-4 text-amber-400" />
-                  <span>Peshmerga Scout Tactical Hint</span>
+                  <span>Hint</span>
                 </div>
                 <p className="text-[11px] leading-relaxed">
-                  {dailyPuzzle.tacticalTidbit || 'Focus on king vulnerability, undefended pieces, or checking rays.'}
+                  {dailyPuzzle.tacticalTidbit || 'Look for checks, undefended pieces and a weak king.'}
                 </p>
                 <div className="pt-1 text-[11px] font-mono text-amber-300/90">
                   Key move starts with piece: "
@@ -604,7 +604,7 @@ export const DailyPuzzleView: React.FC<DailyPuzzleViewProps> = ({
                 <div className="flex items-center justify-between font-bold text-sky-300">
                   <span className="flex items-center gap-1.5">
                     <BookOpen className="w-4 h-4 text-sky-400" />
-                    <span>Complete Master Solution</span>
+                    <span>Full Solution</span>
                   </span>
                   <button onClick={() => setShowSolution(false)} className="text-white/60 hover:text-white">
                     <X className="w-3.5 h-3.5" />
@@ -634,7 +634,7 @@ export const DailyPuzzleView: React.FC<DailyPuzzleViewProps> = ({
                   className="col-span-2 py-3 rounded-2xl bg-gradient-to-r from-[#8C2425] to-[#52673A] text-white font-black text-xs flex items-center justify-center gap-2 hover:scale-[1.01] transition-all cursor-pointer shadow-lg border border-[#F5C453]/40"
                 >
                   <RotateCcw className="w-4 h-4 text-[#F5C453]" />
-                  <span>Retry Tactical Mission</span>
+                  <span>Try Again</span>
                 </button>
               ) : puzzleStatus === 'completed' ? (
                 <>
@@ -650,7 +650,7 @@ export const DailyPuzzleView: React.FC<DailyPuzzleViewProps> = ({
                     className="py-3 px-3 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs flex items-center justify-center gap-1.5 border border-white/20 transition-all cursor-pointer"
                   >
                     <Calendar className="w-4 h-4 text-[#F5C453]" />
-                    <span>Browse Archive</span>
+                    <span>Past Puzzles</span>
                   </button>
                 </>
               ) : (
@@ -660,7 +660,7 @@ export const DailyPuzzleView: React.FC<DailyPuzzleViewProps> = ({
                     className="py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs flex items-center justify-center gap-1.5 border border-white/15 transition-all cursor-pointer"
                   >
                     <Lightbulb className="w-3.5 h-3.5 text-[#F5C453]" />
-                    <span>Tactical Hint</span>
+                    <span>Hint</span>
                   </button>
                   <button
                     onClick={handleReset}
@@ -674,7 +674,7 @@ export const DailyPuzzleView: React.FC<DailyPuzzleViewProps> = ({
                     className="col-span-2 py-2 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-[#DFD0B0]/70 hover:text-white text-[11px] font-bold flex items-center justify-center gap-1 border border-white/10 transition-all cursor-pointer"
                   >
                     <BookOpen className="w-3.5 h-3.5 text-[#F5C453]" />
-                    <span>{showSolution ? 'Hide Solution' : 'Reveal Grandmaster Solution'}</span>
+                    <span>{showSolution ? 'Hide Solution' : 'Show Solution'}</span>
                   </button>
                 </>
               )}
@@ -723,8 +723,8 @@ export const DailyPuzzleView: React.FC<DailyPuzzleViewProps> = ({
                 <Calendar className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-xl font-heading font-black text-white">Daily Puzzle Archive</h3>
-                <p className="text-xs text-[#DFD0B0]/70">Practice or replay any daily challenge from the calendar</p>
+                <h3 className="text-xl font-heading font-black text-white">Past Puzzles</h3>
+                <p className="text-xs text-[#DFD0B0]/70">Pick a day on the calendar to play its puzzle</p>
               </div>
             </div>
 
@@ -811,10 +811,10 @@ export const DailyPuzzleView: React.FC<DailyPuzzleViewProps> = ({
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Solved
               </span>
               <span className="flex items-center gap-1.5">
-                <Sun className="w-3.5 h-3.5 text-[#F5C453]" /> Today's Mission
+                <Sun className="w-3.5 h-3.5 text-[#F5C453]" /> Today's Puzzle
               </span>
               <span className="flex items-center gap-1.5">
-                <Flame className="w-3.5 h-3.5 text-amber-400" /> Continuous Streak
+                <Flame className="w-3.5 h-3.5 text-amber-400" /> Streak
               </span>
             </div>
           </div>

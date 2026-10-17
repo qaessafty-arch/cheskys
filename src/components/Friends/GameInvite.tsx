@@ -29,8 +29,8 @@ export const GameInvite: React.FC<GameInviteProps> = ({
               <Swords className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-black text-white">Challenge to Match</h3>
-              <p className="text-[11px] text-[#DFD0B0]/70">Versus {friend.displayName}</p>
+              <h3 className="text-base font-black text-white">Challenge to a Game</h3>
+              <p className="text-[11px] text-[#DFD0B0]/70">Against {friend.displayName}</p>
             </div>
           </div>
           <button
@@ -45,7 +45,7 @@ export const GameInvite: React.FC<GameInviteProps> = ({
         <div className="space-y-2">
           <label className="text-xs font-bold text-white/70 uppercase tracking-wider flex items-center gap-1">
             <Clock className="w-3.5 h-3.5 text-[#F5C453]" />
-            <span>Select Time Control</span>
+            <span>Choose a Time Control</span>
           </label>
 
           <div className="grid grid-cols-2 gap-2">
@@ -85,7 +85,7 @@ export const GameInvite: React.FC<GameInviteProps> = ({
             className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#8C2425] to-[#B91C1C] hover:brightness-110 text-white font-black text-sm flex items-center justify-center gap-2 shadow-xl border border-[#F5C453]/40 cursor-pointer active:scale-98 transition-all"
           >
             <Sparkles className="w-4 h-4 text-[#F5C453]" />
-            <span>Issue Challenge</span>
+            <span>Send Challenge</span>
           </button>
         </div>
       </div>

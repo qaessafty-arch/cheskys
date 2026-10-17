@@ -184,7 +184,7 @@ export const FriendPanel: React.FC<FriendPanelProps> = ({
     await updateProfileDetails({ username: clean });
     setIsEditingUsername(false);
     setNewUsernameInput('');
-    setFeedback({ msg: `Your unique handle is now @${clean}`, type: 'success' });
+    setFeedback({ msg: `Your username is now @${clean}`, type: 'success' });
     setTimeout(() => setFeedback(null), 3000);
   };
 
@@ -206,7 +206,7 @@ export const FriendPanel: React.FC<FriendPanelProps> = ({
     if (!profile) return;
     const success = await respondToFriendRequest(req.id, true, profile.uid, req.fromUserId);
     if (success) {
-      setFeedback({ msg: `You and ${req.fromUserName} are now allies!`, type: 'success' });
+      setFeedback({ msg: `You and ${req.fromUserName} are now friends!`, type: 'success' });
       setIncomingRequests(prev => prev.filter(r => r.id !== req.id));
       setTimeout(() => setFeedback(null), 3000);
     }
@@ -249,10 +249,10 @@ export const FriendPanel: React.FC<FriendPanelProps> = ({
       userId: friend.uid,
       type: 'challenge',
       title: 'Game Challenge!',
-      message: `${profile.displayName || 'Grandmaster'} has challenged you to a ${tc.name} match!`,
+      message: `${profile.displayName || 'A player'} has challenged you to a ${tc.name} match!`,
       actionData: {
         challengerId: profile.uid,
-        challengerName: profile.displayName || 'Tactician',
+        challengerName: profile.displayName || 'Player',
         challengerAvatar: profile.photoURL,
         timeControlName: tc.name,
         timeControlSeconds: tc.initialSeconds,
@@ -285,14 +285,14 @@ export const FriendPanel: React.FC<FriendPanelProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-xl font-black text-white tracking-tight uppercase">
-                  Social Alliance
+                  Friends
                 </h2>
                 <span className="px-2 py-0.5 rounded-full bg-[#F5C453]/20 text-[#F5C453] font-mono text-xs font-bold">
                   {friendsList.length}
                 </span>
               </div>
               <p className="text-[10px] font-black text-[#DFD0B0]/60 uppercase tracking-widest">
-                Real-Time Mountain Guild & Challenges
+                Friends, Requests and Challenges
               </p>
             </div>
           </div>
@@ -304,7 +304,7 @@ export const FriendPanel: React.FC<FriendPanelProps> = ({
               className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#52673A] to-[#8C2425] hover:brightness-110 text-white text-xs font-black shadow-lg border border-[#F5C453]/40 flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <UserPlus className="w-3.5 h-3.5 text-[#F5C453]" />
-              <span>Add Tactician</span>
+              <span>Add Friend</span>
             </button>
 
             {currentRoom && currentRoom.status === 'waiting' && (
@@ -336,7 +336,7 @@ export const FriendPanel: React.FC<FriendPanelProps> = ({
             </div>
             <div>
               <span className="text-[10px] text-[#DFD0B0]/60 uppercase font-bold tracking-wider">
-                Your Alliance Handle
+                Your Username
               </span>
               <div className="text-sm font-black text-[#F5C453] font-mono flex items-center gap-1.5">
                 <span>@{currentUsername}</span>
@@ -344,7 +344,7 @@ export const FriendPanel: React.FC<FriendPanelProps> = ({
                   type="button"
                   onClick={handleCopyHandle}
                   className="text-white/40 hover:text-white transition-colors cursor-pointer"
-                  title="Copy Handle"
+                  title="Copy Username"
                 >
                   {copiedHandle ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                 </button>
@@ -362,7 +362,7 @@ export const FriendPanel: React.FC<FriendPanelProps> = ({
               className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white text-xs font-bold flex items-center gap-1.5 border border-white/10 transition-all cursor-pointer self-start sm:self-auto"
             >
               <Edit3 className="w-3.5 h-3.5 text-[#F5C453]" />
-              <span>Edit Handle</span>
+              <span>Edit Username</span>
             </button>
           ) : (
             <div className="flex items-center gap-1.5">
@@ -371,7 +371,7 @@ export const FriendPanel: React.FC<FriendPanelProps> = ({
                   type="text"
                   value={newUsernameInput}
                   onChange={e => setNewUsernameInput(e.target.value)}
-                  placeholder="new_handle"
+                  placeholder="new_username"
                   className="bg-black/60 border border-white/20 rounded-xl px-2.5 py-1 text-xs text-white font-mono focus:outline-none focus:border-[#F5C453]"
                   maxLength={20}
                 />
@@ -420,7 +420,7 @@ export const FriendPanel: React.FC<FriendPanelProps> = ({
               activeTab === 'all' ? 'glass-pill-tab active' : 'glass-pill-tab'
             }`}
           >
-            All Allies ({friendsList.length})
+            All Friends ({friendsList.length})
           </button>
 
           <button
@@ -495,7 +495,7 @@ export const FriendPanel: React.FC<FriendPanelProps> = ({
                   {(isGuest || profile?.isGuest) && (
                     <div className="mb-2 p-3 rounded-2xl bg-[#F5C453]/10 border border-[#F5C453]/30 flex items-start gap-2 text-xs text-[#DFD0B0]">
                       <ShieldAlert className="w-4 h-4 text-[#F5C453] shrink-0 mt-0.5" />
-                      <span>You are playing as a guest. Sign in to save allies, send friend requests and challenge friends online.</span>
+                      <span>You are playing as a guest. Sign in to save friends, send friend requests and challenge friends online.</span>
                     </div>
                   )}
                   <FriendList
@@ -554,7 +554,7 @@ export const FriendPanel: React.FC<FriendPanelProps> = ({
             sendFriendRequest(
               {
                 uid: profile?.uid || '',
-                displayName: profile?.displayName || 'Tactician',
+                displayName: profile?.displayName || 'Player',
                 username: currentUsername,
                 photoURL: profile?.photoURL || null,
                 elo: profile?.elo,

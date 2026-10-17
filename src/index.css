@@ -12,6 +12,7 @@
 @import "./styles/settings.css";
 @import "./styles/brutalist-palette.css";
 @import "./styles/brutalist.css";
+@import "./styles/rtl-script.css";
 
 :root {
   --app-bg: #0A0B1E;

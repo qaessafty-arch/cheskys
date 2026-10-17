@@ -40,7 +40,7 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
   const matchmakingMode: MatchmakingMode = 'human_strict';
   const [isSearching, setIsSearching] = useState(false);
   const [searchSeconds, setSearchSeconds] = useState(0);
-  const [searchStatus, setSearchStatus] = useState('Initializing search...');
+  const [searchStatus, setSearchStatus] = useState('Starting search...');
   const [matchedOpponent, setMatchedOpponent] = useState<{ player: OnlineMatchPlayer; isBot: boolean } | null>(null);
   const [liveQueueCount, setLiveQueueCount] = useState<number>(0);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -72,7 +72,7 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
     {
       id: 'bullet_1_0',
       title: '1 min Bullet',
-      desc: 'Hyper-speed instinct clash',
+      desc: 'Very fast game',
       icon: <Zap className="w-5 h-5 text-amber-400" />,
       timeControl: TIME_CONTROLS[0], // 1 min
       badge: '⚡ Fast'
@@ -80,7 +80,7 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
     {
       id: 'blitz_3_0',
       title: '3 min Blitz',
-      desc: 'High-adrenaline tactical war',
+      desc: 'Fast game',
       icon: <Swords className="w-5 h-5 text-red-400" />,
       timeControl: TIME_CONTROLS[2], // 3 min
       badge: '🔥 Hot'
@@ -88,7 +88,7 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
     {
       id: 'blitz_5_0',
       title: '5 min Blitz',
-      desc: 'Balanced tactical battle',
+      desc: 'Fast, most popular',
       icon: <Swords className="w-5 h-5 text-orange-400" />,
       timeControl: TIME_CONTROLS[4], // 5 min
       badge: '⚔️ Popular'
@@ -96,7 +96,7 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
     {
       id: 'rapid_10_0',
       title: '10 min Rapid',
-      desc: 'Strategic mastery & depth',
+      desc: 'More time to think',
       icon: <Shield className="w-5 h-5 text-emerald-400" />,
       timeControl: TIME_CONTROLS[5], // 10 min
       badge: '👑 Ranked'
@@ -104,10 +104,10 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
     {
       id: 'rapid_15_10',
       title: '15 min + 10s',
-      desc: 'Classical Peshmerga duel',
+      desc: 'Long game with time bonus',
       icon: <Clock className="w-5 h-5 text-sky-400" />,
       timeControl: TIME_CONTROLS[7], // 15|10
-      badge: '🛡️ Grandmaster'
+      badge: '🛡️ Long'
     }
   ];
 
@@ -140,7 +140,7 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
     const tc = presetTimeControl || selectedTimeControl;
     setSelectedTimeControl(tc);
     setIsSearching(true);
-    setSearchStatus('Searching the worldwide queue for real live opponents…');
+    setSearchStatus('Looking for a real player…');
     setMatchedOpponent(null);
 
     const myPlayer: OnlineMatchPlayer = {
@@ -159,7 +159,7 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
       tc,
       (matchId, opponent, isBot) => {
         setMatchedOpponent({ player: opponent, isBot });
-        setSearchStatus(`Real Live Opponent Found: ${opponent.displayName}!`);
+        setSearchStatus(`Opponent found: ${opponent.displayName}!`);
         setTimeout(() => {
           setIsSearching(false);
           onMatchFound(matchId);
@@ -219,7 +219,7 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight uppercase">
-                Worldwide Live Arena
+                Play Online
               </h2>
               <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/40 animate-pulse flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
@@ -227,7 +227,7 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
               </span>
             </div>
             <p className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.2em] opacity-60">
-              Live Human vs Human Battlefield • No Bots
+              Play against real people • No bots
             </p>
           </div>
         </div>
@@ -239,12 +239,12 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
             </span>
-            <span className="font-black text-emerald-300">Worldwide Live Queue</span>
+            <span className="font-black text-emerald-300">Players Waiting</span>
           </div>
           <div className="text-[11px] font-mono text-emerald-200/90">
             {liveQueueCount > 0
               ? `${liveQueueCount} player${liveQueueCount === 1 ? '' : 's'} waiting in queue`
-              : 'Queue active • Searching for live players'}
+              : 'Looking for players...'}
           </div>
         </div>
 
@@ -277,7 +277,7 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
                       <span>{matchedOpponent.player.displayName}</span>
                       <span>{matchedOpponent.player.flag}</span>
                       <span className="text-[10px] bg-emerald-500/30 text-emerald-300 px-1.5 py-0.2 rounded border border-emerald-500/40 font-black">
-                        REAL LIVE HUMAN
+                        REAL PLAYER
                       </span>
                     </div>
                     <div className="text-xs text-emerald-300/80 font-mono">
@@ -287,7 +287,7 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
                 </div>
                 <div className="text-xs font-bold text-emerald-400 flex items-center gap-1.5 mt-1">
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>Entering Arena...</span>
+                  <span>Starting game...</span>
                 </div>
               </div>
             ) : (
@@ -306,12 +306,12 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
                   </span>
                   <span>•</span>
                   <span className="text-sky-300 font-black">
-                    Live Real Players
+                    Real Players
                   </span>
                 </div>
 
                 <p className="text-[11px] text-emerald-300/70 max-w-xs mt-1">
-                  Searching for a live human opponent globally… Bots are strictly forbidden in this mode.
+                  Looking for a real player anywhere in the world… No bots in this mode.
                 </p>
               </div>
             )}
@@ -328,10 +328,10 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
               <button
                 onClick={handleCopyInviteLink}
                 className="px-4 py-2.5 rounded-xl bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-500/40 text-emerald-200 text-xs font-bold transition-all hover:scale-105 cursor-pointer shadow-md flex items-center gap-1.5"
-                title="Copy direct invite link to send to a friend or live opponent"
+                title="Copy a link to send to a friend"
               >
                 {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-emerald-400" />}
-                <span>{copiedLink ? 'Invite Link Copied!' : 'Share Live Match Link'}</span>
+                <span>{copiedLink ? 'Link Copied!' : 'Copy Invite Link'}</span>
               </button>
             </div>
           </div>
@@ -342,10 +342,10 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
             <div className="p-3.5 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 shadow-lg">
               <div className="flex items-center gap-2 text-xs font-black text-emerald-300 uppercase tracking-wide mb-1">
                 <Shield className="w-4 h-4 text-emerald-400" />
-                <span>Worldwide Mode: 100% Real Live Players Only</span>
+                <span>Real Players Only</span>
               </div>
               <p className="text-[11px] text-emerald-200/80 leading-relaxed">
-                Connect and play live chess against verified human opponents from across the globe in real time. AI bots, engine fallback, and simulated players are strictly prohibited.
+                Play live chess against real people from around the world. You will never be matched with a bot here.
               </p>
             </div>
 
@@ -374,7 +374,7 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
             {/* Time Control Format */}
             <div>
               <label className="text-xs font-bold text-[#DFD0B0]/80 uppercase tracking-wider block font-ui mb-1.5">
-                Choose Time Control Format
+                Choose a Time Control
               </label>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -420,7 +420,7 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
               >
                 <Globe className="w-5 h-5 text-[#F5C453] animate-pulse" />
                 <span>
-                  Find Real Live Opponent ({selectedTimeControl.name})
+                  Find Match ({selectedTimeControl.name})
                 </span>
               </button>
             </div>
@@ -429,11 +429,11 @@ export const WorldwideMatchModal: React.FC<WorldwideMatchModalProps> = ({
             <div className="flex items-center justify-between text-[11px] text-[#DFD0B0]/60 px-1 pt-1">
               <span className="flex items-center gap-1.5">
                 <Users className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Worldwide matchmaking live queue active</span>
+                <span>Matchmaking is on</span>
               </span>
               <span className="flex items-center gap-1 text-[#F5C453]">
                 <Trophy className="w-3.5 h-3.5" />
-                <span>+30 Respect on Victory</span>
+                <span>+30 Respect for a win</span>
               </span>
             </div>
           </div>

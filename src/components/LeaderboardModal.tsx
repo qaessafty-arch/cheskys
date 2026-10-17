@@ -95,7 +95,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ profile, onC
                 {t('leaderboard.worldwideLeaderboard')}
               </h2>
               <p className="text-[11px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] mt-1 opacity-70">
-                Global Honor Rankings
+                Top players by respect and rating
               </p>
             </div>
           </div>
@@ -128,7 +128,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ profile, onC
               </div>
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-[10px] uppercase tracking-widest text-[var(--secondary-accent)] font-black">Your Standing</span>
+                  <span className="text-[10px] uppercase tracking-widest text-[var(--secondary-accent)] font-black">Your Rank</span>
                   <span className="w-1.5 h-1.5 bg-[#10B981] rounded-full animate-pulse" />
                 </div>
                 <h3 className="text-xl font-black text-[var(--text-main)] uppercase tracking-tight">{profile.honorRank}</h3>
@@ -156,7 +156,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ profile, onC
           {rankInfo.nextRank && (
             <div className="mt-5 pt-5 border-t border-[var(--glass-border)]">
               <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest mb-2">
-                <span className="text-[var(--text-muted)]">Next Ascension: <strong className="text-[var(--text-main)]">{rankInfo.nextRank.title}</strong></span>
+                <span className="text-[var(--text-muted)]">Next Rank: <strong className="text-[var(--text-main)]">{rankInfo.nextRank.title}</strong></span>
                 <span className="text-[var(--secondary-accent)]">{isNaN(rankInfo.nextRank.pointsNeeded) ? 0 : rankInfo.nextRank.pointsNeeded} ✊ Remaining</span>
               </div>
               <div className="w-full h-1.5 bg-[var(--app-bg)] rounded-full overflow-hidden">
@@ -183,7 +183,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ profile, onC
                     : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--glass-bg)]'
                 }`}
               >
-                {tab}
+                {tab === 'lore' ? 'How Points Work' : tab}
               </button>
             ))}
           </div>
@@ -348,20 +348,20 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ profile, onC
                   <section>
                     <div className="flex items-center gap-3 mb-3 text-[#10B981]">
                       <HeartHandshake className="w-5 h-5" />
-                      <h4 className="text-[13px] font-black uppercase tracking-widest">Code of Mercy</h4>
+                      <h4 className="text-[13px] font-black uppercase tracking-widest">Spare (Mercy)</h4>
                     </div>
                     <p className="text-[11px] font-black text-[#94A3B8] uppercase leading-relaxed tracking-widest opacity-80">
-                      Achieving checkmate grants a choice. Mercy yields <span className="text-[#10B981]">+12 ELO</span> and <span className="text-[#F59E0B]">+20 Respect</span>. Grace defines a true Grandmaster.
+                      After checkmate you choose Spare or Execute. Spare gives <span className="text-[#10B981]">+12 ELO</span> and <span className="text-[#F59E0B]">+20 Respect</span>.
                     </p>
                   </section>
                   
                   <section>
                     <div className="flex items-center gap-3 mb-3 text-[#EF4444]">
                       <Sword className="w-5 h-5" />
-                      <h4 className="text-[13px] font-black uppercase tracking-widest">Tactical Strike</h4>
+                      <h4 className="text-[13px] font-black uppercase tracking-widest">Execute</h4>
                     </div>
                     <p className="text-[11px] font-black text-[#94A3B8] uppercase leading-relaxed tracking-widest opacity-80">
-                      Execution yields <span className="text-[#EF4444]">+8 ELO</span> and <span className="text-[#F59E0B]">+10 Respect</span>. Decisive and uncompromising presence on the board.
+                      Execute gives <span className="text-[#EF4444]">+8 ELO</span> and <span className="text-[#F59E0B]">+10 Respect</span>.
                     </p>
                   </section>
                 </div>

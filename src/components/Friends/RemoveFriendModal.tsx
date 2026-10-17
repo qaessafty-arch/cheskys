@@ -27,7 +27,7 @@ export const RemoveFriendModal: React.FC<RemoveFriendModalProps> = ({
         <div>
           <h3 className="text-base font-black text-white">Remove Friend?</h3>
           <p className="text-xs text-white/60 mt-1">
-            Are you sure you want to remove <strong className="text-white">{friend.displayName}</strong> from your alliance list?
+            Are you sure you want to remove <strong className="text-white">{friend.displayName}</strong> from your friends list?
           </p>
         </div>
 

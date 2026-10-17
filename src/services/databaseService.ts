@@ -22,11 +22,11 @@ export interface DatabaseCollectionMeta {
 export const KNOWN_COLLECTIONS: { id: string; name: string; description: string; icon: string }[] = [
   { id: 'users', name: 'User Profiles', description: 'Player accounts, ELO ratings, respect points, and honor badges', icon: '👑' },
   { id: 'online_matches', name: 'Live PvP Matches', description: 'Active multiplayer rooms, board FEN, timers, and moves', icon: '⚔️' },
-  { id: 'authored_puzzles', name: 'Authored Puzzles', description: 'Community created tactical challenges and solution moves', icon: '🧩' },
-  { id: 'game_logs', name: 'Battle Logs', description: 'Match history archives, PGN records, and result statistics', icon: '📜' },
-  { id: 'friend_requests', name: 'Friend Requests', description: 'Pending and accepted invitations between chess warriors', icon: '🤝' },
+  { id: 'authored_puzzles', name: 'Authored Puzzles', description: 'Puzzles made by players, with their solutions', icon: '🧩' },
+  { id: 'game_logs', name: 'Game History', description: 'Past games, PGN records and results', icon: '📜' },
+  { id: 'friend_requests', name: 'Friend Requests', description: 'Pending and accepted friend requests between players', icon: '🤝' },
   { id: 'feedbacks', name: 'User Feedback', description: 'Bug reports, engine suggestions, and developer notes', icon: '💬' },
-  { id: 'announcements', name: 'Announcements', description: 'Broadcast notices, updates, and championship events', icon: '📢' }
+  { id: 'announcements', name: 'Announcements', description: 'News, updates and tournament notices', icon: '📢' }
 ];
 
 export interface DatabaseHealthInfo {
@@ -150,8 +150,8 @@ export const seedSampleDatabaseData = async (): Promise<{ seeded: number; errors
   try {
     await safeSetDoc(doc(db, 'announcements', 'welcome_v2'), {
       id: 'welcome_v2',
-      title: '☀️ Welcome to Chesskys PRO Cloud Arena',
-      content: 'Cloud Firestore database is live and synchronized with real-time multiplayer, leaderboard rankings, tactics puzzles, and battle audits.',
+      title: '☀️ Welcome to Chesskys PRO',
+      content: 'Online play, the leaderboard, puzzles and game history are now live.',
       author: 'q.brz 👑',
       type: 'update',
       active: true,

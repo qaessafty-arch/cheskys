@@ -18,7 +18,7 @@ interface FriendActivityProps {
 const DEFAULT_ACTIVITIES: ActivityItem[] = [
   { id: '1', type: 'game_win', title: 'Won vs Peshmerga Grandmaster', timeAgo: '20m ago', eloChange: +18 },
   { id: '2', type: 'achievement', title: 'Unlocked "Mountain Vanguard"', timeAgo: '2h ago', badge: '🏔️' },
-  { id: '3', type: 'elo_milestone', title: 'Crossed 1800 Elo Threshold', timeAgo: '1d ago', eloChange: +24 }
+  { id: '3', type: 'elo_milestone', title: 'Reached 1800 Elo', timeAgo: '1d ago', eloChange: +24 }
 ];
 
 export const FriendActivity: React.FC<FriendActivityProps> = ({

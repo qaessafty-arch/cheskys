@@ -145,7 +145,7 @@ export const joinWorldwideMatchmaking = async (
     return Date.now() - lastActive < 45000; // active within last 45 seconds
   };
 
-  const triggerBotFallback = async (reason = 'No active human found — pairing with worldwide grandmaster bot...') => {
+  const triggerBotFallback = async (reason = 'No player found — starting a game against a bot...') => {
     // If strict real human mode, strictly forbid bots
     if (matchmakingMode === 'human_strict') return;
 
@@ -199,9 +199,9 @@ export const joinWorldwideMatchmaking = async (
   try {
     // If instant bot requested explicitly, execute
     if (matchmakingMode === 'instant_bot') {
-      onStatusUpdate?.('Initializing Grandmaster Bot duel...');
+      onStatusUpdate?.('Starting a game against a bot...');
       setTimeout(() => {
-        triggerBotFallback('Connecting to Grandmaster Bot...');
+        triggerBotFallback('Connecting to the bot...');
       }, 600);
       return {
         ticketId,
@@ -212,7 +212,7 @@ export const joinWorldwideMatchmaking = async (
       };
     }
 
-    onStatusUpdate?.('Scanning worldwide live queue for real live players...');
+    onStatusUpdate?.('Looking for a real player...');
 
     // Helper to pair with a found waiting human ticket
     const pairWithHumanTicket = async (otherTicketDoc: MatchmakingTicket, otherDocId: string) => {
@@ -224,7 +224,7 @@ export const joinWorldwideMatchmaking = async (
       if (unsubQueue) unsubQueue();
       if (fallbackTimer) clearTimeout(fallbackTimer);
 
-      onStatusUpdate?.(`Real live player matched: ${otherTicketDoc.player.displayName}! Entering arena...`);
+      onStatusUpdate?.(`Opponent found: ${otherTicketDoc.player.displayName}! Starting game...`);
 
       const matchId = `match_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
       const matchDocRef = doc(db, 'online_matches', matchId);
@@ -317,7 +317,7 @@ export const joinWorldwideMatchmaking = async (
     };
 
     await safeSetDoc(ticketDocRef, ticketData);
-    onStatusUpdate?.('Searching worldwide live queue for real live players…');
+    onStatusUpdate?.('Looking for a real player…');
 
     // Start 10-second heartbeat ping so others know this ticket is live
     heartbeatTimer = setInterval(() => {
@@ -342,13 +342,13 @@ export const joinWorldwideMatchmaking = async (
 
           const realOpponent = data.matchedOpponent || {
             uid: `human_${Date.now()}`,
-            displayName: 'Real Live Challenger',
+            displayName: 'Opponent',
             country: 'Worldwide',
             flag: '🌍',
             elo: 1200
           };
 
-          onStatusUpdate?.(`Real live player matched: ${realOpponent.displayName}! Entering arena...`);
+          onStatusUpdate?.(`Opponent found: ${realOpponent.displayName}! Starting game...`);
           onMatched(data.matchId, realOpponent, false);
         }
       }
@@ -380,7 +380,7 @@ export const joinWorldwideMatchmaking = async (
     if (matchmakingMode === 'human_first') {
       fallbackTimer = setTimeout(() => {
         if (!isCancelled && !hasMatched) {
-          triggerBotFallback('No human joined in 20s. Pairing with Worldwide Grandmaster...');
+          triggerBotFallback('No player joined in 20s. Starting a game against a bot...');
         }
       }, fallbackTimeoutSeconds * 1000);
     }
@@ -397,7 +397,7 @@ export const joinWorldwideMatchmaking = async (
     const pairWithBotNow = () => {
       if (matchmakingMode === 'human_strict') return; // Strict mode prohibits bots
       if (!isCancelled && !hasMatched) {
-        triggerBotFallback('Connecting immediately with Grandmaster Bot...');
+        triggerBotFallback('Connecting to the bot...');
       }
     };
 
@@ -405,7 +405,7 @@ export const joinWorldwideMatchmaking = async (
   } catch (e) {
     console.error('Error in worldwide matchmaking:', e);
     if (matchmakingMode === 'human_strict') {
-      onStatusUpdate?.('Waiting in worldwide live real player queue...');
+      onStatusUpdate?.('Waiting for a real player...');
       return {
         ticketId,
         cancel: () => { isCancelled = true; if (heartbeatTimer) clearInterval(heartbeatTimer); },
@@ -596,7 +596,7 @@ export const acceptDrawOnlineMatch = async (matchId: string): Promise<boolean> =
   await safeUpdateDoc(matchDocRef, {
     status: 'draw',
     winner: 'draw',
-    reason: 'Game drawn by mutual agreement of both grandmasters.',
+    reason: 'Draw agreed by both players.',
     drawOfferFrom: null,
     updatedAt: new Date().toISOString()
   });
@@ -1050,7 +1050,7 @@ export const joinOnlineMatch = async (
       // Ignore server fallback error and throw user-friendly error below
     }
 
-    throw new Error(`Match room "${cleanCode}" not found. Please verify the code.`);
+    throw new Error(`Match room "${cleanCode}" not found. Please check the code.`);
   }
 
   const session = snap.data() as OnlineMatchSession;

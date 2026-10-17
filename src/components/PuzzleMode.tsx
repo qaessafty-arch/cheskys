@@ -193,14 +193,14 @@ export const PuzzleMode: React.FC<PuzzleModeProps> = ({ settings }) => {
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-base sm:text-lg font-black text-white tracking-tight">
-                Peshmerga Tactics & Daily Missions
+                Daily Puzzle
               </h2>
               <span className="px-2 py-0.5 rounded-md bg-[#F5C453]/20 text-[#F5C453] text-[10px] font-black border border-[#F5C453]/40 uppercase">
-                Tactics Pro
+                Puzzles
               </span>
             </div>
             <p className="text-xs text-[#DFD0B0]/70">
-              Sharpen your tactical vision with daily grandmaster puzzles & earn battlefield Respect
+              Solve a new puzzle every day and earn Respect points
             </p>
           </div>
         </div>
@@ -217,7 +217,7 @@ export const PuzzleMode: React.FC<PuzzleModeProps> = ({ settings }) => {
             }`}
           >
             <Calendar className="w-3.5 h-3.5 text-[#F5C453]" />
-            <span>Daily Tactical Mission</span>
+            <span>Today's Puzzle</span>
             {dailyProgress.solved && <span className="text-emerald-400 text-xs">✓</span>}
           </button>
 
@@ -231,7 +231,7 @@ export const PuzzleMode: React.FC<PuzzleModeProps> = ({ settings }) => {
             }`}
           >
             <BookOpen className="w-3.5 h-3.5 text-[#F5C453]" />
-            <span>Tactics Library</span>
+            <span>Puzzle Library</span>
           </button>
         </div>
       </div>
@@ -308,7 +308,7 @@ export const PuzzleMode: React.FC<PuzzleModeProps> = ({ settings }) => {
                 <div className="p-3 rounded-2xl bg-white/[0.04] border border-[#F5C453]/20 text-xs text-[#DFD0B0]/90 mb-3 flex items-start gap-2">
                   <span className="text-sm shrink-0">🏔️</span>
                   <div>
-                    <span className="font-bold text-[#F5C453]">Zagros Lore: </span>
+                    <span className="font-bold text-[#F5C453]">Did You Know? </span>
                     <span>{dailyPuzzle.loreContext}</span>
                   </div>
                 </div>
@@ -320,7 +320,7 @@ export const PuzzleMode: React.FC<PuzzleModeProps> = ({ settings }) => {
                   <div className="flex items-center gap-2.5 text-xs">
                     <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
                     <div>
-                      <strong className="block font-black text-sm">Daily Mission Accomplished!</strong>
+                      <strong className="block font-black text-sm">Puzzle Solved!</strong>
                       <span>+25 Respect Points & +15 Tactics Rating</span>
                     </div>
                   </div>
@@ -339,8 +339,8 @@ export const PuzzleMode: React.FC<PuzzleModeProps> = ({ settings }) => {
                 <div className="p-3.5 rounded-2xl bg-rose-500/20 border border-rose-500/50 text-rose-300 flex items-center gap-2.5 mb-3 animate-in zoom-in-95">
                   <XCircle className="w-5 h-5 text-rose-400 shrink-0" />
                   <div className="text-xs">
-                    <strong className="block font-bold">Tactical Inaccuracy</strong>
-                    <span>That was not the master move. Regroup and strike again!</span>
+                    <strong className="block font-bold">Wrong Move</strong>
+                    <span>That was not the best move. Try again!</span>
                   </div>
                 </div>
               )}
@@ -349,7 +349,7 @@ export const PuzzleMode: React.FC<PuzzleModeProps> = ({ settings }) => {
                 <div className="p-3 rounded-2xl bg-amber-500/15 border border-amber-500/40 text-amber-200 text-xs mb-3 flex items-start gap-2 animate-in fade-in">
                   <Lightbulb className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                   <div>
-                    <strong>Peshmerga Scout Hint: </strong>
+                    <strong>Hint: </strong>
                     Look for a decisive move starting with notation "
                     <span className="font-mono text-amber-300 font-bold">
                       {currentPuzzle.solutionMoves[moveStep]?.charAt(0)}
@@ -368,7 +368,7 @@ export const PuzzleMode: React.FC<PuzzleModeProps> = ({ settings }) => {
                     className="col-span-2 py-3 rounded-2xl bg-gradient-to-r from-[#8C2425] to-[#52673A] text-white font-black text-xs flex items-center justify-center gap-2 hover:scale-[1.01] transition-all cursor-pointer shadow-lg border border-[#F5C453]/40"
                   >
                     <RotateCcw className="w-4 h-4 text-[#F5C453]" />
-                    <span>Retry Mission</span>
+                    <span>Try Again</span>
                   </button>
                 ) : puzzleStatus === 'completed' ? (
                   <button
@@ -407,7 +407,7 @@ export const PuzzleMode: React.FC<PuzzleModeProps> = ({ settings }) => {
               <div className="flex items-center justify-between pb-2 border-b border-white/10">
                 <div className="flex items-center gap-2">
                   <Trophy className="w-4 h-4 text-[#F5C453]" />
-                  <span className="text-xs font-bold text-white">Tactics Library</span>
+                  <span className="text-xs font-bold text-white">Puzzle Library</span>
                 </div>
                 <span className="text-xs font-mono font-bold text-[#F5C453]">
                   Puzzle {libraryIndex + 1} / {PUZZLES_COLLECTION.length}
@@ -480,7 +480,7 @@ export const PuzzleMode: React.FC<PuzzleModeProps> = ({ settings }) => {
                     onClick={handleNextLibraryPuzzle}
                     className="col-span-2 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
                   >
-                    <span>Next Tactical Puzzle</span>
+                    <span>Next Puzzle</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 ) : (

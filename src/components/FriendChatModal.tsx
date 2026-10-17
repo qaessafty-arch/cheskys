@@ -89,7 +89,7 @@ export const FriendChatModal: React.FC<FriendChatModalProps> = ({
     try {
       await sendDirectMessage(chatId, {
         senderId: profile.uid,
-        senderName: profile.displayName || 'Tactician',
+        senderName: profile.displayName || 'Player',
         senderAvatar: profile.photoURL || null,
         senderBadge: profile.rankBadge || '☀️',
         text
@@ -108,7 +108,7 @@ export const FriendChatModal: React.FC<FriendChatModalProps> = ({
       const matchId = await createOnlineMatchChallenge(
         {
           uid: profile.uid,
-          displayName: profile.displayName || 'Tactician',
+          displayName: profile.displayName || 'Player',
           username: profile.username,
           photoURL: profile.photoURL || null,
           elo: typeof profile.elo === 'number' ? profile.elo : parseInt(profile.elo || '1200', 10),
@@ -125,10 +125,10 @@ export const FriendChatModal: React.FC<FriendChatModalProps> = ({
         // Send challenge message in chat
         await sendDirectMessage(chatId, {
           senderId: profile.uid,
-          senderName: profile.displayName || 'Tactician',
+          senderName: profile.displayName || 'Player',
           senderAvatar: profile.photoURL || null,
           senderBadge: profile.rankBadge || '☀️',
-          text: `⚔️ Issued an Online Match Challenge (${selectedTimeControl.name})!`,
+          text: `⚔️ Sent a game challenge (${selectedTimeControl.name})!`,
           challengeData: {
             matchId,
             timeControlName: selectedTimeControl.name,
@@ -200,7 +200,7 @@ export const FriendChatModal: React.FC<FriendChatModalProps> = ({
               type="button"
               onClick={() => setShowChallengeMenu(!showChallengeMenu)}
               className="w-10 h-10 rounded-xl bg-[#111827] hover:bg-[#1F293D] text-[#F59E0B] transition-all border border-[#1F293D] active:scale-95 flex items-center justify-center cursor-pointer shadow-lg"
-              title="Issue Chess Challenge"
+              title="Challenge to a Game"
             >
               <Swords className="w-5 h-5" />
             </button>
@@ -220,7 +220,7 @@ export const FriendChatModal: React.FC<FriendChatModalProps> = ({
           <div className="p-3.5 rounded-2xl bg-[#161c12] border border-[#F5C453]/50 my-2 shrink-0 animate-in slide-in-from-top-2 shadow-xl">
             <div className="text-xs font-bold text-white mb-2 flex items-center gap-1.5">
               <Swords className="w-4 h-4 text-[#F5C453]" />
-              <span>Select Match Time Control:</span>
+              <span>Choose a Time Control:</span>
             </div>
             <div className="grid grid-cols-3 gap-1.5 mb-3">
               {TIME_CONTROLS.slice(0, 6).map(tc => (
@@ -245,7 +245,7 @@ export const FriendChatModal: React.FC<FriendChatModalProps> = ({
               className="w-full py-2 rounded-xl bg-gradient-to-r from-[#8C2425] to-[#52673A] text-white font-black text-xs flex items-center justify-center gap-2 hover:scale-[1.01] transition-all cursor-pointer shadow-md border border-[#F5C453]/40"
             >
               <Swords className="w-4 h-4 text-[#F5C453]" />
-              <span>Launch Match Challenge Now</span>
+              <span>Send Challenge</span>
             </button>
           </div>
         )}
@@ -255,7 +255,7 @@ export const FriendChatModal: React.FC<FriendChatModalProps> = ({
           {messages.length === 0 ? (
             <div className="text-center py-12 text-xs text-[#DFD0B0]/60 space-y-2">
               <div className="text-2xl">💬</div>
-              <p>Start a conversation with {friend.displayName} or challenge them to an online duel!</p>
+              <p>Start a conversation with {friend.displayName} or challenge them to a game!</p>
             </div>
           ) : (
             messages.map(msg => {
@@ -318,7 +318,7 @@ export const FriendChatModal: React.FC<FriendChatModalProps> = ({
         {/* Quick Taunt / Emote / Sticker Bar */}
         <div className="py-2 border-t border-white/10 shrink-0">
           <div className="flex items-center justify-between mb-2 px-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#F5C453]">Text Reactions</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#F5C453]">Quick Messages</span>
           </div>
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar min-h-[44px]">
             {QUICK_EMOTES.map((emote, idx) => (

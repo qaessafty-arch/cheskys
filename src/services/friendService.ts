@@ -63,7 +63,7 @@ export const searchUsersInDirectory = async (searchQuery: string, currentUid?: s
       if (uname.includes(clean) || dname.includes(clean)) {
         results.push({
           uid: data.uid,
-          displayName: data.displayName || 'Peshmerga Tactician',
+          displayName: data.displayName || 'Player',
           username: data.username || null,
           photoURL: data.photoURL || null,
           elo: typeof data.elo === 'number' ? data.elo : parseInt(data.elo || '1200', 10),
@@ -136,7 +136,7 @@ const existing = await getDocs(q);
 
     const reqData = {
       fromUserId: currentUser.uid,
-      fromUserName: currentUser.displayName || 'Tactician',
+      fromUserName: currentUser.displayName || 'Player',
       fromUsername: currentUser.username || '',
       fromUserAvatar: currentUser.photoURL || '',
       fromUserElo: typeof currentUser.elo === 'number' ? currentUser.elo : parseInt(currentUser.elo || '1200', 10),

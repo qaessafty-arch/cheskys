@@ -45,7 +45,7 @@ export const RoomChat: React.FC = () => {
         <div className="flex items-center gap-2">
           <MessageSquare className="w-4 h-4 text-[#F5C453]" />
           <span className="text-xs font-bold uppercase tracking-wider text-white">
-            Battle Chat
+            Chat
           </span>
         </div>
         {typingUsers.size > 0 && (
@@ -60,7 +60,7 @@ export const RoomChat: React.FC = () => {
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center text-white/40 p-4">
             <MessageSquare className="w-8 h-8 mb-2 opacity-40 text-[#F5C453]" />
-            <p className="text-xs">No messages yet. Say hi to your challenger!</p>
+            <p className="text-xs">No messages yet. Say hi to your opponent!</p>
           </div>
         ) : (
           messages.map((msg) => {
@@ -191,7 +191,7 @@ export const RoomChat: React.FC = () => {
             type="text"
             value={pending}
             onChange={(e) => setPending(e.target.value)}
-            placeholder="Type a message or cheer..."
+            placeholder="Type a message..."
             maxLength={500}
             className="room-chat-input"
           />

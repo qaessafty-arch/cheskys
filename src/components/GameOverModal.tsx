@@ -53,8 +53,8 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   const title = isDraw
     ? 'Game Drawn'
     : isWhiteWin
-    ? 'White Victorious!'
-    : 'Black Victorious!';
+    ? 'White Wins!'
+    : 'Black Wins!';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
@@ -145,7 +145,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
             className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-[#0B0F19] text-[#94A3B8] font-black text-[11px] hover:text-[#F59E0B] hover:border-[#F59E0B]/30 border border-[#1F293D] transition-all uppercase tracking-widest active:scale-95 cursor-pointer"
           >
             <Compass className="w-4 h-4" />
-            <span>Game Analysis Board</span>
+            <span>Analyze Game</span>
           </button>
         </div>
 

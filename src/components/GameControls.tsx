@@ -125,8 +125,8 @@ export const GameControls: React.FC<GameControlsProps> = ({
           onClick={onHint}
           variant="secondary"
           className="flex-col w-full h-full !rounded-2xl !px-1 !py-2.5 shadow-lg"
-          ariaLabel="Request engine tactical hint"
-          title="Tactical Hint (Hotkey: H)"
+          ariaLabel="Get a hint"
+          title="Hint (Hotkey: H)"
         >
           <Sparkles className="w-4 h-4" />
           <span className="text-[10px] font-black uppercase tracking-tighter truncate">Hint</span>

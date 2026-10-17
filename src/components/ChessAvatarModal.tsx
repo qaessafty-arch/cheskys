@@ -163,11 +163,11 @@ export const AVATAR_ARCHETYPES: AvatarArchetype[] = [
 ];
 
 export const ART_STYLES = [
-  { id: 'cinematic', label: 'Epic Cinematic Art', icon: '🎬', desc: 'Dramatic studio lighting & hyper-detailed realism' },
-  { id: 'kurdish_mythic', label: 'Mythic Citadel Regalia', icon: '☀️', desc: 'Gold leaf accents, 21-ray sun halos & Kurdish motifs' },
-  { id: '3d_render', label: '3D Masterpiece Render', icon: '💎', desc: 'Octane render, polished marble & glowing crystals' },
-  { id: 'anime_tactician', label: 'Heroic Anime Tactician', icon: '⚡', desc: 'Vibrant cell-shaded anime grandmaster warrior' },
-  { id: 'ancient_fresco', label: 'Zagros Ancient Fresco', icon: '🏛️', desc: 'Carved mountain stone & timeless Citadel relief' }
+  { id: 'cinematic', label: 'Movie Style', icon: '🎬', desc: 'Dramatic lighting and lots of detail' },
+  { id: 'kurdish_mythic', label: 'Kurdish Gold', icon: '☀️', desc: 'Gold details, Kurdish sun and patterns' },
+  { id: '3d_render', label: '3D Style', icon: '💎', desc: 'Shiny 3D look with marble and crystals' },
+  { id: 'anime_tactician', label: 'Anime Style', icon: '⚡', desc: 'Bright cartoon anime look' },
+  { id: 'ancient_fresco', label: 'Zagros Stone Carving', icon: '🏛️', desc: 'Looks carved into old mountain stone' }
 ];
 
 export const CHESS_PIECES = [
@@ -181,9 +181,9 @@ export const CHESS_PIECES = [
 export const ELEMENTAL_AURAS = [
   { id: 'sun_flare', label: '21-Ray Kurdish Sun Glow', color: '#F5C453', gradient: 'from-[#F5C453]/40 via-amber-600/30 to-transparent' },
   { id: 'crimson_flame', label: 'Jamadani Crimson Spark', color: '#8C2425', gradient: 'from-[#8C2425]/40 via-red-900/30 to-transparent' },
-  { id: 'olive_mountain', label: 'Zagros Olive Vanguard', color: '#52673A', gradient: 'from-[#52673A]/40 via-emerald-900/30 to-transparent' },
-  { id: 'celestial_azure', label: 'Celestial Butterfly Starlight', color: '#38BDF8', gradient: 'from-sky-400/40 via-blue-900/30 to-transparent' },
-  { id: 'citadel_diamond', label: 'Citadel Diamond Radiance', color: '#E2E8F0', gradient: 'from-slate-200/40 via-slate-700/30 to-transparent' }
+  { id: 'olive_mountain', label: 'Zagros Olive Green', color: '#52673A', gradient: 'from-[#52673A]/40 via-emerald-900/30 to-transparent' },
+  { id: 'celestial_azure', label: 'Sky Blue Glow', color: '#38BDF8', gradient: 'from-sky-400/40 via-blue-900/30 to-transparent' },
+  { id: 'citadel_diamond', label: 'Silver Diamond Glow', color: '#E2E8F0', gradient: 'from-slate-200/40 via-slate-700/30 to-transparent' }
 ];
 
 export const ChessAvatarModal: React.FC<ChessAvatarModalProps> = ({
@@ -393,14 +393,14 @@ export const ChessAvatarModal: React.FC<ChessAvatarModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg sm:text-xl font-black text-white tracking-tight">
-                  Imagen Chess Avatar Studio
+                  AI Avatar Maker
                 </h2>
                 <span className="px-2 py-0.5 rounded-md bg-[#F5C453]/20 text-[#F5C453] text-[10px] font-black border border-[#F5C453]/40 uppercase">
                   AI Generator
                 </span>
               </div>
               <p className="text-xs text-[#DFD0B0]/70">
-                Generate unique Kurdish Peshmerga Chess Avatars forged for your Honor Rank & equip in 1-click
+                Make a chess avatar for your rank with AI and use it as your profile picture
               </p>
             </div>
           </div>
@@ -432,7 +432,7 @@ export const ChessAvatarModal: React.FC<ChessAvatarModalProps> = ({
               ) : (
                 <div className="text-center p-4">
                   <Wand2 className="w-12 h-12 text-[#F5C453] mx-auto animate-bounce mb-2" />
-                  <p className="text-xs text-[#DFD0B0]">Synthesizing avatar...</p>
+                  <p className="text-xs text-[#DFD0B0]">Making avatar...</p>
                 </div>
               )}
 
@@ -451,7 +451,7 @@ export const ChessAvatarModal: React.FC<ChessAvatarModalProps> = ({
               {isGenerating && (
                 <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center text-white space-y-2">
                   <RefreshCw className="w-8 h-8 text-[#F5C453] animate-spin" />
-                  <span className="text-xs font-bold text-amber-300">Forging with Imagen Engine...</span>
+                  <span className="text-xs font-bold text-amber-300">Making your avatar...</span>
                 </div>
               )}
             </div>
@@ -460,7 +460,7 @@ export const ChessAvatarModal: React.FC<ChessAvatarModalProps> = ({
             {equipSuccess && (
               <div className="w-full p-2.5 rounded-2xl bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 text-xs font-bold flex items-center justify-center gap-2 animate-in zoom-in-95">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                <span>Equipped as Profile Picture & Cloud Synced!</span>
+                <span>Profile picture saved!</span>
               </div>
             )}
 
@@ -500,7 +500,7 @@ export const ChessAvatarModal: React.FC<ChessAvatarModalProps> = ({
 
             {/* Active User Rank Indicator */}
             <div className="w-full p-3 rounded-2xl bg-white/[0.04] border border-white/10 text-xs">
-              <div className="text-[11px] text-[#DFD0B0]/70 font-semibold mb-0.5">Your Current Honor Rank:</div>
+              <div className="text-[11px] text-[#DFD0B0]/70 font-semibold mb-0.5">Your Rank:</div>
               <div className="flex items-center justify-between">
                 <span className="font-bold text-white flex items-center gap-1.5">
                   <Award className="w-4 h-4 text-[#F5C453]" />
@@ -519,7 +519,7 @@ export const ChessAvatarModal: React.FC<ChessAvatarModalProps> = ({
             <div>
               <label className="text-xs font-bold text-[#F5C453] uppercase tracking-wider flex items-center gap-1.5 mb-2">
                 <Award className="w-3.5 h-3.5" />
-                <span>1. Select Honor Rank Archetype</span>
+                <span>1. Choose a Rank Style</span>
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {AVATAR_ARCHETYPES.map((arch) => {
@@ -559,7 +559,7 @@ export const ChessAvatarModal: React.FC<ChessAvatarModalProps> = ({
             <div>
               <label className="text-xs font-bold text-[#F5C453] uppercase tracking-wider flex items-center gap-1.5 mb-2">
                 <Palette className="w-3.5 h-3.5" />
-                <span>2. Art Style & Rendering Engine</span>
+                <span>2. Art Style</span>
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {ART_STYLES.map((style) => {
@@ -592,7 +592,7 @@ export const ChessAvatarModal: React.FC<ChessAvatarModalProps> = ({
               <div>
                 <label className="text-xs font-bold text-[#F5C453] uppercase tracking-wider flex items-center gap-1.5 mb-2">
                   <Shield className="w-3.5 h-3.5" />
-                  <span>3. Guardian Chess Piece</span>
+                  <span>3. Chess Piece</span>
                 </label>
                 <div className="grid grid-cols-3 gap-1.5">
                   {CHESS_PIECES.map((piece) => {
@@ -620,7 +620,7 @@ export const ChessAvatarModal: React.FC<ChessAvatarModalProps> = ({
               <div>
                 <label className="text-xs font-bold text-[#F5C453] uppercase tracking-wider flex items-center gap-1.5 mb-2">
                   <Sun className="w-3.5 h-3.5" />
-                  <span>4. Kurdish Aura & Flare</span>
+                  <span>4. Glow Color</span>
                 </label>
                 <div className="space-y-1.5">
                   {ELEMENTAL_AURAS.slice(0, 3).map((aura) => {
@@ -653,15 +653,15 @@ export const ChessAvatarModal: React.FC<ChessAvatarModalProps> = ({
               <label className="text-xs font-bold text-[#DFD0B0]/80 uppercase tracking-wider flex items-center justify-between mb-1.5">
                 <span className="flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-[#F5C453]" />
-                  <span>Imagen Prompt Synthesis</span>
+                  <span>AI Description</span>
                 </span>
-                <span className="text-[10px] text-sky-300 font-mono">1:1 Aspect Ratio</span>
+                <span className="text-[10px] text-sky-300 font-mono">Square image</span>
               </label>
               <textarea
                 value={customPrompt}
                 onChange={(e) => setCustomPrompt(e.target.value)}
                 rows={2}
-                placeholder="Custom Imagen avatar prompt..."
+                placeholder="Describe your avatar..."
                 className="w-full px-3 py-2 rounded-2xl bg-black/50 border border-white/15 text-white text-xs outline-none focus:border-[#F5C453] font-mono resize-none"
               />
             </div>
@@ -671,14 +671,14 @@ export const ChessAvatarModal: React.FC<ChessAvatarModalProps> = ({
         {/* Modal Footer */}
         <div className="pt-3 mt-3 border-t border-white/10 flex items-center justify-between shrink-0">
           <div className="text-[11px] text-[#DFD0B0]/60 hidden sm:block">
-            Avatars are saved directly to your cloud profile and appear in matches, leaderboards, and game over verdicts.
+            Your avatar is saved to your profile and shows in games and on the leaderboard.
           </div>
           <button
             type="button"
             onClick={onClose}
             className="px-5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition-all cursor-pointer ml-auto"
           >
-            Close Studio
+            Close
           </button>
         </div>
       </div>

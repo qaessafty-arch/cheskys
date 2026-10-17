@@ -291,7 +291,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
     const text = `Play chess with me in Chesskys PRO! Room Code: ${cleanRoomCode}`;
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'Chesskys Private Battle', text });
+        await navigator.share({ title: 'Chesskys Private Room', text });
         setShared(true);
         setTimeout(() => setShared(false), 2000);
         return;
@@ -333,11 +333,11 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
         userId: currentRoom.creatorId,
         type: 'room_nudge',
         title: 'Opponent is waiting!',
-        message: `Your challenger is ready in room ${cleanRoomCode}. Please launch the arena!`,
+        message: `Your opponent is ready in room ${cleanRoomCode}. Please start the game!`,
       });
-      toast.success('Nudge sent to host!');
+      toast.success('Reminder sent to the host!');
     } catch (e) {
-      toast.error('Failed to nudge host.');
+      toast.error('Could not send a reminder to the host.');
     }
   };
   const handleRetryConnection = async () => {
@@ -438,7 +438,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
       const opponentPlayer: OnlineMatchPlayer | null = currentRoom.opponentId
         ? {
             uid: currentRoom.opponentId,
-            displayName: currentRoom.opponentName || 'Challenger',
+            displayName: currentRoom.opponentName || 'Opponent',
             avatar: currentRoom.opponentPhotoURL,
             elo: currentRoom.opponentElo || 1200,
           }
@@ -513,18 +513,18 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
                 <Swords className="w-8 h-8" />
               </div>
               <div className="text-xl font-black uppercase tracking-widest text-white">
-                Rival Aligned!
+                Opponent Joined!
               </div>
               <p className="text-xs text-white/70">
                 {isCreator
-                  ? 'Creator authority: Provisioning match arena in'
-                  : 'Invitee handshake: Awaiting host provisioning in'}
+                  ? 'Starting the game in'
+                  : 'The game starts in'}
               </p>
               <div className="text-6xl font-black text-[#F5C453] my-2 drop-shadow-[0_0_20px_rgba(245,196,83,0.6)]">
                 {countdown}
               </div>
               <div className="text-xs font-mono text-[#F5C453] tracking-widest uppercase">
-                Prepare your pieces
+                Get ready
               </div>
             </div>
           </motion.div>
@@ -545,22 +545,22 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
               <div className="flex flex-col">
                 <p className="text-sm font-bold text-white">
                   {!hasDetectedValidGameId
-                    ? 'State Guard: Awaiting gameId...'
+                    ? 'Waiting for the game...'
                     : isVerifyingMatch
-                    ? 'Verifying Match Arena...'
-                    : 'Synchronizing Handshake...'}
+                    ? 'Checking the game...'
+                    : 'Connecting...'}
                 </p>
                 <p className="text-xs text-white/60">
                   {!hasDetectedValidGameId
-                    ? 'Waiting for host to provision the match session'
+                    ? 'Waiting for the host to start the game'
                     : isVerifyingMatch
-                    ? 'Confirming session exists in Firestore'
-                    : 'Finalizing connection'}
+                    ? 'Making sure the game is ready'
+                    : 'Almost ready'}
                 </p>
               </div>
             </div>
             <span className="text-xs font-mono text-[#F5C453] bg-[#F5C453]/10 px-2 py-1 rounded">
-              {!hasDetectedValidGameId ? 'Guarded' : isVerifyingMatch ? 'Verifying' : 'Active'}
+              {!hasDetectedValidGameId ? 'Waiting' : isVerifyingMatch ? 'Checking' : 'Connecting'}
             </span>
           </motion.div>
         )}
@@ -581,10 +581,10 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
               </div>
               <div>
                 <h4 className="text-sm font-bold text-white">
-                  Awaiting Creator Handshake
+                  Waiting for the Host
                 </h4>
                 <p className="text-xs text-white/70">
-                  Room host response is taking longer than usual. Only the room creator can provision the match arena.
+                  The host is taking longer than usual. Only the host can start the game.
                 </p>
               </div>
             </div>
@@ -634,7 +634,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-base font-black uppercase tracking-wider text-white">
-                  Astral Sanctum
+                  Private Room
                 </h2>
                 <span
                   className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-black uppercase tracking-wider ${
@@ -643,26 +643,26 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
                       : 'bg-amber-400/20 text-amber-300 border border-amber-400/30'
                   }`}
                 >
-                  {isReady ? 'Ready · Handshake Active' : isInProgress ? 'In Progress' : 'Awaiting Rival alignment'}
+                  {isReady ? 'Ready' : isInProgress ? 'In Progress' : 'Waiting for Opponent'}
                 </span>
               </div>
               <p className="text-xs text-white/60 flex items-center gap-1.5 mt-0.5">
                 {isCreator && (
                   <span className="text-[#F5C453] font-semibold flex items-center gap-1">
-                    <Crown className="w-3 h-3" /> Host (Creator Authority)
+                    <Crown className="w-3 h-3" /> Host
                   </span>
                 )}
                 {isInvitee && (
                   <span className="text-emerald-300 font-semibold flex items-center gap-1">
-                    <Swords className="w-3 h-3" /> Astral Rival (Challenger)
+                    <Swords className="w-3 h-3" /> Opponent
                   </span>
                 )}
                 {isSpectator && <span className="text-white/40">Spectator</span>}
                 <span>·</span>
                 <span className="text-white/40">
                   {isCreator
-                    ? 'Only you can provision the match document'
-                    : 'Awaiting host match provisioning'}
+                    ? 'Only you can start the game'
+                    : 'Waiting for the host to start the game'}
                 </span>
               </p>
             </div>
@@ -682,7 +682,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
               ) : (
                 <Play className="w-3.5 h-3.5 fill-current" />
               )}
-              <span>Initiate Trial</span>
+              <span>Start Game</span>
             </button>
           )}
 
@@ -743,11 +743,11 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
         <div className="flex items-center gap-2 text-xs font-semibold text-white/80">
           {isOpponentJoined ? (
             <span className="text-emerald-400 flex items-center gap-1.5 font-bold">
-              <Check className="w-4 h-4" /> Rival Aligned! Launching match...
+              <Check className="w-4 h-4" /> Opponent joined! Starting game...
             </span>
           ) : (
             <div className="flex items-center gap-2">
-              <span>Awaiting Rival alignment</span>
+              <span>Waiting for an opponent</span>
               <div className="waiting-dots">
                 <span />
                 <span />
@@ -788,7 +788,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-[#F5C453]" />
               <span className="text-xs font-black uppercase tracking-wider text-white">
-                Celestial Aspirants
+                Players
               </span>
             </div>
             <span className="text-[11px] font-mono text-white/40">
@@ -818,7 +818,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
                     {currentRoom.creatorName}
                   </span>
                   <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-[#52673A] text-white">
-                    Host (Creator)
+                    Host
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-white/50 font-mono mt-0.5">
@@ -854,7 +854,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
                       {currentRoom.opponentName}
                     </span>
                     <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                      Astral Rival (Challenger)
+                      Opponent
                     </span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-white/50 font-mono mt-0.5">
@@ -876,7 +876,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
                   </div>
                   <div>
                     <div className="text-xs font-bold text-white/60">
-                      Awaiting Rival alignment...
+                      Waiting for an opponent...
                     </div>
                     <div className="text-[11px] text-white/40">
                       Share code or invite friends
@@ -889,7 +889,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
                   className="room-btn-action gold !py-2 !px-3 !text-xs cursor-pointer"
                 >
                   <UserPlus className="w-3.5 h-3.5" />
-                  <span>Summon</span>
+                  <span>Invite</span>
                 </button>
               </div>
             )}
@@ -902,7 +902,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
             <div className="flex items-center gap-2">
               <UserPlus className="w-4 h-4 text-[#F5C453]" />
               <span className="text-xs font-black uppercase tracking-wider text-white">
-                Summon Allies
+                Invite Friends
               </span>
             </div>
             <button
@@ -974,7 +974,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
                           : 'bg-[#F5C453] text-black font-black uppercase text-[10px] hover:brightness-110'
                       } disabled:opacity-40 disabled:cursor-not-allowed`}
                     >
-                      {isInvited ? 'Summoned' : 'Summon'}
+                      {isInvited ? 'Invited' : 'Invite'}
                     </button>
                   </div>
                 );

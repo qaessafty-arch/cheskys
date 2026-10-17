@@ -190,7 +190,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               Latency: <strong className="text-white">{latencyMs}ms</strong>
             </span>
             <span className="text-xs text-white/60 font-mono hidden md:inline">
-              Concurrent: <strong className="text-emerald-300">{activeGamesCount.toLocaleString()}</strong> games
+              Playing now: <strong className="text-emerald-300">{activeGamesCount.toLocaleString()}</strong> games
             </span>
           </div>
 
@@ -218,7 +218,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           >
             <Sparkles className="w-4 h-4 text-amber-300" />
             <span className="text-xs sm:text-sm font-semibold text-white/90">
-              The Next Generation Multiplayer Chess Platform
+              Play Chess Online, Free
             </span>
           </motion.div>
 
@@ -228,9 +228,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             transition={{ duration: 0.7, delay: 0.1 }}
             className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.1] mb-6 drop-shadow-2xl"
           >
-            Master The Board. <br />
+            Play Chess. <br />
             <span className="bg-gradient-to-r from-[var(--secondary-accent)] via-purple-400 to-[var(--primary-accent)] bg-clip-text text-transparent">
-              Elevate Your Strategy.
+              Get Better Every Day.
             </span>
           </motion.h1>
 
@@ -240,8 +240,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             transition={{ duration: 0.7, delay: 0.2 }}
             className="text-base sm:text-xl text-white/70 max-w-2xl mx-auto mb-10 leading-relaxed font-normal"
           >
-            Sub-50ms real-time multiplayer, deep Stockfish strategic vision, 
-            cinematic 3D perspectives, and an honorable Peshmerga spirit.
+            Fast online games, a strong computer that reviews your moves, 
+            3D boards and Kurdish themes.
           </motion.p>
 
           {/* CALL TO ACTION BUTTONS */}
@@ -269,7 +269,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               className="px-6 py-4 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-bold text-base border border-white/20 backdrop-blur-xl hover:border-white/40 transition-all flex items-center gap-2.5 shadow-lg active:scale-95"
             >
               <Cpu className="w-5 h-5 text-[var(--secondary-accent)]" />
-              <span>Vs Bot Masters</span>
+              <span>Play vs Computer</span>
             </button>
 
             {/* Daily Puzzle */}
@@ -278,7 +278,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               className="px-6 py-4 rounded-2xl bg-white/5 hover:bg-white/10 text-white/90 font-bold text-base border border-white/10 backdrop-blur-xl hover:border-white/25 transition-all flex items-center gap-2.5 shadow-lg active:scale-95"
             >
               <Zap className="w-5 h-5 text-amber-400" />
-              <span>Tactics Puzzle</span>
+              <span>Daily Puzzle</span>
             </button>
           </motion.div>
         </div>
@@ -299,7 +299,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               &lt;25ms
             </span>
             <span className="text-xs font-semibold uppercase tracking-wider text-white/60">
-              WebSocket Latency
+              Move Speed
             </span>
           </div>
 
@@ -308,7 +308,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               99.99%
             </span>
             <span className="text-xs font-semibold uppercase tracking-wider text-white/60">
-              Engine Uptime
+              Server Uptime
             </span>
           </div>
 
@@ -317,7 +317,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               100K+
             </span>
             <span className="text-xs font-semibold uppercase tracking-wider text-white/60">
-              Active Tacticians
+              Active Players
             </span>
           </div>
         </div>
@@ -327,13 +327,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
-              <h2 className="text-xl font-bold tracking-tight text-white">Live Grandmaster Games</h2>
+              <h2 className="text-xl font-bold tracking-tight text-white">Live Games</h2>
             </div>
             <button
               onClick={() => onOpenMultiplayer()}
               className="text-xs font-bold text-[var(--secondary-accent)] flex items-center gap-1 hover:underline"
             >
-              <span>View All Arena Rooms</span>
+              <span>See All Games</span>
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
@@ -382,10 +382,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <div className="max-w-5xl mx-auto mb-20">
           <div className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl font-black tracking-tight mb-3">
-              Crafted For Elite Competitors
+              What You Can Do
             </h2>
             <p className="text-white/60 max-w-xl mx-auto text-sm sm:text-base">
-              Engineered with zero compromises. From lightning WebSocket connections to cinematic glass themes.
+              Play online, add friends, join tournaments and review your games.
             </p>
           </div>
 
@@ -395,9 +395,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div className="w-12 h-12 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 mb-4 group-hover:scale-110 transition-transform">
                 <Swords className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">Real-Time Arena</h3>
+              <h3 className="text-lg font-bold text-white mb-2">Play Online</h3>
               <p className="text-xs text-white/60 leading-relaxed">
-                6-char instant room codes, drift-free high resolution game clocks, and under 50ms moves.
+                Share a 6-letter room code to play a friend. Accurate clocks and fast moves.
               </p>
             </div>
 
@@ -408,7 +408,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
               <h3 className="text-lg font-bold text-white mb-2">Social & Friends</h3>
               <p className="text-xs text-white/60 leading-relaxed">
-                Unique handles, live challenge invites, instant private chat, and real-time friend presence.
+                Pick a username, send game invites, chat in private and see which friends are online.
               </p>
             </div>
 
@@ -419,7 +419,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
               <h3 className="text-lg font-bold text-white mb-2">Tournaments</h3>
               <p className="text-xs text-white/60 leading-relaxed">
-                Interactive Swiss and bracket ladders, live pairings, automatic clock transitions, and prize pools.
+                Swiss and knockout events with live pairings, automatic clocks and prizes.
               </p>
             </div>
 
@@ -428,9 +428,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div className="w-12 h-12 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mb-4 group-hover:scale-110 transition-transform">
                 <Cpu className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">Strategic Vision</h3>
+              <h3 className="text-lg font-bold text-white mb-2">Game Review</h3>
               <p className="text-xs text-white/60 leading-relaxed">
-                Deep position evaluation, classification of blunders vs brilliant moves, and interactive arrows.
+                See who is winning, find your mistakes and best moves, with move arrows.
               </p>
             </div>
           </div>
@@ -439,8 +439,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         {/* TESTIMONIALS SECTION */}
         <div className="max-w-5xl mx-auto mb-20">
           <div className="text-center mb-10">
-            <span className="text-xs font-mono uppercase tracking-widest text-[var(--secondary-accent)]">Endorsed Globally</span>
-            <h2 className="text-3xl font-black tracking-tight text-white mt-1">Master Testimonials</h2>
+            <span className="text-xs font-mono uppercase tracking-widest text-[var(--secondary-accent)]">What Players Say</span>
+            <h2 className="text-3xl font-black tracking-tight text-white mt-1">Player Reviews</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -480,13 +480,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             Ready To Make Your Move?
           </h3>
           <p className="text-white/60 max-w-md mx-auto mb-8 text-sm">
-            Join thousands of players worldwide. No downloads required. Pure web speed.
+            Join thousands of players. Nothing to download, it runs in your browser.
           </p>
           <button
             onClick={() => onOpenMultiplayer()}
             className="px-8 py-3.5 rounded-xl bg-white text-black font-extrabold text-base hover:bg-white/90 hover:scale-105 active:scale-95 transition-all shadow-xl inline-flex items-center gap-2"
           >
-            <span>Launch Quick Arena</span>
+            <span>Quick Match</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>

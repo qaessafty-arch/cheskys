@@ -79,7 +79,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onCancel, onNav
     setError(null); setLoading(true);
     try {
       await signInAsGuest();
-      await handleSuccess('Welcome, Guest Warrior!');
+      await handleSuccess('Welcome, Guest!');
     } catch (err: any) {
       setError(err.message); setLoading(false);
     }
@@ -135,7 +135,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onCancel, onNav
     try {
       if (devPassword === 'q.brz') {
         await signInWithEmail('dev@chessky.local', 'q.brz1234');
-        await handleSuccess('Developer Account activated.');
+        await handleSuccess('Developer account signed in.');
       } else {
         throw new Error('Invalid passkey');
       }
@@ -152,7 +152,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onCancel, onNav
     try {
       if (skyPassword === 'BLUEBERRY') {
         await signInWithEmail('sky@chessky.local', 'BLUEBERRY1234');
-        await handleSuccess('Celestial Account activated.');
+        await handleSuccess('Sky account signed in.');
       } else {
         throw new Error('Invalid passkey');
       }

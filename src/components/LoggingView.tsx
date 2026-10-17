@@ -151,7 +151,7 @@ export const LoggingView: React.FC<LoggingViewProps> = ({
         opponentName: importOpponentName.trim() || 'Imported PGN Opponent',
         playerColor: 'w',
         result: 'win',
-        reason: 'Imported PGN Game Log Archive',
+        reason: 'Imported from PGN',
         movesCount: (importPgnText.match(/\d+\./g) || []).length,
         timeControlName: 'Imported',
         pgn: importPgnText.trim(),
@@ -162,7 +162,7 @@ export const LoggingView: React.FC<LoggingViewProps> = ({
 
       refreshLogs();
       setImportPgnText('');
-      setImportMessage('PGN successfully imported into Battle Logs!');
+      setImportMessage('Game imported into your game history!');
       soundManager.playVictory();
       setActiveTab('matches');
     } catch (e: any) {
@@ -183,14 +183,14 @@ export const LoggingView: React.FC<LoggingViewProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-xl sm:text-2xl font-black font-heading text-white tracking-tight">
-                Match Logs & Battle History
+                Game History
               </h2>
               <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#52673A] text-white border border-[#F5C453]/40 uppercase tracking-wider">
-                Audit Ledger
+                Activity Log
               </span>
             </div>
             <p className="text-xs text-[#DFD0B0]/75">
-              Comprehensive chronological archives of chess games, move accuracy, and respect actions.
+              All your past games, move accuracy and respect points, newest first.
             </p>
           </div>
         </div>
@@ -218,7 +218,7 @@ export const LoggingView: React.FC<LoggingViewProps> = ({
             }`}
           >
             <Activity className="w-3.5 h-3.5" />
-            <span>Audit Events ({auditEvents.length})</span>
+            <span>Activity ({auditEvents.length})</span>
           </button>
 
           <button
@@ -243,7 +243,7 @@ export const LoggingView: React.FC<LoggingViewProps> = ({
           </div>
           <div>
             <div className="text-base sm:text-lg font-black text-white font-mono">{totalGames}</div>
-            <div className="text-[11px] text-[#DFD0B0]/70">Total Games Logged</div>
+            <div className="text-[11px] text-[#DFD0B0]/70">Games Played</div>
           </div>
         </div>
 
@@ -253,7 +253,7 @@ export const LoggingView: React.FC<LoggingViewProps> = ({
           </div>
           <div>
             <div className="text-base sm:text-lg font-black text-white font-mono">{winRate}%</div>
-            <div className="text-[11px] text-[#DFD0B0]/70">Victory Ratio</div>
+            <div className="text-[11px] text-[#DFD0B0]/70">Win Rate</div>
           </div>
         </div>
 
@@ -263,7 +263,7 @@ export const LoggingView: React.FC<LoggingViewProps> = ({
           </div>
           <div>
             <div className="text-base sm:text-lg font-black text-white font-mono">{executions}</div>
-            <div className="text-[11px] text-[#DFD0B0]/70">Executions Enacted</div>
+            <div className="text-[11px] text-[#DFD0B0]/70">Executions</div>
           </div>
         </div>
 
@@ -273,7 +273,7 @@ export const LoggingView: React.FC<LoggingViewProps> = ({
           </div>
           <div>
             <div className="text-base sm:text-lg font-black text-[#F5C453] font-mono">+{totalRespectGained}</div>
-            <div className="text-[11px] text-[#DFD0B0]/70">Respect Points Logged</div>
+            <div className="text-[11px] text-[#DFD0B0]/70">Respect Points</div>
           </div>
         </div>
       </div>
@@ -289,7 +289,7 @@ export const LoggingView: React.FC<LoggingViewProps> = ({
                 <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
                 <input
                   type="text"
-                  placeholder="Search opponent or event..."
+                  placeholder="Search by opponent or result..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-black/60 border border-white/20 text-white text-xs focus:border-[#F5C453] focus:outline-none"
@@ -301,9 +301,9 @@ export const LoggingView: React.FC<LoggingViewProps> = ({
                 onChange={e => setResultFilter(e.target.value as any)}
                 className="px-3 py-1.5 rounded-xl bg-black/60 border border-white/20 text-white text-xs cursor-pointer focus:outline-none"
               >
-                <option value="all">All Outcomes</option>
-                <option value="win">Victories</option>
-                <option value="loss">Defeats</option>
+                <option value="all">All Results</option>
+                <option value="win">Wins</option>
+                <option value="loss">Losses</option>
                 <option value="draw">Draws</option>
                 <option value="executed">Executions</option>
                 <option value="mercied">Mercies</option>
@@ -336,7 +336,7 @@ export const LoggingView: React.FC<LoggingViewProps> = ({
               <button
                 onClick={handleExportJSON}
                 className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold flex items-center gap-1.5 border border-white/10 transition-colors cursor-pointer"
-                title="Download JSON ledger"
+                title="Download all games as JSON file"
               >
                 <FileCode className="w-3.5 h-3.5 text-amber-300" />
                 <span>JSON</span>
@@ -358,7 +358,7 @@ export const LoggingView: React.FC<LoggingViewProps> = ({
             <div className="lg:col-span-7 space-y-2.5 max-h-[620px] overflow-y-auto pr-1">
               {filteredLogs.length === 0 ? (
                 <div className="p-8 rounded-3xl bg-black/40 border border-dashed border-white/15 text-center text-xs text-white/50">
-                  No match logs match your current filter criteria.
+                  No games match your filters.
                 </div>
               ) : (
                 filteredLogs.map(log => {
@@ -434,7 +434,7 @@ export const LoggingView: React.FC<LoggingViewProps> = ({
                   <div className="flex items-start justify-between gap-2 border-b border-white/10 pb-3">
                     <div>
                       <span className="text-[10px] font-black uppercase tracking-wider text-[#F5C453]">
-                        Match Audit Inspector
+                        Game Details
                       </span>
                       <h3 className="text-base font-black text-white mt-0.5">
                         vs {selectedLog.opponentName}
@@ -453,7 +453,7 @@ export const LoggingView: React.FC<LoggingViewProps> = ({
 
                   <div className="space-y-2 text-xs">
                     <div className="flex justify-between py-1 border-b border-white/5">
-                      <span className="text-white/60">Termination</span>
+                      <span className="text-white/60">How It Ended</span>
                       <span className="text-white font-bold">{selectedLog.reason}</span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-white/5">
@@ -496,7 +496,7 @@ export const LoggingView: React.FC<LoggingViewProps> = ({
                       className="py-2.5 px-3 rounded-xl bg-[#52673A] hover:bg-[#52673A]/90 text-white font-black text-xs flex items-center justify-center gap-1.5 border border-[#F5C453]/40 cursor-pointer shadow-md"
                     >
                       <Compass className="w-4 h-4 text-[#F5C453]" />
-                      <span>Analyze Final FEN</span>
+                      <span>Analyze Final Position</span>
                     </button>
 
                     <button
@@ -511,9 +511,9 @@ export const LoggingView: React.FC<LoggingViewProps> = ({
               ) : (
                 <div className="glass-panel p-8 rounded-3xl border border-white/10 text-center space-y-3">
                   <FileText className="w-10 h-10 text-[#F5C453]/40 mx-auto" />
-                  <h4 className="text-sm font-bold text-white">Select a Match to Inspect</h4>
+                  <h4 className="text-sm font-bold text-white">Select a Game</h4>
                   <p className="text-xs text-[#DFD0B0]/60 max-w-xs mx-auto">
-                    Click any game record on the left to inspect move counts, PGN notations, accuracy, and termination reasons.
+                    Click a game on the left to see its moves, accuracy and how it ended.
                   </p>
                 </div>
               )}
@@ -529,23 +529,23 @@ export const LoggingView: React.FC<LoggingViewProps> = ({
             <div>
               <h3 className="text-base font-black text-white flex items-center gap-2">
                 <Database className="w-5 h-5 text-[#F5C453]" />
-                <span>System Activity & Audit Ledger</span>
+                <span>Activity Log</span>
               </h3>
               <p className="text-xs text-[#DFD0B0]/70">
-                Real-time operational event trace for battle state transitions, authentication, and database synchronization.
+                A live list of app events: games, sign-ins and saving data.
               </p>
             </div>
 
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-xs font-mono text-emerald-400 font-bold">Live DB Sync Active</span>
+              <span className="text-xs font-mono text-emerald-400 font-bold">Saving Live</span>
             </div>
           </div>
 
           <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
             {auditEvents.length === 0 ? (
               <div className="p-8 text-center text-xs text-white/40">
-                No recent system audit records logged.
+                No recent activity.
               </div>
             ) : (
               auditEvents.map(evt => (
@@ -594,9 +594,9 @@ export const LoggingView: React.FC<LoggingViewProps> = ({
           <div className="flex items-center gap-3 border-b border-white/10 pb-3">
             <UploadCloud className="w-6 h-6 text-[#F5C453]" />
             <div>
-              <h3 className="text-base font-black text-white">Import External PGN File / Text</h3>
+              <h3 className="text-base font-black text-white">Import a Game (PGN)</h3>
               <p className="text-xs text-[#DFD0B0]/70">
-                Paste portable game notation (PGN) from Chess.com, Lichess, or FIDE tournaments to add to your personal battle log archive.
+                Paste a game in PGN format from Chess.com, Lichess or a tournament to add it to your game history.
               </p>
             </div>
           </div>
@@ -608,7 +608,7 @@ export const LoggingView: React.FC<LoggingViewProps> = ({
           )}
 
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-[#DFD0B0]">Opponent Name / Tournament Label</label>
+            <label className="text-xs font-bold text-[#DFD0B0]">Opponent or Event Name</label>
             <input
               type="text"
               value={importOpponentName}
@@ -634,7 +634,7 @@ export const LoggingView: React.FC<LoggingViewProps> = ({
             className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#52673A] via-[#8C2425] to-[#F5C453] hover:brightness-110 text-white font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#F5C453]/20 border border-[#F5C453]/50 transition-all cursor-pointer"
           >
             <UploadCloud className="w-4 h-4" />
-            <span>Import to Battle Logs</span>
+            <span>Import to Game History</span>
           </button>
         </div>
       )}

@@ -74,7 +74,7 @@ const BOARD_THEMES: { id: BoardThemeId; name: string; lightBg: string; darkBg: s
   { id: 'midnight', name: 'Midnight Slate', lightBg: '#334155', darkBg: '#0f172a', desc: 'Deep Obsidian' },
   { id: 'marble', name: 'Royal Marble', lightBg: '#e8ebf0', darkBg: '#8ca2b0', desc: 'Polished Alabaster' },
   { id: 'brutalist', name: '🧱 Brutalist Block', lightBg: '#FFF1C1', darkBg: '#5B8CFF', desc: 'Flat cream and electric blue with black ink' },
-  { id: 'custom', name: 'Theme Matched', lightBg: 'var(--board-light)', darkBg: 'var(--board-dark)', desc: 'Synchronized with UI Palette' }
+  { id: 'custom', name: 'Theme Matched', lightBg: 'var(--board-light)', darkBg: 'var(--board-dark)', desc: 'Matches your app colors' }
 ];
 
 const PIECE_THEMES: { id: PieceThemeId; name: string; tag: string; desc: string; icon: string }[] = [
@@ -103,7 +103,7 @@ const PIECE_THEMES: { id: PieceThemeId; name: string; tag: string; desc: string;
     id: 'crystal_neon', 
     name: '💎 Crystal Glass & Neon', 
     tag: 'GLOW',
-    desc: 'Translucent glowing neon-infused laser vector shapes',
+    desc: 'See-through glowing neon pieces',
     icon: '💎'
   },
   { 
@@ -117,7 +117,7 @@ const PIECE_THEMES: { id: PieceThemeId; name: string; tag: string; desc: string;
     id: 'classic', 
     name: 'Classic Staunton (Flat)', 
     tag: 'STANDARD',
-    desc: 'Clean, minimalist vector Staunton tournament pieces',
+    desc: 'Simple, clean tournament pieces',
     icon: '♟️'
   },
   { 
@@ -131,7 +131,7 @@ const PIECE_THEMES: { id: PieceThemeId; name: string; tag: string; desc: string;
     id: 'neo', 
     name: 'Neo Azure Modern', 
     tag: 'CLEAN',
-    desc: 'High contrast electric slate vector silhouettes',
+    desc: 'High-contrast modern pieces',
     icon: '⚡'
   }
 ];
@@ -431,7 +431,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   {customThemes.length === 0 ? (
                     <div className="p-6 rounded-2xl bg-white/[0.02] border border-dashed border-white/15 text-center">
                       <p className="text-xs text-[#DFD0B0]/60 mb-3">
-                        Tailor your own Kurdish military variants, ambient colors, and chessboard tones!
+                        Make your own theme with your own app and board colors.
                       </p>
                       <button
                         onClick={() => {
@@ -441,7 +441,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         className="inline-flex items-center gap-1.5 py-2 px-4 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/15 text-white font-bold text-xs transition-all cursor-pointer"
                       >
                         <Plus className="w-3.5 h-3.5 text-[#F5C453]" />
-                        <span>Build Custom Theme</span>
+                        <span>Create Theme</span>
                       </button>
                     </div>
                   ) : (
@@ -540,10 +540,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-xs font-bold text-white/90 uppercase tracking-wider block font-ui">
-                      Piece Vector Styles & Sets
+                      Piece Styles
                     </label>
                     <span className="text-[11px] text-[#F5C453] font-semibold">
-                      Instant Vector Switcher
+                      Changes right away
                     </span>
                   </div>
 
@@ -583,7 +583,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 {/* Board Theme Selection */}
                 <div>
                   <label className="text-xs font-bold text-white/90 uppercase tracking-wider block mb-2 font-ui">
-                    Chessboard Color Style
+                    Board Colors
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {BOARD_THEMES.map(theme => {
@@ -623,7 +623,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="space-y-3 animate-in fade-in duration-150">
                 <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white/[0.04] border border-white/10 backdrop-blur-md">
                   <div>
-                    <div className="text-xs font-semibold text-white/90">Sound Effects & Audio</div>
+                    <div className="text-xs font-semibold text-white/90">Sound Effects</div>
                     <div className="text-[11px] text-[#DFD0B0]/60">Audio for moves, captures, checks, and game over</div>
                   </div>
                   <button
@@ -643,7 +643,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white/[0.04] border border-white/10 backdrop-blur-md">
                   <div>
                     <div className="text-xs font-semibold text-white/90">Legal Move Highlights</div>
-                    <div className="text-[11px] text-[#DFD0B0]/60">Display valid destination dots and capture rings</div>
+                    <div className="text-[11px] text-[#DFD0B0]/60">Show dots where the selected piece can move</div>
                   </div>
                   <button
                     onClick={() => onUpdateSettings({ showLegalMoves: !settings.showLegalMoves })}
@@ -699,8 +699,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                 <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white/[0.04] border border-white/10 backdrop-blur-md">
                   <div>
-                    <div className="text-xs font-semibold text-white/90">Evaluation Bar</div>
-                    <div className="text-[11px] text-[#DFD0B0]/60">Real-time advantage engine gauge on side of board</div>
+                    <div className="text-xs font-semibold text-white/90">Eval Bar</div>
+                    <div className="text-[11px] text-[#DFD0B0]/60">Shows who is winning</div>
                   </div>
                   <button
                     onClick={() => onUpdateSettings({ showEvalBar: !settings.showEvalBar })}
@@ -718,7 +718,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                 <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white/[0.04] border border-white/10 backdrop-blur-md">
                   <div>
-                    <div className="text-xs font-semibold text-white/90">Board Coordinates (Ranks & Files)</div>
+                    <div className="text-xs font-semibold text-white/90">Board Coordinates</div>
                     <div className="text-[11px] text-[#DFD0B0]/60">Show 1-8 and a-h notation on board borders</div>
                   </div>
                   <button
@@ -738,7 +738,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white/[0.04] border border-white/10 backdrop-blur-md">
                   <div>
                     <div className="text-xs font-semibold text-white/90">Highlight Last Move</div>
-                    <div className="text-[11px] text-[#DFD0B0]/60">Soft highlight on origin and target squares</div>
+                    <div className="text-[11px] text-[#DFD0B0]/60">Highlights the squares of the last move</div>
                   </div>
                   <button
                     onClick={() => onUpdateSettings({ highlightLastMove: !settings.highlightLastMove })}

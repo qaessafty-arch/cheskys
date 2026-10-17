@@ -41,7 +41,7 @@ html[data-ui-style='brutalist'] body {
   color: var(--nb-ink);
 }
 
-[data-ui-style='brutalist'] body:not(.font-vazirmatn) {
+html[data-ui-style='brutalist']:not([dir='rtl']) body {
   font-family: 'Outfit', 'Inter', system-ui, sans-serif;
 }
 

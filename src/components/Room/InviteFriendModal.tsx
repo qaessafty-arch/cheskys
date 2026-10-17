@@ -78,7 +78,7 @@ export const InviteFriendModal: React.FC<InviteFriendModalProps> = ({ isOpen, on
           <div className="flex items-center gap-2">
             <UserPlus className="w-5 h-5 text-[#F5C453]" />
             <h3 className="text-base font-bold text-white tracking-wide">
-              Invite Allies
+              Invite Friends
             </h3>
           </div>
           <button
@@ -115,8 +115,8 @@ export const InviteFriendModal: React.FC<InviteFriendModalProps> = ({ isOpen, on
           {friends.length === 0 ? (
             <div className="h-48 flex flex-col items-center justify-center text-center text-white/40 gap-2">
               <UserPlus className="w-8 h-8 opacity-40 text-[#F5C453]" />
-              <p className="text-xs">No friends found on your roster yet.</p>
-              <p className="text-[11px] text-white/30">Add friends via the Friends tab to challenge them directly.</p>
+              <p className="text-xs">You have no friends added yet.</p>
+              <p className="text-[11px] text-white/30">Add friends in the Friends tab to invite them here.</p>
             </div>
           ) : filteredFriends.length === 0 ? (
             <div className="h-32 flex items-center justify-center text-xs text-white/40">

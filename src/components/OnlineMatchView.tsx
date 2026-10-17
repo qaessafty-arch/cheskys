@@ -419,7 +419,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
     };
 
     const onMatchAborted = (data: { reason: string }) => {
-      setSession(prev => prev ? { ...prev, status: 'aborted', reason: data.reason || 'Match was aborted.' } : prev);
+      setSession(prev => prev ? { ...prev, status: 'aborted', reason: data.reason || 'Match was cancelled.' } : prev);
     };
 
     const onReconnectSuccess = (data: any) => {
@@ -1059,13 +1059,13 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
           ) : (
             <>
               <div className="w-10 h-10 rounded-full border-4 border-[#F59E0B] border-t-transparent animate-spin" />
-              <h2 className="text-lg font-black text-white">Loading Game State...</h2>
-              <p className="text-xs text-[#94A3B8]">Synchronizing board and player credentials</p>
+              <h2 className="text-lg font-black text-white">Loading Game...</h2>
+              <p className="text-xs text-[#94A3B8]">Getting the board and players ready</p>
               <button
                 onClick={() => window.location.reload()}
                 className="mt-2 px-4 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold transition-colors cursor-pointer border border-white/10"
               >
-                Retry Connection
+                Try Again
               </button>
             </>
           )}
@@ -1098,7 +1098,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base sm:text-lg font-black text-white tracking-tight">
-                  {isSpectator ? 'Spectating Live Match' : 'Worldwide Live Match'}
+                  {isSpectator ? 'Watching Live' : 'Online Game'}
                 </h2>
                 <span className="px-2 py-0.5 rounded-md bg-[#8C2425]/40 text-[#F5C453] text-[10px] font-black border border-[#F5C453]/40 uppercase">
                   {session?.timeControl?.name || 'Rapid'}
@@ -1106,19 +1106,19 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                 {isSpectator ? (
                   <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-[10px] font-black border border-emerald-500/40 uppercase flex items-center gap-1 shadow-sm">
                     <Eye className="w-3 h-3 text-emerald-400 animate-pulse" />
-                    Live Spectator
+                    Watching
                   </span>
                 ) : (
                   <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-[10px] font-black border border-emerald-500/40 uppercase flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    Real Live Player
+                    Real Player
                   </span>
                 )}
               </div>
               <p className="text-xs text-[#DFD0B0]/70">
                 {isSpectator
-                  ? `${session?.whitePlayer?.displayName || 'White'} vs ${session?.blackPlayer?.displayName || 'Black'} • Live observer feed (read-only)`
-                  : 'Battle for Peshmerga Grandmaster Honor & Respect Points'}
+                  ? `${session?.whitePlayer?.displayName || 'White'} vs ${session?.blackPlayer?.displayName || 'Black'} • You are watching (you cannot move)`
+                  : 'Play to win Elo and Respect Points'}
               </p>
             </div>
           </div>
@@ -1129,7 +1129,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                 type="button"
                 onClick={() => setManualFlipped(prev => prev === null ? (isWhitePlayer ? true : false) : !prev)}
                 className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold flex items-center gap-1.5 border border-white/10 transition-colors cursor-pointer"
-                title="Flip Board Perspective"
+                title="Flip Board"
               >
                 <RotateCw className="w-3.5 h-3.5 text-emerald-400" />
                 <span className="hidden sm:inline">Flip View</span>
@@ -1144,7 +1144,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                   ? 'bg-[#52673A] text-white border-[#F5C453] shadow-md'
                   : 'bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border-white/10'
               }`}
-              title="Toggle In-Game Match Chat"
+              title="Show or hide chat"
             >
               <MessageSquare className="w-4 h-4 text-[#F59E0B]" />
               <span>{activeTab === 'chat' ? 'Show Moves' : 'Show Chat'}</span>
@@ -1265,7 +1265,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                   >
                     <div className="w-10 h-10 rounded-full border-4 border-[#F5C453] border-t-transparent animate-spin" />
                     <span className="text-white font-black uppercase tracking-widest text-xs">
-                      {socketStatus === 'reconnecting' ? 'Reconnecting...' : 'Connecting to Arena...'}
+                      {socketStatus === 'reconnecting' ? 'Reconnecting...' : 'Connecting...'}
                     </span>
                   </motion.div>
                 )}
@@ -1286,14 +1286,14 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                     </div>
                     <div className="space-y-1">
                       <span className="text-[10px] font-black uppercase text-[#F5C453] tracking-widest block">
-                        Game Room Code
+                        Room Code
                       </span>
                       <span className="font-mono text-3xl font-black text-white tracking-[0.25em] select-all">
                         {session.code || matchId}
                       </span>
                     </div>
                     <p className="text-xs text-[#DFD0B0]/80 max-w-xs">
-                      Waiting for opponent to connect. Both players will enter the board automatically once joined!
+                      Waiting for your opponent to join. The game starts by itself when they arrive.
                     </p>
                     <button
                       onClick={handleCopyMatchId}
@@ -1317,8 +1317,8 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                       </h2>
                       <p className="text-xs text-[#DFD0B0]/70 font-bold uppercase tracking-widest">
                         {session.winner === myUid || (session.winner === 'w' && isWhitePlayer) || (session.winner === 'b' && !isWhitePlayer)
-                          ? 'You have claimed victory. How shall the fallen be treated?'
-                          : 'Your fate is in the hands of your opponent...'}
+                          ? 'You won! Choose what happens to your opponent.'
+                          : 'You lost. Your opponent is choosing what happens next...'}
                       </p>
                     </div>
 
@@ -1345,7 +1345,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                       <div className="flex flex-col items-center gap-3">
                         <div className="w-12 h-12 rounded-full border-4 border-[#F5C453] border-t-transparent animate-spin" />
                         <span className="text-xs font-black text-[#F5C453] uppercase tracking-widest">
-                          Awaiting Judgment...
+                          Waiting for your opponent to choose...
                         </span>
                       </div>
                     )}
@@ -1386,13 +1386,13 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                       : (!isGameLive
                           ? `Match ${session?.status?.toUpperCase() || 'CONNECTING'}`
                           : isMyTurn
-                            ? 'Your Turn — Choose your move'
+                            ? 'Your Turn'
                             : `${opponent?.displayName || 'Opponent'} is thinking...`)}
                   </span>
                 </div>
                 <span className="text-[#DFD0B0]/70 font-mono text-[11px] whitespace-nowrap">
                   {isSpectator
-                    ? '👁️ Live Spectator (Read Only)'
+                    ? '👁️ Watching (you cannot move)'
                     : `You play as ${isWhitePlayer ? 'White ⚪' : 'Black ⚫'}`}
                 </span>
               </div>
@@ -1406,13 +1406,13 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                   </div>
                   <div>
                     <div className="text-xs font-black text-emerald-300 flex items-center gap-1.5">
-                      <span>Spectator Mode Active</span>
+                      <span>You Are Watching</span>
                       <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/30 border border-emerald-500/40 font-mono font-bold text-emerald-200">
                         READ ONLY
                       </span>
                     </div>
                     <div className="text-[10px] text-[#DFD0B0]/70">
-                      Real-time live board sync • Moves cannot be made
+                      Live board • You cannot make moves
                     </div>
                   </div>
                 </div>
@@ -1420,7 +1420,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                   <button
                     onClick={() => setManualFlipped(prev => prev === null ? (isWhitePlayer ? true : false) : !prev)}
                     className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold flex items-center gap-1.5 border border-white/10 transition-colors cursor-pointer"
-                    title="Flip Board Orientation"
+                    title="Flip Board"
                   >
                     <RotateCw className="w-3.5 h-3.5 text-emerald-400" />
                     <span>Flip View</span>
@@ -1428,7 +1428,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                   <button
                     onClick={onClose}
                     className="px-3 py-1.5 rounded-xl bg-red-950/60 hover:bg-red-900/80 text-red-200 border border-red-500/40 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-                    title="Leave Spectator Mode"
+                    title="Stop watching"
                   >
                     <LogOut className="w-3.5 h-3.5 text-red-400" />
                     <span>Exit</span>
@@ -1545,7 +1545,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                     />
                   )}
                   <Layers className="w-3.5 h-3.5 relative z-10" />
-                  <span className="relative z-10">Move Log</span>
+                  <span className="relative z-10">Moves</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('chat')}
@@ -1563,7 +1563,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                     />
                   )}
                   <MessageSquare className="w-3.5 h-3.5 relative z-10" />
-                  <span className="relative z-10">Match Chat</span>
+                  <span className="relative z-10">Chat</span>
                   {unreadChatCount > 0 && activeTab !== 'chat' && (
                     <span className="absolute top-1 right-2 w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center animate-bounce shadow-lg border-2 border-[var(--app-bg)] relative z-20">
                       {unreadChatCount}
@@ -1584,7 +1584,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                     >
                       <div className="flex items-center justify-between p-3 border-b border-white/5 bg-black/20">
                         <h4 className="text-[10px] font-black text-[#DFD0B0]/50 uppercase tracking-widest">
-                          Tactical History
+                          Moves
                         </h4>
                         <span className="px-2 py-0.5 rounded bg-white/5 text-[9px] text-white/60 font-mono">
                           {moveHistory.length} Moves
@@ -1607,7 +1607,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                         {moveHistory.length === 0 && (
                           <div className="h-full flex flex-col items-center justify-center text-[#DFD0B0]/20 gap-3 py-10">
                             <Layers className="w-10 h-10 opacity-20" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Awaiting First Strike</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest">No moves yet</span>
                           </div>
                         )}
                       </div>
@@ -1658,10 +1658,10 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                     <AlertTriangle className="w-10 h-10" />
                   </div>
                   <h2 className="text-2xl sm:text-3xl font-black text-white mb-2 tracking-tight uppercase">
-                    Match Aborted
+                    Match Cancelled
                   </h2>
                   <p className="text-xs font-black text-[#94A3B8] uppercase tracking-[0.2em] mb-6 opacity-80">
-                    {session?.reason || 'The match was aborted before play started. No rating changes were applied.'}
+                    {session?.reason || 'The match was cancelled before it started. Your rating did not change.'}
                   </p>
                   <button
                     onClick={onClose}
@@ -1688,7 +1688,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                       : Boolean(session.winner) && (session.winner === session.blackPlayer?.uid || session.winner === session.blackId)
                       ? 'b'
                       : 'draw',
-                  reason: session.reason || 'Match Concluded'
+                  reason: session.reason || 'Game Over'
                 }}
                 pgn={session.pgn || game.pgn() || ''}
                 ratingChange={ratingChanges
@@ -1744,7 +1744,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                     onChange={e => setShowWeather(e.target.checked)}
                     className="form-checkbox text-amber-500 rounded bg-black/40 border-white/20"
                   />
-                  <span className="text-xs text-white/80 font-bold">Dynamic Weather</span>
+                  <span className="text-xs text-white/80 font-bold">Weather Effects</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -1753,7 +1753,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                     onChange={e => setShowTerritory(e.target.checked)}
                     className="form-checkbox text-emerald-500 rounded bg-black/40 border-white/20"
                   />
-                  <span className="text-xs text-white/80 font-bold">Territory Heatmap</span>
+                  <span className="text-xs text-white/80 font-bold">Square Control</span>
                 </label>
               </div>
               <div className="grid grid-cols-2 gap-2">

@@ -396,7 +396,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       role: 'member',
       badgeNumber: guestBadge,
       customBadge: `#${guestBadge}`,
-      customStatus: 'Exploring the chess battlefield as a guest warrior',
+      customStatus: 'Playing as a guest',
       isGuest: true
     };
 
@@ -712,13 +712,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         activateSkyProfile();
         return true;
       }
-      throw new Error('Access Denied: The Celestial [sky] account requires its special and only password [q.brz]+[BLUEBERRY].');
+      throw new Error('Access denied: the Sky account requires its special and only password [q.brz]+[BLUEBERRY].');
     }
 
     // Only Developer & Founder can switch to Sky without passkey
     const isAuthorized = isDeveloper || isOwner || devModeUnlocked;
     if (!isAuthorized) {
-      throw new Error('Access Denied: The Celestial [sky] account requires its special and only password [q.brz]+[BLUEBERRY].');
+      throw new Error('Access denied: the Sky account requires its special and only password [q.brz]+[BLUEBERRY].');
     }
 
     try {
@@ -1017,7 +1017,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...fbData,
       userId: profile?.uid || 'guest',
       userEmail: profile?.email || fbData.userEmail || null,
-      userName: profile?.displayName || fbData.userName || 'Anonymous Warrior',
+      userName: profile?.displayName || fbData.userName || 'Anonymous Player',
       userBadge: profile?.badgeNumber !== undefined ? `#${profile.badgeNumber}` : 'Guest',
       status: 'pending',
       createdAt: serverTimestamp()

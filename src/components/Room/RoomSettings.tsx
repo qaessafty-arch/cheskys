@@ -70,7 +70,7 @@ export const RoomSettings: React.FC<RoomSettingsProps> = ({ value, onChange }) =
       <div className="flex flex-col gap-2">
         <label className="text-xs font-bold uppercase tracking-wider text-white/70 flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5 text-[#F5C453]" />
-          <span>Preferred Color</span>
+          <span>Your Color</span>
         </label>
         <div className="grid grid-cols-3 gap-2">
           {[
@@ -102,7 +102,7 @@ export const RoomSettings: React.FC<RoomSettingsProps> = ({ value, onChange }) =
       <div className="flex flex-col gap-2">
         <label className="text-xs font-bold uppercase tracking-wider text-white/70 flex items-center gap-1.5">
           <Shield className="w-3.5 h-3.5 text-[#F5C453]" />
-          <span>Match Rating</span>
+          <span>Rated or Casual</span>
         </label>
         <button
           type="button"
@@ -115,10 +115,10 @@ export const RoomSettings: React.FC<RoomSettingsProps> = ({ value, onChange }) =
         >
           <div>
             <div className="text-xs font-black uppercase tracking-wider">
-              {value.rated ? 'Rated Battle' : 'Casual / Friendly'}
+              {value.rated ? 'Rated Game' : 'Casual Game'}
             </div>
             <div className="text-[11px] text-white/40 mt-0.5">
-              {value.rated ? 'Affects Grandmaster ELO rating' : 'Practice match without ELO stakes'}
+              {value.rated ? 'Changes your rating' : 'Just for fun, rating does not change'}
             </div>
           </div>
           <div

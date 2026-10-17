@@ -24,7 +24,7 @@ export const FriendRequests: React.FC<FriendRequestsProps> = ({
         <div className="flex items-center justify-between">
           <h4 className="text-xs font-black text-[#F5C453] uppercase tracking-wider flex items-center gap-1.5">
             <Clock className="w-3.5 h-3.5" />
-            <span>Pending Received Requests</span>
+            <span>Received Requests</span>
           </h4>
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#F5C453]/20 text-[#F5C453] font-bold">
             {incomingRequests.length}
@@ -52,7 +52,7 @@ export const FriendRequests: React.FC<FriendRequestsProps> = ({
                     />
                   ) : (
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#52673A] to-[#8C2425] border border-[#F5C453] flex items-center justify-center font-bold text-sm text-white">
-                      {req.fromUserName ? req.fromUserName.charAt(0).toUpperCase() : 'T'}
+                      {req.fromUserName ? req.fromUserName.charAt(0).toUpperCase() : 'P'}
                     </div>
                   )}
 

@@ -20,10 +20,10 @@ export const StrategicVisionPanel: React.FC<StrategicVisionPanelProps> = ({
       <div className="flex items-center justify-between">
         <h4 className="text-[10px] font-black text-[#94A3B8] uppercase tracking-[0.2em] flex items-center gap-2">
           <Glasses className="w-4 h-4 text-sky-400" />
-          Strategic Vision
+          Board Aids
         </h4>
         <span className="text-[8px] px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 font-black font-mono border border-sky-500/30">
-          ENGAGED
+          On
         </span>
       </div>
 
@@ -42,8 +42,8 @@ export const StrategicVisionPanel: React.FC<StrategicVisionPanelProps> = ({
               <Map className="w-4 h-4" />
             </div>
             <div className="text-left">
-              <div className="text-[11px] font-black uppercase tracking-wider">Territory Vision</div>
-              <div className="text-[9px] opacity-60">Heatmap of controlled squares</div>
+              <div className="text-[11px] font-black uppercase tracking-wider">Square Control</div>
+              <div className="text-[9px] opacity-60">Shows which side controls each square</div>
             </div>
           </div>
           <div className={`w-8 h-4 rounded-full relative transition-colors ${settings.showTerritory ? 'bg-emerald-500' : 'bg-white/10'}`}>
@@ -65,8 +65,8 @@ export const StrategicVisionPanel: React.FC<StrategicVisionPanelProps> = ({
               <CloudSun className="w-4 h-4" />
             </div>
             <div className="text-left">
-              <div className="text-[11px] font-black uppercase tracking-wider">Atmospheric Intel</div>
-              <div className="text-[9px] opacity-60">Dynamic battlefield weather</div>
+              <div className="text-[11px] font-black uppercase tracking-wider">Weather Effects</div>
+              <div className="text-[9px] opacity-60">Animated weather on the board</div>
             </div>
           </div>
           <div className={`w-8 h-4 rounded-full relative transition-colors ${settings.showWeather ? 'bg-amber-500' : 'bg-white/10'}`}>
@@ -88,8 +88,8 @@ export const StrategicVisionPanel: React.FC<StrategicVisionPanelProps> = ({
               <BarChart2 className="w-4 h-4" />
             </div>
             <div className="text-left">
-              <div className="text-[11px] font-black uppercase tracking-wider">Engine Evaluation</div>
-              <div className="text-[9px] opacity-60">Real-time match scoring</div>
+              <div className="text-[11px] font-black uppercase tracking-wider">Eval Bar</div>
+              <div className="text-[9px] opacity-60">Shows who is winning</div>
             </div>
           </div>
           <div className={`w-8 h-4 rounded-full relative transition-colors ${settings.showEvalBar ? 'bg-blue-500' : 'bg-white/10'}`}>
@@ -111,8 +111,8 @@ export const StrategicVisionPanel: React.FC<StrategicVisionPanelProps> = ({
               <ArrowUpRight className="w-4 h-4" />
             </div>
             <div className="text-left">
-              <div className="text-[11px] font-black uppercase tracking-wider">Tactical Arrows</div>
-              <div className="text-[9px] opacity-60">Visualizing threat paths</div>
+              <div className="text-[11px] font-black uppercase tracking-wider">Move Arrows</div>
+              <div className="text-[9px] opacity-60">Arrows for threats and best moves</div>
             </div>
           </div>
           <div className={`w-8 h-4 rounded-full relative transition-colors ${settings.showMoveArrows ? 'bg-purple-500' : 'bg-white/10'}`}>
