@@ -8,24 +8,31 @@ import { formatDistanceToNow } from 'date-fns';
 import { KurdishFlag } from './KurdishFlag';
 
 const LatencyIndicator: React.FC = React.memo(() => {
-  const [latency, setLatency] = useState<number>(18);
+  // Measured round trip to the app server; null while unknown or offline.
+  const [latency, setLatency] = useState<number | null>(null);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setLatency(prev => {
-        const variation = Math.floor(Math.random() * 5) - 2;
-        let newLatency = prev + variation;
-        if (newLatency < 12) newLatency = 12;
-        if (newLatency > 85) newLatency = 85;
-        return isNaN(newLatency) ? 18 : newLatency;
-      });
-    }, 8000);
-    return () => clearInterval(interval);
+    let cancelled = false;
+    const measure = async () => {
+      const start = performance.now();
+      try {
+        await fetch('/api/health', { cache: 'no-store', signal: AbortSignal.timeout(5000) });
+        if (!cancelled) setLatency(Math.round(performance.now() - start));
+      } catch {
+        if (!cancelled) setLatency(null);
+      }
+    };
+    measure();
+    const interval = setInterval(measure, 15000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, []);
 
   return (
-    <span className={`text-[9px] font-black uppercase tracking-widest ${latency < 40 ? 'text-[#10B981]' : 'text-[var(--secondary-accent)]'}`}>
-      {latency}ms
+    <span className={`text-[10px] font-black uppercase tracking-widest ${latency === null ? 'text-[var(--text-muted)]' : latency < 150 ? 'text-[#10B981]' : 'text-[var(--secondary-accent)]'}`}>
+      {latency === null ? 'offline' : `${latency}ms`}
     </span>
   );
 });
@@ -130,7 +137,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="flex items-center gap-3 sm:gap-6">
         {/* Connection Status - Hidden on mobile */}
         <div className="hidden sm:flex flex-col items-end">
-          <span className="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] leading-none">Rating</span>
+          <span className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] leading-none">Rating</span>
           <span className="text-[11px] font-mono font-black text-white mt-1">
             {currentElo} <span className="text-[var(--secondary-accent)]">ELO</span>
           </span>
@@ -168,7 +175,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <div className="flex items-center gap-2">
                       <span className="text-[11px] font-black text-white uppercase tracking-widest">Notifications</span>
                       {unreadCount > 0 && (
-                        <span className="px-1.5 py-0.5 rounded bg-[var(--secondary-accent)] text-[var(--app-bg)] text-[9px] font-black shadow-sm">{unreadCount}</span>
+                        <span className="px-1.5 py-0.5 rounded bg-[var(--secondary-accent)] text-[var(--app-bg)] text-[10px] font-black shadow-sm">{unreadCount}</span>
                       )}
                     </div>
                     {unreadCount > 0 && (
@@ -296,7 +303,7 @@ const NotificationListItem: React.FC<{
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
             <span className="text-[11px] font-black text-white uppercase tracking-tight truncate">{notification.title}</span>
-            <span className="text-[9px] font-mono text-[var(--text-muted)] shrink-0">
+            <span className="text-[10px] font-mono text-[var(--text-muted)] shrink-0">
               {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
             </span>
           </div>

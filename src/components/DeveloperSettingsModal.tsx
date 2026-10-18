@@ -546,12 +546,12 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                                     <div className="font-black text-white flex items-center gap-1.5">
                                       <span>{u.displayName || 'Anonymous Player'}</span>
                                       {isDevAccount && (
-                                        <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[9px] font-black border border-amber-400/40">
+                                        <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[10px] font-black border border-amber-400/40">
                                           👑 OWNER #0
                                         </span>
                                       )}
                                       {isAdminAccount && !isDevAccount && (
-                                        <span className="px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 text-[9px] font-black border border-purple-400/40">
+                                        <span className="px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 text-[10px] font-black border border-purple-400/40">
                                           🛡️ ADMIN
                                         </span>
                                       )}
@@ -771,7 +771,7 @@ export const DeveloperSettingsModal: React.FC<DeveloperSettingsModalProps> = ({ 
                             </div>
                           </div>
                           <div className="pt-4 border-t border-[#1F293D] flex items-center justify-between">
-                            <span className="text-[9px] font-mono text-slate-600 uppercase tracking-[0.2em]">PREVIEW</span>
+                            <span className="text-[10px] font-mono text-slate-600 uppercase tracking-[0.2em]">PREVIEW</span>
                             <div className="flex gap-2 text-slate-700">
                               <Globe size={14} />
                               <Heart size={14} />

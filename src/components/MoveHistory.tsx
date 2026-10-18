@@ -117,7 +117,7 @@ export const MoveHistory: React.FC<MoveHistoryProps> = ({
           <div className="truncate">
             {openingInfo ? (
               <div className="flex items-center gap-2 truncate">
-                <span className="font-mono text-[9px] font-black px-1.5 py-0.5 rounded bg-[#F59E0B] text-[#0B0F19] shadow-sm uppercase">
+                <span className="font-mono text-[10px] font-black px-1.5 py-0.5 rounded bg-[#F59E0B] text-[#0B0F19] shadow-sm uppercase">
                   {openingInfo.eco}
                 </span>
                 <span className="text-[11px] font-black text-white tracking-tight truncate">
@@ -133,7 +133,7 @@ export const MoveHistory: React.FC<MoveHistoryProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={handleCopyFen}
-            className="px-2 py-1.5 rounded-lg bg-[#0B0F19] border border-[#1F293D] text-[9px] font-black text-[#94A3B8] hover:text-[#F59E0B] hover:border-[#F59E0B]/30 transition-all interactive-btn uppercase tracking-tighter"
+            className="px-2 py-1.5 rounded-lg bg-[#0B0F19] border border-[#1F293D] text-[10px] font-black text-[#94A3B8] hover:text-[#F59E0B] hover:border-[#F59E0B]/30 transition-all interactive-btn uppercase tracking-tighter"
             title="Copy FEN string"
           >
             {copiedFen ? <Check className="w-3.5 h-3.5 text-[#10B981]" /> : 'FEN'}

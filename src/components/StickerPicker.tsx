@@ -56,7 +56,7 @@ export const StickerPicker: React.FC<StickerPickerProps> = ({ onSelect, onClose 
         <button 
           type="button" 
           onClick={onClose} 
-          className="text-[#94A3B8] hover:text-[#F59E0B] transition-all text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg bg-[#0B0F19] border border-[#1F293D] active:scale-95 cursor-pointer"
+          className="text-[#94A3B8] hover:text-[#F59E0B] transition-all text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg bg-[#0B0F19] border border-[#1F293D] active:scale-95 cursor-pointer"
         >
           Hide
         </button>

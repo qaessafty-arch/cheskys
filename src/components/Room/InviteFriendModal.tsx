@@ -156,7 +156,7 @@ export const InviteFriendModal: React.FC<InviteFriendModalProps> = ({ isOpen, on
                         {friend.displayName}
                       </span>
                       {isOnline && (
-                        <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-wider">
+                        <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
                           Online
                         </span>
                       )}

@@ -538,7 +538,7 @@ export const ChessAvatarModal: React.FC<ChessAvatarModalProps> = ({
                       }`}
                     >
                       {isUserCurrentRank && (
-                        <span className="absolute top-1.5 right-1.5 px-1.5 py-0.2 rounded bg-amber-500/30 text-amber-300 text-[9px] font-black border border-amber-400/40">
+                        <span className="absolute top-1.5 right-1.5 px-1.5 py-0.2 rounded bg-amber-500/30 text-amber-300 text-[10px] font-black border border-amber-400/40">
                           YOUR RANK
                         </span>
                       )}
@@ -579,7 +579,7 @@ export const ChessAvatarModal: React.FC<ChessAvatarModalProps> = ({
                         <span>{style.icon}</span>
                         <span className="truncate">{style.label}</span>
                       </div>
-                      <p className="text-[9px] text-[#DFD0B0]/60 truncate mt-0.5">{style.desc}</p>
+                      <p className="text-[10px] text-[#DFD0B0]/60 truncate mt-0.5">{style.desc}</p>
                     </button>
                   );
                 })}

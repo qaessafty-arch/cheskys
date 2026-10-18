@@ -1044,7 +1044,7 @@ export default function App() {
                     <div className="w-2.5 h-2.5 rounded-full bg-[var(--secondary-accent)] gold-glow" />
                     <div className="flex flex-col">
                       <span className="text-[10px] font-black text-white uppercase tracking-widest leading-none">{activeMode === 'ai' ? `VS ${currentBot.name}` : 'Local Game'}</span>
-                      <span className="text-[9px] font-mono text-[#94A3B8] mt-1">Game in progress</span>
+                      <span className="text-[10px] font-mono text-[#94A3B8] mt-1">Game in progress</span>
                     </div>
                   </div>
                   <div className="px-3 py-1.5 rounded-lg bg-[var(--app-bg)] border border-[var(--glass-border)] text-[10px] font-black text-[var(--secondary-accent)] uppercase tracking-tighter">{timeControl.name}</div>

@@ -430,7 +430,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
                 {t('profile.accountProfile')}
               </h2>
               {isOwner && (
-                <span className="px-2 py-0.5 rounded-lg bg-[#F59E0B] text-[#0B0F19] text-[9px] font-black uppercase tracking-tighter shadow-lg shadow-[#F59E0B]/20">
+                <span className="px-2 py-0.5 rounded-lg bg-[#F59E0B] text-[#0B0F19] text-[10px] font-black uppercase tracking-tighter shadow-lg shadow-[#F59E0B]/20">
                   Founder
                 </span>
               )}
@@ -811,7 +811,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
                     title="Change or upload profile picture"
                   >
                     <Camera className="w-5 h-5 animate-pulse" />
-                    <span className="text-[9px] font-bold text-white mt-0.5">Change</span>
+                    <span className="text-[10px] font-bold text-white mt-0.5">Change</span>
                   </button>
                 </div>
 
@@ -1397,7 +1397,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
                   <div>
                     <div className="text-xs font-black text-white group-hover:text-amber-300 transition-colors flex items-center gap-1.5">
                       <span>Developer Settings</span>
-                      <span className="text-[9px] px-1 rounded bg-amber-500/20 text-amber-300 font-mono border border-amber-400/40">
+                      <span className="text-[10px] px-1 rounded bg-amber-500/20 text-amber-300 font-mono border border-amber-400/40">
                         [Dev Set]
                       </span>
                     </div>

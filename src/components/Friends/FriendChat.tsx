@@ -137,7 +137,7 @@ export const FriendChat: React.FC<FriendChatProps> = ({
                 >
                   <p>{msg.text}</p>
                 </div>
-                <span className="text-[9px] text-white/40 mt-0.5 px-1 font-mono">
+                <span className="text-[10px] text-white/40 mt-0.5 px-1 font-mono">
                   {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>

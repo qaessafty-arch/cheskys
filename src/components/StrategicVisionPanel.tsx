@@ -22,7 +22,7 @@ export const StrategicVisionPanel: React.FC<StrategicVisionPanelProps> = ({
           <Glasses className="w-4 h-4 text-sky-400" />
           Board Aids
         </h4>
-        <span className="text-[8px] px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 font-black font-mono border border-sky-500/30">
+        <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 font-black font-mono border border-sky-500/30">
           On
         </span>
       </div>
@@ -43,7 +43,7 @@ export const StrategicVisionPanel: React.FC<StrategicVisionPanelProps> = ({
             </div>
             <div className="text-left">
               <div className="text-[11px] font-black uppercase tracking-wider">Square Control</div>
-              <div className="text-[9px] opacity-60">Shows which side controls each square</div>
+              <div className="text-[10px] opacity-60">Shows which side controls each square</div>
             </div>
           </div>
           <div className={`w-8 h-4 rounded-full relative transition-colors ${settings.showTerritory ? 'bg-emerald-500' : 'bg-white/10'}`}>
@@ -66,7 +66,7 @@ export const StrategicVisionPanel: React.FC<StrategicVisionPanelProps> = ({
             </div>
             <div className="text-left">
               <div className="text-[11px] font-black uppercase tracking-wider">Weather Effects</div>
-              <div className="text-[9px] opacity-60">Animated weather on the board</div>
+              <div className="text-[10px] opacity-60">Animated weather on the board</div>
             </div>
           </div>
           <div className={`w-8 h-4 rounded-full relative transition-colors ${settings.showWeather ? 'bg-amber-500' : 'bg-white/10'}`}>
@@ -89,7 +89,7 @@ export const StrategicVisionPanel: React.FC<StrategicVisionPanelProps> = ({
             </div>
             <div className="text-left">
               <div className="text-[11px] font-black uppercase tracking-wider">Eval Bar</div>
-              <div className="text-[9px] opacity-60">Shows who is winning</div>
+              <div className="text-[10px] opacity-60">Shows who is winning</div>
             </div>
           </div>
           <div className={`w-8 h-4 rounded-full relative transition-colors ${settings.showEvalBar ? 'bg-blue-500' : 'bg-white/10'}`}>
@@ -112,7 +112,7 @@ export const StrategicVisionPanel: React.FC<StrategicVisionPanelProps> = ({
             </div>
             <div className="text-left">
               <div className="text-[11px] font-black uppercase tracking-wider">Move Arrows</div>
-              <div className="text-[9px] opacity-60">Arrows for threats and best moves</div>
+              <div className="text-[10px] opacity-60">Arrows for threats and best moves</div>
             </div>
           </div>
           <div className={`w-8 h-4 rounded-full relative transition-colors ${settings.showMoveArrows ? 'bg-purple-500' : 'bg-white/10'}`}>

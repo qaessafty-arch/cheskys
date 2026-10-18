@@ -54,6 +54,19 @@ const buildLocalHistogram = (list: LeaderboardUser[]): HistogramData[] => {
     .map(([start, count]) => ({ range: `${start}-${start + 200}`, count, start }));
 };
 
+// The rating bracket that holds the middle player, weighting each bracket by its player count.
+const medianBracket = (data: HistogramData[]): string | null => {
+  const sorted = [...data].sort((a, b) => a.start - b.start);
+  const total = sorted.reduce((sum, d) => sum + d.count, 0);
+  if (total === 0) return null;
+  let seen = 0;
+  for (const d of sorted) {
+    seen += d.count;
+    if (seen >= total / 2) return `${d.start}–${d.start + 200}`;
+  }
+  return null;
+};
+
 export const WorldwideLeaderboardView: React.FC = () => {
   const { user, profile } = useAuth();
   const [activeMode, setActiveMode] = useState<'bullet' | 'blitz' | 'rapid' | 'puzzle' | 'daily'>('blitz');
@@ -215,7 +228,7 @@ export const WorldwideLeaderboardView: React.FC = () => {
     else if (title === 'NM') bg = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.3)]';
     
     return (
-      <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-sm border ${bg}`}>
+      <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-sm border ${bg}`}>
         {title === 'CELESTIAL' ? '🦋 CELESTIAL' : title}
       </span>
     );
@@ -403,7 +416,12 @@ export const WorldwideLeaderboardView: React.FC = () => {
                     </tr>
                   ) : players.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="p-8 text-center text-white/40">{needsSignIn ? 'Sign in with Google, email or phone to see real players.' : 'No ranked players yet. Finish a game against the bot to appear here.'}</td>
+                      <td colSpan={6} className="p-8 text-white/50">
+                        {/* Pinned to the visible part of the horizontally scrolling table on phones. */}
+                        <p className="sticky left-4 max-w-[16rem] sm:static sm:max-w-none sm:text-center whitespace-normal">
+                          {needsSignIn ? 'Sign in with Google, email or phone to see real players.' : 'No ranked players yet. Finish a game against the bot to appear here.'}
+                        </p>
+                      </td>
                     </tr>
                   ) : (
                     players.map((p) => (
@@ -607,11 +625,9 @@ export const WorldwideLeaderboardView: React.FC = () => {
             </div>
             
             <div className="mt-4 p-4 rounded-xl bg-black/30 border border-white/5 flex flex-col gap-2">
-              <div className="text-xs text-white/50">Current Median Rating</div>
+              <div className="text-xs text-white/50">Median Rating</div>
               <div className="text-xl font-black text-white font-mono">
-                {histogramData.length > 0 
-                  ? (parseInt(histogramData[Math.floor(histogramData.length / 2)]?.range?.split('-')[0]) + 100 || 1200) 
-                  : 1200}
+                {medianBracket(histogramData) ?? '—'}
               </div>
             </div>
           </div>

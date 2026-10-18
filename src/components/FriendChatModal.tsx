@@ -187,7 +187,7 @@ export const FriendChatModal: React.FC<FriendChatModalProps> = ({
                   <span className="text-[10px] font-black text-[#F59E0B] uppercase tracking-tighter opacity-70">@{friend.username}</span>
                 )}
               </div>
-              <div className="text-[9px] font-black uppercase text-[#94A3B8] tracking-widest flex items-center gap-2">
+              <div className="text-[10px] font-black uppercase text-[#94A3B8] tracking-widest flex items-center gap-2">
                 <span>{friend.honorRank}</span>
                 <span className="w-1 h-1 bg-[#1F293D] rounded-full" />
                 <span className="text-[#10B981]">{friend.elo} RATING</span>

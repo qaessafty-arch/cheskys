@@ -1608,7 +1608,7 @@ export const MultiplayerLobbyView: React.FC<MultiplayerLobbyViewProps> = ({
                                     {m.winnerId === m.player2?.uid && <Check className="w-3 h-3 text-[#F5C453]" />}
                                   </div>
                                   {m.status === 'in_progress' && (
-                                    <div className="text-[9px] text-emerald-400 font-bold uppercase tracking-wider text-center mt-1">Live Match</div>
+                                    <div className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider text-center mt-1">Live Match</div>
                                   )}
                                 </div>
                               ))}

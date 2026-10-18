@@ -114,7 +114,7 @@ export const ModernGameCreationModal: React.FC<ModernGameCreationModalProps> = (
             {/* Room Code Banner */}
             <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-between mb-5">
               <div>
-                <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-white/50 block">Room Code</span>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-white/50 block">Room Code</span>
                 <span className="font-mono text-xl font-black text-white tracking-[0.2em]">{pregeneratedCode}</span>
               </div>
               <button

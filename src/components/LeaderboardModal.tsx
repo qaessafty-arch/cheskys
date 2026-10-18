@@ -138,14 +138,14 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ profile, onC
 
             <div className="flex items-center gap-4">
               <div className="text-center px-4 py-2 rounded-xl bg-[var(--glass-bg)] border border-[var(--glass-border)]">
-                <span className="text-[9px] text-[var(--text-muted)] uppercase block font-black mb-1">Respect</span>
+                <span className="text-[10px] text-[var(--text-muted)] uppercase block font-black mb-1">Respect</span>
                 <span className="text-lg font-black text-[var(--secondary-accent)] flex items-center justify-center gap-1">
                   ✊ {profile.respectPoints}
                 </span>
               </div>
 
               <div className="text-center px-4 py-2 rounded-xl bg-[var(--glass-bg)] border border-[var(--glass-border)]">
-                <span className="text-[9px] text-[var(--text-muted)] uppercase block font-black mb-1">Rating</span>
+                <span className="text-[10px] text-[var(--text-muted)] uppercase block font-black mb-1">Rating</span>
                 <span className="text-lg font-black text-[var(--text-main)]">
                   ⚔️ {profile.elo}
                 </span>
@@ -193,7 +193,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ profile, onC
             <div className="flex items-center p-1 rounded-xl bg-[var(--glass-bg)] border border-[var(--glass-border)]">
               <button
                 onClick={() => setLeaderboardType('respect')}
-                className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all ${
                   leaderboardType === 'respect'
                     ? 'bg-[var(--secondary-accent)] text-[var(--app-bg)]'
                     : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
@@ -203,7 +203,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ profile, onC
               </button>
               <button
                 onClick={() => setLeaderboardType('elo')}
-                className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all ${
                   leaderboardType === 'elo'
                     ? 'bg-[var(--secondary-accent)] text-[var(--app-bg)]'
                     : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
@@ -278,7 +278,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ profile, onC
                             <span className={`text-[13px] font-black uppercase tracking-tight ${isCelestial ? 'text-purple-300' : 'text-[var(--text-main)]'}`}>{entry.username}</span>
                             <span className="text-xs">{entry.flag}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-[9px] font-black uppercase text-[var(--text-muted)] tracking-widest">
+                          <div className="flex items-center gap-2 text-[10px] font-black uppercase text-[var(--text-muted)] tracking-widest">
                             <span className={isCelestial ? 'text-purple-300' : 'text-[var(--secondary-accent)]'}>
                               {isCelestial ? '🦋 CELESTIAL' : entry.title}
                             </span>
@@ -291,7 +291,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ profile, onC
                         <div className={`text-lg font-black ${isCelestial ? 'text-purple-300' : 'text-[var(--text-main)]'}`}>
                           {leaderboardType === 'elo' ? `⚔️ ${entry.elo}` : `✊ ${entry.respectPoints}`}
                         </div>
-                        <div className="text-[9px] font-black uppercase text-[var(--text-muted)] tracking-tighter opacity-60">
+                        <div className="text-[10px] font-black uppercase text-[var(--text-muted)] tracking-tighter opacity-60">
                           Total {leaderboardType}
                         </div>
                       </div>
@@ -336,7 +336,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ profile, onC
                           <span className="text-xs font-black text-[var(--secondary-accent)] block">
                             {rank.minRespect} ✊
                           </span>
-                          <span className="text-[9px] font-black uppercase tracking-tighter text-[var(--text-muted)]">
+                          <span className="text-[10px] font-black uppercase tracking-tighter text-[var(--text-muted)]">
                             Requirement
                           </span>
                         </div>
