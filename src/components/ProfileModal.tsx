@@ -229,7 +229,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
       flag: flag.trim(),
       customStatus: sanitizedStatus,
       customBadge: customBadgeInput.trim() || null,
-      badgeNumber: Number(badgeNumberInput),
+      // Badge numbers are assigned, not chosen; Firestore rules only let the owner change them.
+      ...(isOwner ? { badgeNumber: Number(badgeNumberInput) } : {}),
       photoURL: profilePhotoInput.trim() || null
     });
     setIsEditing(false);
