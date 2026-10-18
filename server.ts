@@ -49,66 +49,51 @@ async function getCachedLeaderboard(mode: string, period: string = 'all', userId
   const weekMs = 7 * 24 * 60 * 60 * 1000;
   const monthMs = 30 * 24 * 60 * 60 * 1000;
 
-  allUsers.forEach(u => {
-    u.sortElo = Number(u[eloField]) || Number(u.elo) || 1200;
-    // Calculate total wins/losses/draws or mock them if they don't exist
-    u.wins = Number(u.wins) || Math.floor(Math.random() * 50);
-    u.losses = Number(u.losses) || Math.floor(Math.random() * 50);
-    u.draws = Number(u.draws) || Math.floor(Math.random() * 10);
-    const total = u.wins + u.losses + u.draws;
-    u.winRate = total > 0 ? Math.round((u.wins / total) * 100) : 0;
-    u.streak = Number(u.streak) || Math.floor(Math.random() * 5);
-    u.streakType = u.streakType || (Math.random() > 0.5 ? 'win' : 'loss');
-    // Online status: check if user has recent activity (lastSeen within 5 minutes)
-    const lastSeen = u.lastSeen ? new Date(u.lastSeen).getTime() : 0;
-    u.isOnline = (now - lastSeen) < 5 * 60 * 1000;
+  const toTime = (v: any): number => {
+    if (!v) return 0;
+    if (typeof v.toMillis === 'function') return v.toMillis();
+    if (typeof v.seconds === 'number') return v.seconds * 1000;
+    const t = new Date(v).getTime();
+    return Number.isFinite(t) ? t : 0;
+  };
+
+  // Only real, rankable profiles: public, not guests, a numeric rating and at least one finished game.
+  const rankable = allUsers.filter(u => {
+    const rating = Number(u[eloField] ?? u.elo);
+    const isSample = u.isSample || String(u.id).startsWith('gm_');
+    return u.isPublic !== false && !u.isGuest && !isSample && Number.isFinite(rating) && (Number(u.gamesPlayed) || 0) > 0;
   });
 
-  // Filter by friends if needed
-  let filteredUsers = allUsers;
+  rankable.forEach(u => {
+    u.sortElo = Number(u[eloField] ?? u.elo);
+    u.wins = Number(u.wins) || 0;
+    u.draws = Number(u.draws) || 0;
+    const played = Math.max(Number(u.gamesPlayed) || 0, u.wins + u.draws);
+    // Older profiles never stored losses; every game that was not a win or draw was one.
+    u.losses = Number.isFinite(Number(u.losses)) && u.losses !== undefined ? Number(u.losses) : Math.max(0, played - u.wins - u.draws);
+    const total = u.wins + u.losses + u.draws;
+    u.winRate = total > 0 ? Math.round((u.wins / total) * 100) : 0;
+    u.streak = Number(u.streak) || 0;
+    u.streakType = u.streakType === 'loss' ? 'loss' : 'win';
+    u.lastActive = Math.max(toTime(u.lastSeen), toTime(u.updatedAt));
+    u.isOnline = (now - toTime(u.lastSeen)) < 5 * 60 * 1000;
+  });
+
+  let filteredUsers = rankable;
   if (friendUids !== null) {
-    filteredUsers = allUsers.filter(u => friendUids.has(u.id));
+    filteredUsers = filteredUsers.filter(u => friendUids.has(u.id));
   }
 
-  // Period filtering based on game logs
+  // No per-game history is stored, so week/month show players who were active in that window.
   if (period !== 'all') {
-    const periodFactor = period === 'week' ? 0.25 : 0.5;
-    filteredUsers = filteredUsers.map(u => {
-      const pWins = Math.max(0, Math.round(u.wins * periodFactor));
-      const pLosses = Math.max(0, Math.round(u.losses * periodFactor));
-      const pDraws = Math.max(0, Math.round(u.draws * periodFactor));
-      const pTotal = pWins + pLosses + pDraws;
-      
-      return {
-        ...u,
-        periodWins: pWins,
-        periodLosses: pLosses,
-        periodDraws: pDraws,
-        periodWinRate: pTotal > 0 ? Math.round((pWins / pTotal) * 100) : 0,
-      };
-    });
+    const windowMs = period === 'week' ? weekMs : monthMs;
+    filteredUsers = filteredUsers.filter(u => now - u.lastActive <= windowMs);
   }
 
   filteredUsers.sort((a, b) => b.sortElo - a.sortElo);
 
   const leaderboard = filteredUsers.map((u, index) => {
     const rank = index + 1;
-    let title = '';
-    // Celestial account always gets special title
-    if (u.id === 'sky_celestial_account_uid') {
-      title = 'CELESTIAL';
-    } else if (rank <= 50) title = 'GM';
-    else if (rank <= 200) title = 'IM';
-    else if (rank <= 500) title = 'FM';
-    else if (rank <= 1000) title = 'NM';
-
-    // Celestial account gets infinity display
-    const isCelestial = u.id === 'sky_celestial_account_uid';
-    const displayElo = isCelestial ? '∞' : u.sortElo;
-    const displayWins = isCelestial ? '∞' : u.wins;
-    const displayLosses = isCelestial ? '∞' : u.losses;
-    const displayDraws = isCelestial ? '∞' : u.draws;
-    const displayWinRate = isCelestial ? '∞' : u.winRate;
 
     return {
       uid: u.id,
@@ -118,16 +103,16 @@ async function getCachedLeaderboard(mode: string, period: string = 'all', userId
       avatar: u.avatar || '',
       country: u.country || 'Unknown',
       flag: u.flag || '🏳️',
-      elo: displayElo,
-      wins: displayWins,
-      losses: displayLosses,
-      draws: displayDraws,
-      winRate: displayWinRate,
+      elo: u.sortElo,
+      wins: u.wins,
+      losses: u.losses,
+      draws: u.draws,
+      winRate: u.winRate,
       streak: u.streak,
       streakType: u.streakType,
       rank,
-      title: title || u.honorRank || 'Tactician',
-      honorRank: title || u.honorRank || 'Tactician',
+      title: u.honorRank || '',
+      honorRank: u.honorRank || '',
       isOnline: u.isOnline || false,
       isCurrentUser: false // updated on client
     };

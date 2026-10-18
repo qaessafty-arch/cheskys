@@ -113,8 +113,7 @@ export const PuzzleMode: React.FC<PuzzleModeProps> = ({ settings }) => {
             // Reward Respect Points (+25 for daily puzzle). Rating is not changed by puzzles.
             if (updateRespectMetrics) {
               updateRespectMetrics({
-                respectPoints: 25,
-                wins: 1
+                respectPoints: 25
               });
             }
           } else {

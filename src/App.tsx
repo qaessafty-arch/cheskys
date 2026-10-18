@@ -239,6 +239,8 @@ export default function App() {
   const [viewingMoveIndex, setViewingMoveIndex] = useState<number>(-1);
   const [evalScore, setEvalScore] = useState<number>(0);
   const [gameResult, setGameResult] = useState<GameResult | null>(null);
+  // True once the current game's outcome has been written to the player's stats.
+  const resultRecordedRef = useRef(false);
   const [isAiThinking, setIsAiThinking] = useState(false);
   const [whiteTime, setWhiteTime] = useState<number>(timeControl.initialSeconds);
   const [blackTime, setBlackTime] = useState<number>(timeControl.initialSeconds);
@@ -762,11 +764,28 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [setSettings]);
 
+  // Records wins, losses and draws against the bot. Checkmates the player delivers are
+  // recorded by the Execute judgment instead, which sets resultRecordedRef first.
+  useEffect(() => {
+    if (!gameResult) {
+      resultRecordedRef.current = false;
+      return;
+    }
+    if (activeMode !== 'ai' || resultRecordedRef.current || moveLogs.length < 2) return;
+    resultRecordedRef.current = true;
+    if (gameResult.winner === playerColor) updateRespectMetrics({ wins: 1, gamesPlayed: 1 });
+    else if (gameResult.winner === 'w' || gameResult.winner === 'b') updateRespectMetrics({ losses: 1, gamesPlayed: 1 });
+    else updateRespectMetrics({ draws: 1, gamesPlayed: 1 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameResult]);
+
   const handleExecuteJudgment = () => {
     setIsJudgmentModalOpen(false);
     const updated = recordVictory(respectProfile);
     setRespectProfile(updated);
-    updateRespectMetrics({ respectPoints: 0, executions: 1, wins: 1, gamesPlayed: 1 });
+    // Pass-and-play is two people on one device, so only games against the bot count toward ranked stats.
+    resultRecordedRef.current = true;
+    updateRespectMetrics(activeMode === 'ai' ? { executions: 1, wins: 1, gamesPlayed: 1 } : { executions: 1 });
     if (pendingCheckmateResult) setGameResult(pendingCheckmateResult);
   };
 
@@ -774,7 +793,8 @@ export default function App() {
     setIsJudgmentModalOpen(false);
     const updated = recordMercy(respectProfile);
     setRespectProfile(updated);
-    updateRespectMetrics({ respectPoints: 12, merciesGranted: 1, gamesPlayed: 1 });
+    // Spare takes back the mating move and play continues, so the game is counted when it really ends.
+    updateRespectMetrics({ respectPoints: 12, merciesGranted: 1 });
     setPendingCheckmateResult(null);
     if (moveLogs.length > 0) {
       const remainingLogs = moveLogs.slice(0, moveLogs.length - 1);

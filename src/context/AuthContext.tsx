@@ -31,6 +31,7 @@ import {
   orderBy,
   limit,
   getDocs,
+  getCountFromServer,
   addDoc
 } from 'firebase/firestore';
 import { 
@@ -47,6 +48,7 @@ import {
 import { RespectLeaderboardEntry, UserRole, UserFeedback, UserPermissions } from '../types/chess';
 import { getHonorRank } from '../utils/respectSystem';
 import { establishSecureSession } from '../utils/security';
+import { fetchRankedPlayers } from '../services/leaderboardService';
 
 // Firebase auth error codes mapped to messages a player can act on.
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
@@ -169,6 +171,8 @@ export interface UserProfileData {
   merciesGranted: number | string;
   gamesPlayed: number;
   wins: number;
+  losses?: number;
+  draws?: number;
   honorRank: string;
   rankBadge: string;
   role: UserRole;
@@ -232,6 +236,8 @@ interface AuthContextType {
     executions?: number;
     merciesGranted?: number;
     wins?: number;
+    losses?: number;
+    draws?: number;
     gamesPlayed?: number;
   }) => Promise<void>;
   updateProfileDetails: (details: { displayName?: string; username?: string; country?: string; flag?: string; customStatus?: string; photoURL?: string; customBadge?: string; badgeNumber?: number }) => Promise<void>;
@@ -519,8 +525,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               assignedBadgeNumber = 0;
             } else {
               try {
-                const usersCountSnap = await getDocs(collection(db, 'users'));
-                assignedBadgeNumber = 10 + Math.max(0, usersCountSnap.size - 2);
+                const usersCount = await getCountFromServer(collection(db, 'users'));
+                assignedBadgeNumber = 10 + Math.max(0, usersCount.data().count - 2);
               } catch {
                 assignedBadgeNumber = 10 + Math.floor(Math.random() * 20);
               }
@@ -535,12 +541,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               photoURL: initialPhoto,
               country: 'Kurdistan',
               flag: isDev ? '👑' : '☀️',
-              elo: isDev ? 3000 : 800,
-              respectPoints: isDev ? 5000 : 100,
-              executions: isDev ? 500 : 0,
-              merciesGranted: isDev ? 250 : 0,
-              gamesPlayed: isDev ? 800 : 0,
-              wins: isDev ? 750 : 0,
+              // Everyone starts from the same real baseline; the owner badge comes from role, not stats.
+              elo: 800,
+              respectPoints: 100,
+              executions: 0,
+              merciesGranted: 0,
+              gamesPlayed: 0,
+              wins: 0,
+              losses: 0,
+              draws: 0,
               honorRank: rank.title,
               rankBadge: rank.badge,
               role: isDev ? 'owner' : 'member',
@@ -913,6 +922,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     executions?: number;
     merciesGranted?: number;
     wins?: number;
+    losses?: number;
+    draws?: number;
     gamesPlayed?: number;
   }) => {
     if (!profile) return;
@@ -929,6 +940,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const newExecutions = currentExecutions + (delta.executions || 0);
     const newMercies = currentMercies + (delta.merciesGranted || 0);
     const newWins = (profile.wins || 0) + (delta.wins || 0);
+    const newLosses = (profile.losses || 0) + (delta.losses || 0);
+    const newDraws = (profile.draws || 0) + (delta.draws || 0);
     const newGames = (profile.gamesPlayed || 0) + (delta.gamesPlayed || 0);
 
     const rank = profile.isOwner 
@@ -942,6 +955,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       executions: newExecutions,
       merciesGranted: newMercies,
       wins: newWins,
+      losses: newLosses,
+      draws: newDraws,
       gamesPlayed: newGames,
       honorRank: rank.title,
       rankBadge: rank.badge
@@ -961,6 +976,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         executions: newExecutions,
         merciesGranted: newMercies,
         wins: newWins,
+        losses: newLosses,
+        draws: newDraws,
         gamesPlayed: newGames,
         honorRank: rank.title,
         rankBadge: rank.badge,
@@ -1034,38 +1051,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const syncWithCloudLeaderboard = async (sortBy: 'respect' | 'elo' = 'respect'): Promise<RespectLeaderboardEntry[]> => {
     try {
-      const orderField = sortBy === 'elo' ? 'elo' : 'respectPoints';
-      const q = query(collection(db, 'users'), orderBy(orderField, 'desc'), limit(50));
-      const querySnap = await getDocs(q);
-      const cloudEntries: RespectLeaderboardEntry[] = [];
-
-      let index = 0;
-      querySnap.forEach((docSnap) => {
-        const d = docSnap.data() as UserProfileData;
-        const currentActiveUid = profile?.uid;
-        cloudEntries.push({
-          id: d.uid,
-          rank: index + 3,
-          username: d.displayName || 'Peshmerga Tactician',
-          title: d.uid === SKY_PROFILE_DEFAULT.uid ? 'CELESTIAL IMMORTAL 🦋' : (d.honorRank || null),
-          country: d.country || 'Kurdistan',
-          flag: d.flag || '☀️',
-          respectPoints: d.respectPoints,
-          elo: d.elo,
-          executions: d.executions,
-          mercies: d.merciesGranted,
-          avatar: d.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
-          isCurrentUser: currentActiveUid ? d.uid === currentActiveUid : false,
-          role: d.role,
-          badgeNumber: d.badgeNumber,
-          badgeTag: d.role === 'owner' ? '👑 OWNER #0' : (d.role === 'admin' ? `🛡️ ADMIN #${d.badgeNumber}` : undefined)
-        });
-        index++;
-      });
-
-      return cloudEntries;
+      const rows = await fetchRankedPlayers(sortBy, 50, profile?.uid);
+      return rows.map(row => ({
+        id: row.uid,
+        rank: row.rank,
+        username: row.displayName,
+        title: row.honorRank,
+        country: row.country,
+        flag: row.flag,
+        respectPoints: row.respectPoints,
+        elo: row.elo,
+        executions: row.executions,
+        mercies: row.mercies,
+        avatar: row.avatar,
+        isCurrentUser: row.isCurrentUser,
+        role: row.role as UserRole | undefined,
+      }));
     } catch (e) {
-      console.warn('Cloud leaderboard fallback:', e);
+      console.warn('Cloud leaderboard unavailable:', e);
       return [];
     }
   };

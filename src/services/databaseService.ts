@@ -207,6 +207,8 @@ export const seedSampleDatabaseData = async (): Promise<{ seeded: number; errors
     try {
       await safeSetDoc(doc(db, 'users', u.uid), {
         ...u,
+        // Marks demo data so leaderboards never rank it alongside real players.
+        isSample: true,
         updatedAt: new Date().toISOString()
       }, { merge: true });
       seeded++;
