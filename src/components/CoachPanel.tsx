@@ -1,13 +1,29 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Chess, Square, Move } from 'chess.js';
 import { PanelContainer } from './PanelContainer';
 import { ChessBoard } from './ChessBoard';
 import { EvalBar } from './EvalBar';
-import { MoveHistory } from './MoveHistory';
 import { engine } from '../engine/client';
+import { EngineSearchResponse } from '../engine/protocol';
 import { detectOpening } from '../utils/openings';
 import { soundManager } from '../utils/audio';
-import { StrategicVisionPanel } from './StrategicVisionPanel';
+import { useAuth } from '../context/AuthContext';
+import { getRespectProfile } from '../utils/respectSystem';
+import {
+  CoachMemory,
+  StrengthTier,
+  loadMemory,
+  saveMemory,
+  startSession,
+  recordAttempt,
+  recordAnalysedMove,
+  weaknesses,
+  strengths,
+  improvementRate,
+  engineMatchRate,
+  strengthTier,
+  recommendNext,
+} from '../services/coachMemory';
 import {
   Sparkles,
   Lightbulb,
@@ -20,10 +36,13 @@ import {
   Award,
   Flame,
   BrainCircuit,
-  ClipboardPaste
+  ClipboardPaste,
+  Eye,
+  RotateCcw,
+  CheckCircle2
 } from 'lucide-react';
-import { AppSettings, OpeningInfo } from '../types/chess';
-import { useTranslation } from 'react-i18next';
+import { AppSettings } from '../types/chess';
+import { TRAINING_EXERCISES, TrainingExercise } from '../data/coachExercises';
 
 interface CoachPanelProps {
   settings: AppSettings;
@@ -45,30 +64,15 @@ interface CoachAdvice {
   confidence: number;
 }
 
-interface TrainingExercise {
-  id: string;
-  title: string;
-  description: string;
-  fen: string;
-  solution: string[];
-  difficulty: 'easy' | 'medium' | 'hard' | 'master';
-  theme: string;
-  hint?: string;
-  completed?: boolean;
-  attempts?: number;
-  bestTime?: number;
-}
-
 interface CoachProfile {
   rating: number;
-  strength: 'beginner' | 'intermediate' | 'advanced' | 'expert' | 'master';
+  strength: StrengthTier;
   weaknesses: string[];
   strengths: string[];
-  preferredOpenings: string[];
-  preferredTimeControl: string;
-  gamesAnalyzed: number;
-  improvementRate: number;
-  lastSession: string;
+  sessions: number;
+  solved: number;
+  improvementRate: number | null;
+  engineMatch: number | null;
 }
 
 interface CoachMessage {
@@ -84,17 +88,17 @@ const COACH_PERSONAS = {
   beginner: {
     name: 'Coach Alex',
     style: 'encouraging',
-    focus: ['basics', 'tactics', 'piece_safety'],
+    focus: ['basics', 'tactics', 'piece safety'],
     catchphrases: [
       "Every master was once a beginner!",
       "Great job spotting that!",
-      "Let's work on piece safety first."
+      "Let's keep every piece safe first."
     ]
   },
   intermediate: {
     name: 'Coach Maya',
     style: 'analytical',
-    focus: ['positional_understanding', 'planning', 'calculation'],
+    focus: ['planning', 'calculation', 'structure'],
     catchphrases: [
       "Good calculation!",
       "What's your plan here?",
@@ -104,7 +108,7 @@ const COACH_PERSONAS = {
   advanced: {
     name: 'Coach Viktor',
     style: 'deep',
-    focus: ['prophylaxis', 'transitions', 'endgame_technique'],
+    focus: ['prophylaxis', 'transitions', 'endgames'],
     catchphrases: [
       "Interesting choice. What's your plan?",
       "Have you considered the prophylactic move?",
@@ -114,7 +118,7 @@ const COACH_PERSONAS = {
   master: {
     name: 'Grandmaster Aria',
     style: 'masterful',
-    focus: ['prophylaxis', 'deep_strategy', 'psychology', 'endgame_mastery'],
+    focus: ['deep strategy', 'psychology', 'endgame mastery'],
     catchphrases: [
       "Beautiful! You're thinking like a GM.",
       "The position whispers its secrets to those who listen.",
@@ -130,96 +134,52 @@ const getCoachPersona = (rating: number) => {
   return COACH_PERSONAS.master;
 };
 
-const TRAINING_EXERCISES: TrainingExercise[] = [
-  {
-    id: 'fork_1',
-    title: 'Knight Fork Basics',
-    description: 'Find the knight fork that wins material',
-    fen: 'r1bqkb1r/pppp1ppp/2n2n1p/4p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R w KQkq - 4 4',
-    solution: ['Nxe5', 'dxe5', 'Qh5'],
-    difficulty: 'easy',
-    theme: 'tactics_fork',
-    hint: 'Look for a knight move that attacks two pieces at once'
-  },
-  {
-    id: 'pin_1',
-    title: 'Absolute Pin',
-    description: 'Use the pin to win the pinned piece',
-    fen: 'r1bqk2r/pppp1ppp/2n2n2/4p1B1/2B1P3/3P1N2/PPP2PPP/RNBQK2R w KQkq - 5 5',
-    solution: ['Bxf6', 'gxf6', 'Nxd5'],
-    difficulty: 'easy',
-    theme: 'tactics_pin',
-    hint: 'The pinned piece cannot move without exposing the king'
-  },
-  {
-    id: 'skewer_1',
-    title: 'Skewer Attack',
-    description: 'Force the valuable piece to move and capture the one behind',
-    fen: '8/8/8/3k4/8/3R4/3K4/8 w - - 0 1',
-    solution: ['Rd8+', 'Kc7', 'Rxa8'],
-    difficulty: 'medium',
-    theme: 'tactics_skewer',
-    hint: 'Attack the king and the piece behind it on the same line'
-  },
-  {
-    id: 'mate_1',
-    title: 'Back Rank Mate',
-    description: 'Deliver checkmate on the back rank',
-    fen: '6k1/5ppp/8/8/8/8/8/R5K1 w - - 0 1',
-    solution: ['Rd8#'],
-    difficulty: 'easy',
-    theme: 'checkmate',
-    hint: 'The king has no escape squares on the back rank'
-  },
-  {
-    id: 'mate_2',
-    title: 'Smothered Mate',
-    description: 'Knight delivers mate surrounded by own pieces',
-    fen: '6rk/6pp/8/6N1/8/8/8/6QK w - - 0 1',
-    solution: ['Nf7#'],
-    difficulty: 'medium',
-    theme: 'checkmate',
-    hint: 'The knight can jump to a square where the king is surrounded by its own pieces'
-  },
-  {
-    id: 'endgame_1',
-    title: 'King and Pawn vs King',
-    description: 'Promote the pawn with correct technique',
-    fen: '8/8/8/8/8/4k3/4P3/4K3 w - - 0 1',
-    solution: ['Ke2', 'Ke7', 'Ke3', 'Ke6', 'Ke4', 'Ke5', 'Ke5', 'Ke6', 'Kd5', 'Kd7', 'Ke5', 'Ke7', 'Kd6', 'Kd8', 'c8=Q#'],
-    difficulty: 'medium',
-    theme: 'endgame',
-    hint: 'Use opposition to push the enemy king back'
-  },
-  {
-    id: 'opening_1',
-    title: 'Italian Game Main Line',
-    description: 'Play the main line of the Italian Game',
-    fen: 'rnbqkb1r/pppp1ppp/5n2/4p2N/3p4/8/PPPP1PPP/RNBQKB1R w KQkq - 2 4',
-    solution: ['Nc3', 'Nf6', 'd4', 'exd4', 'Nxd4', 'Bb4', 'c3', 'Nxd4', 'Qxd4'],
-    difficulty: 'medium',
-    theme: 'opening_italian',
-    hint: 'Develop pieces and control the center'
-  },
-  {
-    id: 'prophylaxis_1',
-    title: 'Prophylactic Thinking',
-    description: "Prevent opponent's plan before executing your own",
-    fen: 'r1bq1rk1/ppp2ppp/2np1n1p/4p3/2PP4/2N1PN2/PP2BPPP/R1BQ1RK1 w - - 0 9',
-    solution: ['a3', 'Bg4', 'h3', 'Bh5'],
-    difficulty: 'hard',
-    theme: 'prophylaxis',
-    hint: "Prevent the bishop from pinning your knight"
+const pick = <T,>(list: T[]): T => list[Math.floor(Math.random() * list.length)];
+
+const THEME_LABELS: Record<string, string> = {
+  tactics_fork: 'forks',
+  tactics_pin: 'pins',
+  tactics_skewer: 'skewers',
+  checkmate: 'checkmates',
+  endgame: 'endgames',
+  opening_italian: 'openings',
+  prophylaxis: 'prophylaxis'
+};
+const themeLabel = (theme: string) => THEME_LABELS[theme] || theme.replace(/_/g, ' ');
+
+/** Few pieces and no queens: the side to move should think in endgame terms. */
+const isEndgame = (game: Chess) => {
+  const pieces = game.board().flat().filter(Boolean) as { type: string }[];
+  const heavyAndMinor = pieces.filter(p => p.type !== 'p' && p.type !== 'k');
+  return !pieces.some(p => p.type === 'q') && heavyAndMinor.length <= 6;
+};
+
+const uciToSan = (fen: string, uci: string | null): string | null => {
+  if (!uci) return null;
+  try {
+    const probe = new Chess(fen);
+    const applied = probe.move({
+      from: uci.slice(0, 2) as Square,
+      to: uci.slice(2, 4) as Square,
+      promotion: (uci[4] as 'q' | 'r' | 'b' | 'n' | undefined) ?? 'q'
+    });
+    return applied ? applied.san : null;
+  } catch {
+    return null;
   }
-];
+};
 
 export const CoachPanel: React.FC<CoachPanelProps> = ({
   settings,
-  onUpdateSettings,
   initialFen,
   initialPgn
 }) => {
-  const { t } = useTranslation();
+  const { user, profile } = useAuth();
+  const accountId = user?.uid || profile?.uid || 'guest';
+  // Same source as the header's rating: the account's Elo, else the local profile kept for guests.
+  const localElo = getRespectProfile().elo;
+  const rating = typeof profile?.elo === 'number' ? profile.elo : typeof localElo === 'number' ? localElo : 1200;
+
   const [analysisGame, setAnalysisGame] = useState<Chess>(() => {
     const g = new Chess();
     if (initialPgn) {
@@ -233,37 +193,186 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
   const [historyFens, setHistoryFens] = useState<string[]>([analysisGame.fen()]);
   const [historySans, setHistorySans] = useState<string[]>([]);
   const [currentStep, setCurrentStep] = useState<number>(0);
-  const [isFlipped, setIsFlipped] = useState(false);
+  const [isFlipped] = useState(false);
   const [evalScore, setEvalScore] = useState<number>(0);
   const [bestMoveSan, setBestMoveSan] = useState<string | null>(null);
   const [searchDepth, setSearchDepth] = useState(0);
-  const [mateIn, setMateIn] = useState<number | null>(null);
-  const [isThinking, setIsThinking] = useState(false);
   const [fenInput, setFenInput] = useState('');
   const [showFenModal, setShowFenModal] = useState(false);
   const [coachAdvice, setCoachAdvice] = useState<CoachAdvice[]>([]);
   const [coachMessages, setCoachMessages] = useState<CoachMessage[]>([]);
   const [currentExercise, setCurrentExercise] = useState<TrainingExercise | null>(null);
   const [currentExerciseStep, setCurrentExerciseStep] = useState(0);
-  const [coachProfile] = useState<CoachProfile>({
-    rating: 1200,
-    strength: 'beginner',
-    weaknesses: [],
-    strengths: [],
-    preferredOpenings: [],
-    preferredTimeControl: 'rapid',
-    gamesAnalyzed: 0,
-    improvementRate: 0,
-    lastSession: new Date().toISOString()
-  });
+  const [showAllExercises, setShowAllExercises] = useState(false);
   const [showCoachChat, setShowCoachChat] = useState(true);
+  const exerciseStartRef = useRef(0);
+  const exerciseMistakesRef = useRef(0);
+  const replyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const persona = getCoachPersona(coachProfile.rating);
+  // The coach's memory follows the signed-in account and survives reloads.
+  const [memory, setMemory] = useState<CoachMemory>(() => startSession(loadMemory(accountId), Date.now()));
+  const memoryRef = useRef(memory);
+  memoryRef.current = memory;
+  const loadedForRef = useRef(accountId);
+  useEffect(() => {
+    if (loadedForRef.current !== accountId) {
+      loadedForRef.current = accountId;
+      setMemory(startSession(loadMemory(accountId), Date.now()));
+      return;
+    }
+    saveMemory(accountId, memory);
+  }, [accountId, memory]);
+
+  useEffect(() => () => {
+    if (replyTimerRef.current) clearTimeout(replyTimerRef.current);
+  }, []);
+
+  const coachProfile: CoachProfile = useMemo(() => ({
+    rating,
+    strength: strengthTier(rating),
+    weaknesses: weaknesses(memory),
+    strengths: strengths(memory),
+    sessions: memory.sessions,
+    solved: Object.values(memory.exercises).filter(r => r.solved > 0).length,
+    improvementRate: improvementRate(memory),
+    engineMatch: engineMatchRate(memory)
+  }), [memory, rating]);
+
+  const persona = getCoachPersona(rating);
+
+  const pushMessages = useCallback((messages: CoachMessage[]) => {
+    if (messages.length > 0) setCoachMessages(prev => [...messages, ...prev].slice(0, 20));
+  }, []);
+
+  const say = useCallback((type: CoachMessage['type'], content: string, priority: CoachMessage['priority'] = 'medium', relatedMove?: string) => {
+    pushMessages([{ id: `${type}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, type, content, timestamp: new Date(), priority, relatedMove }]);
+  }, [pushMessages]);
+
+  // Greets the player with what the coach has learned about them so far, once per account.
+  const greetedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (greetedRef.current === accountId) return;
+    greetedRef.current = accountId;
+    const weak = weaknesses(memory);
+    const solved = Object.values(memory.exercises).filter(r => r.solved > 0).length;
+    if (solved === 0 && weak.length === 0) {
+      say('advice', `${persona.name}: Welcome! Solve a few exercises and I'll learn where to help you most.`, 'high');
+    } else if (weak.length > 0) {
+      say('advice', `${persona.name}: Welcome back. Last time ${themeLabel(weak[0])} gave you trouble, so I'll bring those up first.`, 'high');
+    } else {
+      say('advice', `${persona.name}: Welcome back! ${solved} exercise${solved === 1 ? '' : 's'} solved so far. Let's keep going.`, 'high');
+    }
+    // Only once per account.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountId]);
+
+  const generateCoachAdvice = useCallback((game: Chess, result: EngineSearchResponse, bestSan: string | null) => {
+    const advice: CoachAdvice[] = [];
+    const now = Date.now();
+    const moves = game.moves({ verbose: true });
+    const mateNow = moves.find(m => m.san.includes('#'));
+    const bestMove = bestSan ? moves.find(m => m.san === bestSan) : undefined;
+
+    if (mateNow) {
+      advice.push({
+        id: `mate_${now}`,
+        type: 'tactic',
+        title: 'Checkmate Available!',
+        description: `${mateNow.san} is checkmate right now.`,
+        priority: 'critical',
+        move: mateNow.san,
+        category: 'tactical',
+        confidence: 100,
+        explanation: 'Always look for checks first — this one ends the game.'
+      });
+    } else if (result.mateIn !== null && result.mateIn > 0 && bestSan) {
+      advice.push({
+        id: `forced_mate_${now}`,
+        type: 'tactic',
+        title: `Forced Mate in ${result.mateIn}`,
+        description: `There is a forced checkmate in ${result.mateIn}. It starts with ${bestSan}.`,
+        priority: 'critical',
+        move: bestSan,
+        category: 'tactical',
+        confidence: 95
+      });
+    } else if (bestMove && result.depth >= 6) {
+      // Only point at captures and checks the engine actually recommends.
+      const kind = bestMove.san.includes('+') ? 'check' : bestMove.flags.includes('c') ? 'capture' : null;
+      if (kind) {
+        advice.push({
+          id: `best_${now}`,
+          type: 'tactic',
+          title: kind === 'check' ? 'Strong Checking Move' : 'Winning Capture',
+          description: kind === 'check'
+            ? `${bestMove.san} is the strongest move here — a forcing check.`
+            : `Capturing with ${bestMove.san} on ${bestMove.to} is the best move.`,
+          priority: 'high',
+          move: bestMove.san,
+          category: 'tactical',
+          confidence: 85
+        });
+      }
+    }
+
+    if (isEndgame(game)) {
+      advice.push({
+        id: `endgame_${now}`,
+        type: 'endgame',
+        title: 'Endgame Technique',
+        description: 'With the queens gone, activate your king and push passed pawns.',
+        priority: 'medium',
+        category: 'endgame',
+        confidence: 90
+      });
+    }
+
+    const sans = game.history();
+    if (sans.length > 0 && sans.length < 12) {
+      const openingInfo = detectOpening(sans);
+      if (openingInfo) {
+        advice.push({
+          id: `opening_${now}`,
+          type: 'opening',
+          title: `Opening: ${openingInfo.name}`,
+          description: `You are in the ${openingInfo.name}. ${openingInfo.variation || 'Main line.'}`,
+          priority: 'medium',
+          category: 'opening',
+          confidence: 85
+        });
+      }
+    }
+
+    // Personalised: remind the player of the pattern they miss most often.
+    const weak = weaknesses(memory, 1)[0];
+    if (weak && advice.length < 3) {
+      advice.push({
+        id: `focus_${now}`,
+        type: 'plan',
+        title: `Your focus: ${themeLabel(weak)}`,
+        description: `You've been missing ${themeLabel(weak)} lately. Scan this position for one before you move.`,
+        priority: 'low',
+        category: 'tactical',
+        confidence: 70
+      });
+    }
+
+    setCoachAdvice(advice);
+    if (advice.length > 0 && advice[0].priority !== 'low') {
+      say('advice', `${persona.name}: ${pick(persona.catchphrases)} ${advice[0].description}`, 'high');
+    }
+  }, [memory, persona, say]);
+
+  const generateRef = useRef(generateCoachAdvice);
+  generateRef.current = generateCoachAdvice;
 
   useEffect(() => {
     let cancelled = false;
     const fen = analysisGame.fen();
-    setIsThinking(true);
+    if (analysisGame.isGameOver()) {
+      setBestMoveSan(null);
+      return;
+    }
 
     engine
       .search({ fen }, { depth: 16, timeMs: 2000 })
@@ -271,291 +380,174 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
         if (cancelled) return;
         setEvalScore(result.mateIn !== null ? (result.mateIn > 0 ? 1000 : -1000) : result.scoreWhite / 100);
         setSearchDepth(result.depth);
-        setMateIn(result.mateIn);
-        if (!result.bestMove) {
-          setBestMoveSan(null);
-          return;
-        }
-        try {
-          const probe = new Chess(fen);
-          const applied = probe.move({
-            from: result.bestMove.slice(0, 2) as Square,
-            to: result.bestMove.slice(2, 4) as Square,
-            promotion: (result.bestMove[4] as 'q' | 'r' | 'b' | 'n' | undefined) ?? 'q'
-          });
-          setBestMoveSan(applied ? applied.san : null);
-        } catch {
-          setBestMoveSan(null);
-        }
-
-        generateCoachAdvice(fen, result, analysisGame);
+        const san = uciToSan(fen, result.bestMove);
+        setBestMoveSan(san);
+        if (!currentExercise) generateRef.current(analysisGame, result, san);
       })
       .catch(() => {
         if (!cancelled) setBestMoveSan(null);
-      })
-      .finally(() => {
-        if (!cancelled) setIsThinking(false);
       });
 
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [analysisGame]);
 
-  const generateCoachAdvice = useCallback((fen: string, result: any, game: Chess) => {
-    const advice: CoachAdvice[] = [];
-    const evalScore = result.mateIn !== null ? (result.mateIn > 0 ? 1000 : -1000) : result.scoreWhite / 100;
-
-    const moves = game.moves({ verbose: true });
-    const captures = moves.filter(m => m.flags.includes('c'));
-    const checksMoves = moves.filter(m => m.san.includes('+'));
-    const mateMoves = moves.filter(m => m.san.includes('#'));
-
-    if (mateMoves.length > 0) {
-      advice.push({
-        id: `mate_${Date.now()}`,
-        type: 'tactic',
-        title: 'Checkmate Available!',
-        description: `You have a forced checkmate in ${mateMoves.length} move(s)!`,
-        priority: 'critical',
-        move: mateMoves[0].san,
-        category: 'tactical',
-        confidence: 100,
-        explanation: 'You have a forced checkmate. Calculate carefully and deliver the final blow!'
-      });
+  const applyMove = (game: Chess, from: Square, to: Square): { next: Chess; move: Move } | null => {
+    try {
+      const next = new Chess(game.fen());
+      const move = next.move({ from, to, promotion: 'q' });
+      return move ? { next, move } : null;
+    } catch {
+      return null;
     }
+  };
 
-    if (checksMoves.length > 0 && evalScore > 100) {
-      advice.push({
-        id: `check_${Date.now()}`,
-        type: 'tactic',
-        title: 'Strong Checking Move',
-        description: `A checking move improves your position significantly.`,
-        priority: 'high',
-        move: checksMoves[0].san,
-        category: 'tactical',
-        confidence: 85,
-        explanation: 'Checks that improve your position are often the most forcing moves.'
-      });
-    }
+  const pushPosition = (next: Chess, san: string, baseFens = historyFens, baseSans = historySans, baseStep = currentStep) => {
+    const newFens = [...baseFens.slice(0, baseStep + 1), next.fen()];
+    const newSans = [...baseSans.slice(0, baseStep), san];
+    setHistoryFens(newFens);
+    setHistorySans(newSans);
+    setCurrentStep(newFens.length - 1);
+    setAnalysisGame(next);
+    return { newFens, newSans };
+  };
 
-    if (captures.length > 0) {
-      advice.push({
-        id: `capture_${Date.now()}`,
-        type: 'tactic',
-        title: 'Capture Opportunity',
-        description: `Consider capturing on ${captures[0].to}.`,
-        priority: 'high',
-        move: captures[0].san,
-        category: 'tactical',
-        confidence: 80,
-        explanation: 'Capturing material is usually good, but verify it does not lead to a trap.'
-      });
-    }
+  const handleAnalysisMove = (from: Square, to: Square) => {
+    const applied = applyMove(analysisGame, from, to);
+    if (!applied) return;
+    const { next, move } = applied;
+    soundManager.playMove();
 
-    if (!fen.split(' ')[0].includes('K')) {
-      advice.push({
-        id: `endgame_${Date.now()}`,
-        type: 'endgame',
-        title: 'Endgame Technique',
-        description: 'Activate your king and push passed pawns.',
-        priority: 'medium',
-        category: 'endgame',
-        confidence: 90,
-        explanation: 'In the endgame, the king becomes a powerful piece. Activate it!'
-      });
-    }
-
-    if (historySans.length < 10) {
-      const openingInfo = detectOpening(historySans);
-      if (openingInfo) {
-        advice.push({
-          id: `opening_${Date.now()}`,
-          type: 'opening',
-          title: `Opening: ${openingInfo.name}`,
-          description: `You are in the ${openingInfo.name}. ${openingInfo.variation || 'Main line.'}`,
-          priority: 'medium',
-          category: 'opening',
-          confidence: 85,
-          explanation: `The ${openingInfo.name} (ECO ${openingInfo.eco}) is a solid choice.`
-        });
+    // Learn from real play: compare the move with the engine's choice at a trustworthy depth.
+    if (bestMoveSan && searchDepth >= 8) {
+      const matched = move.san === bestMoveSan;
+      setMemory(m => recordAnalysedMove(m, matched));
+      if (!matched && !move.san.includes('#')) {
+        say('warning', `${persona.name}: Playable, but the engine preferred ${bestMoveSan}.`, 'low', move.san);
       }
     }
 
-    const persona = getCoachPersona(1200);
-    const randomCatchphrase = persona.catchphrases[Math.floor(Math.random() * persona.catchphrases.length)];
-
-    const messages: CoachMessage[] = [];
-    if (advice.length > 0) {
-      messages.push({
-        id: `advice_${Date.now()}`,
-        type: 'advice',
-        content: `${persona.name}: ${randomCatchphrase} ${advice[0].description}`,
-        timestamp: new Date(),
-        priority: 'high'
-      });
-    }
-
-    setCoachAdvice(prev => [...advice, ...prev.slice(0, 9)]);
-    setCoachMessages(prev => [...messages, ...prev.slice(0, 19)]);
-  }, [historySans]);
-
-  const handleAnalysisMove = (from: Square, to: Square) => {
-    try {
-      const newGame = new Chess(analysisGame.fen());
-      const move = newGame.move({ from, to, promotion: 'q' });
-      if (!move) return;
-
-      soundManager.playMove();
-
-      const newFens = historyFens.slice(0, currentStep + 1);
-      newFens.push(newGame.fen());
-
-      const newSans = historySans.slice(0, currentStep);
-      newSans.push(move.san);
-
-      setHistoryFens(newFens);
-      setHistorySans(newSans);
-      setCurrentStep(newFens.length - 1);
-      setAnalysisGame(newGame);
-
-      provideMoveFeedback(move);
-    } catch {
-      // Illegal
-    }
-  };
-
-  const provideMoveFeedback = (move: Move) => {
-    const persona = getCoachPersona(1200);
-    const messages: CoachMessage[] = [];
+    pushPosition(next, move.san);
 
     if (move.san.includes('#')) {
-      messages.push({
-        id: `praise_${Date.now()}`,
-        type: 'celebration',
-        content: `${persona.name}: Checkmate! ${persona.catchphrases[0]}`,
-        timestamp: new Date(),
-        relatedMove: move.san,
-        priority: 'high'
-      });
+      say('celebration', `${persona.name}: Checkmate! ${persona.catchphrases[0]}`, 'high', move.san);
     } else if (move.san.includes('+')) {
-      messages.push({
-        id: `praise_${Date.now()}`,
-        type: 'praise',
-        content: `${persona.name}: Good check! Keep the pressure on.`,
-        timestamp: new Date(),
-        relatedMove: move.san,
-        priority: 'medium'
-      });
-    } else if (move.flags.includes('c')) {
-      messages.push({
-        id: `praise_${Date.now()}`,
-        type: 'praise',
-        content: `${persona.name}: Good capture! ${persona.catchphrases[Math.floor(Math.random() * persona.catchphrases.length)]}`,
-        timestamp: new Date(),
-        relatedMove: move.san,
-        priority: 'medium'
-      });
+      say('praise', `${persona.name}: Good check! Keep the pressure on.`, 'medium', move.san);
+    } else if (move.flags.includes('c') && move.san === bestMoveSan) {
+      say('praise', `${persona.name}: Good capture! ${pick(persona.catchphrases)}`, 'medium', move.san);
     }
-
-    setCoachMessages(prev => [...messages, ...prev.slice(0, 19)]);
   };
 
-  const jumpToStep = (step: number) => {
-    if (step < 0 || step >= historyFens.length) return;
-    const targetFen = historyFens[step];
-    const g = new Chess(targetFen);
-    setAnalysisGame(g);
-    setCurrentStep(step);
-  };
-
-  const startExercise = (exercise: TrainingExercise) => {
-    setCurrentExercise(exercise);
-    setCurrentExerciseStep(0);
+  const loadExercisePosition = (exercise: TrainingExercise) => {
     const g = new Chess(exercise.fen);
     setAnalysisGame(g);
     setHistoryFens([exercise.fen]);
     setHistorySans([]);
     setCurrentStep(0);
+    setCurrentExerciseStep(0);
+  };
 
-    setCoachMessages(prev => [{
-      id: `exercise_${Date.now()}`,
-      type: 'exercise',
-      content: `New exercise: ${exercise.title}. ${exercise.description}`,
-      timestamp: new Date(),
-      priority: 'high'
-    }, ...prev.slice(0, 9)]);
+  const startExercise = (exercise: TrainingExercise) => {
+    if (replyTimerRef.current) clearTimeout(replyTimerRef.current);
+    setCurrentExercise(exercise);
+    setCoachAdvice([]);
+    loadExercisePosition(exercise);
+    exerciseStartRef.current = Date.now();
+    exerciseMistakesRef.current = 0;
+    const rec = memory.exercises[exercise.id];
+    const note = rec?.solved ? ' A review — show me it stuck.' : '';
+    say('exercise', `New exercise: ${exercise.title}. ${exercise.description}.${note}`, 'high');
+  };
+
+  const finishExercise = (exercise: TrainingExercise, solved: boolean) => {
+    const timeMs = Date.now() - exerciseStartRef.current;
+    const mistakes = exerciseMistakesRef.current;
+    const updated = recordAttempt(memoryRef.current, exercise, { solved, mistakes, timeMs, at: Date.now() });
+    setMemory(updated);
+    setCurrentExercise(null);
+    if (solved) {
+      const clean = mistakes === 0 ? ' Flawless!' : ` (${mistakes} miss${mistakes === 1 ? '' : 'es'} on the way.)`;
+      say('celebration', `Exercise completed in ${Math.max(1, Math.round(timeMs / 1000))}s.${clean} ${persona.name}: Outstanding work!`, 'high');
+    }
+    const next = recommendNext(TRAINING_EXERCISES, updated, rating, Date.now(), exercise.id);
+    if (next) say('advice', `${persona.name}: Up next I'd suggest "${next.title}".`, 'medium');
+    if (solved) {
+      // Some finished lines are dead positions the board would announce as "Game over: draw";
+      // hand back a fresh board for free analysis instead.
+      replyTimerRef.current = setTimeout(() => {
+        const fresh = new Chess();
+        setAnalysisGame(fresh);
+        setHistoryFens([fresh.fen()]);
+        setHistorySans([]);
+        setCurrentStep(0);
+      }, 1800);
+    }
   };
 
   const handleExerciseMove = (from: Square, to: Square) => {
-    if (!currentExercise) return;
+    // Odd steps are the coach's reply, which is still being played.
+    if (!currentExercise || currentExerciseStep % 2 === 1) return;
+    const applied = applyMove(analysisGame, from, to);
+    if (!applied) return;
+    const { next, move } = applied;
+    soundManager.playMove();
 
-    try {
-      const newGame = new Chess(analysisGame.fen());
-      const move = newGame.move({ from, to, promotion: 'q' });
-      if (!move) return;
-
-      soundManager.playMove();
-
-      const newFens = historyFens.slice(0, currentStep + 1);
-      newFens.push(newGame.fen());
-
-      const newSans = historySans.slice(0, currentStep);
-      newSans.push(move.san);
-
-      setHistoryFens(newFens);
-      setHistorySans(newSans);
-      setCurrentStep(newFens.length - 1);
-      setAnalysisGame(newGame);
-
-      const expectedMove = currentExercise.solution[currentExerciseStep];
-      if (move.san === expectedMove) {
-        setCurrentExerciseStep(prev => prev + 1);
-
-        const persona = getCoachPersona(1200);
-        setCoachMessages(prev => [{
-          id: `exercise_${Date.now()}`,
-          type: 'praise',
-          content: `${persona.name}: Excellent! ${persona.catchphrases[Math.floor(Math.random() * persona.catchphrases.length)]}`,
-          timestamp: new Date(),
-          priority: 'high'
-        }, ...prev.slice(0, 9)]);
-
-        if (currentExerciseStep + 1 >= currentExercise.solution.length) {
-          setCurrentExercise(null);
-          setCoachMessages(prev => [{
-            id: `complete_${Date.now()}`,
-            type: 'celebration',
-            content: `Exercise completed! ${getCoachPersona(1200).name}: Outstanding work! You've mastered this pattern.`,
-            timestamp: new Date(),
-            priority: 'high'
-          }, ...prev.slice(0, 9)]);
-        }
-      } else {
-        const persona = getCoachPersona(1200);
-        setCoachMessages(prev => [{
-          id: `hint_${Date.now()}`,
-          type: 'warning',
-          content: `${persona.name}: Not quite. ${currentExercise.hint || 'Think about the key tactical idea.'}`,
-          timestamp: new Date(),
-          priority: 'medium'
-        }, ...prev.slice(0, 9)]);
-      }
-    } catch {
-      // Illegal move
+    const expected = currentExercise.solution[currentExerciseStep];
+    // Any checkmate is accepted where the solution mates, even a different one.
+    const correct = move.san === expected || (expected.endsWith('#') && next.isCheckmate());
+    if (!correct) {
+      exerciseMistakesRef.current += 1;
+      say('warning', `${persona.name}: Not quite — ${move.san} isn't it. ${currentExercise.hint || 'Think about the key tactical idea.'}`, 'medium', move.san);
+      return; // The board stays on the exercise position so the player can try again.
     }
+
+    const { newFens, newSans } = pushPosition(next, move.san);
+    const step = currentExerciseStep + 1;
+    if (step >= currentExercise.solution.length) {
+      finishExercise(currentExercise, true);
+      return;
+    }
+
+    say('praise', `${persona.name}: Excellent! ${pick(persona.catchphrases)}`, 'medium', move.san);
+    // The coach plays the opponent's reply, then it's the player's turn again.
+    const reply = currentExercise.solution[step];
+    const exercise = currentExercise;
+    setCurrentExerciseStep(step);
+    replyTimerRef.current = setTimeout(() => {
+      const after = new Chess(next.fen());
+      const replyMove = after.move(reply);
+      soundManager.playMove();
+      pushPosition(after, replyMove.san, newFens, newSans, newFens.length - 1);
+      setCurrentExerciseStep(step + 1);
+      if (step + 1 >= exercise.solution.length) finishExercise(exercise, true);
+    }, 500);
   };
 
-  const startNextExercise = () => {
-    const nextIdx = TRAINING_EXERCISES.findIndex(e => e.id === currentExercise?.id) + 1;
-    if (nextIdx < TRAINING_EXERCISES.length) {
-      startExercise(TRAINING_EXERCISES[nextIdx]);
-    }
+  const showSolution = () => {
+    if (!currentExercise) return;
+    const exercise = currentExercise;
+    say('advice', `${persona.name}: The solution is ${exercise.solution.join(', ')}. We'll come back to this one soon.`, 'high');
+    finishExercise(exercise, false);
+    loadExercisePosition(exercise);
+  };
+
+  const restartExercise = () => {
+    if (!currentExercise) return;
+    if (replyTimerRef.current) clearTimeout(replyTimerRef.current);
+    loadExercisePosition(currentExercise);
+  };
+
+  const startRecommended = () => {
+    const next = recommendNext(TRAINING_EXERCISES, memory, rating, Date.now(), currentExercise?.id);
+    if (next) startExercise(next);
   };
 
   const handleLoadFen = () => {
     try {
       const g = new Chess(fenInput.trim());
+      setCurrentExercise(null);
       setAnalysisGame(g);
       setHistoryFens([g.fen()]);
       setHistorySans([]);
@@ -567,7 +559,9 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
     }
   };
 
-  const openingInfo: OpeningInfo | null = detectOpening(historySans);
+  const recommended = recommendNext(TRAINING_EXERCISES, memory, rating, Date.now(), currentExercise?.id);
+  const visibleExercises = showAllExercises ? TRAINING_EXERCISES : TRAINING_EXERCISES.slice(0, 4);
+  const remaining = TRAINING_EXERCISES.filter(e => !((memory.exercises[e.id]?.solved ?? 0) > 0)).length;
 
   return (
     <PanelContainer className="flex flex-col lg:flex-row items-center lg:items-start justify-center gap-5">
@@ -593,36 +587,54 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
       </div>
 
       <div className="w-full lg:w-96 flex flex-col gap-3">
-        <div className="glass-card p-4 shadow-xl">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white shadow-lg">
+        <div className="glass-card p-4 shadow-xl space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-9 h-9 shrink-0 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white shadow-lg">
                 <BrainCircuit className="w-4 h-4" />
               </div>
-              <div>
-                <div className="font-black text-xs text-white font-ui uppercase tracking-wider">
+              <div className="min-w-0">
+                <div className="font-black text-sm text-white font-ui uppercase tracking-wider truncate">
                   {persona.name}
                 </div>
-                <div className="text-[10px] text-white/50 font-mono uppercase tracking-widest">
-                  {persona.style} | {persona.focus.join(', ')}
+                <div className="text-[11px] text-white/60 font-mono truncate">
+                  {persona.style} · {persona.focus.join(', ')}
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-1">
-              <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
-                coachProfile.strength === 'master' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/40' :
-                coachProfile.strength === 'expert' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/40' :
-                coachProfile.strength === 'advanced' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40' :
-                coachProfile.strength === 'intermediate' ? 'bg-green-500/20 text-green-400 border border-green-500/40' :
-                'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-              }`}>
-                {coachProfile.strength.toUpperCase()}
-              </span>
-            </div>
+            <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+              coachProfile.strength === 'master' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/40' :
+              coachProfile.strength === 'expert' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/40' :
+              coachProfile.strength === 'advanced' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40' :
+              coachProfile.strength === 'intermediate' ? 'bg-green-500/20 text-green-400 border border-green-500/40' :
+              'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+            }`}>
+              {coachProfile.strength}
+            </span>
           </div>
 
-          {showCoachChat && (
-            <div className="glass-card p-3 max-h-64 overflow-y-auto space-y-2">
+          {currentExercise && (
+            <div className="glass-card p-3 border border-blue-500/30 bg-blue-500/5">
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <span className="text-xs font-black text-white uppercase tracking-wider truncate">{currentExercise.title}</span>
+                <span className="text-[11px] text-white/60 font-mono shrink-0">
+                  move {Math.floor(currentExerciseStep / 2) + 1} / {Math.ceil(currentExercise.solution.length / 2)}
+                </span>
+              </div>
+              <p className="text-xs text-white/75 leading-relaxed mb-2">{currentExercise.description}</p>
+              <div className="flex gap-2">
+                <button onClick={restartExercise} className="flex-1 py-2 rounded-lg bg-white/[0.06] hover:bg-white/10 border border-white/10 text-[11px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5">
+                  <RotateCcw className="w-3.5 h-3.5" /> Restart
+                </button>
+                <button onClick={showSolution} className="flex-1 py-2 rounded-lg bg-white/[0.06] hover:bg-white/10 border border-white/10 text-[11px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5">
+                  <Eye className="w-3.5 h-3.5" /> Solution
+                </button>
+              </div>
+            </div>
+          )}
+
+          {showCoachChat && coachMessages.length > 0 && (
+            <div className="glass-card p-3 max-h-64 overflow-y-auto space-y-2" aria-live="polite">
               {coachMessages.slice(0, 10).map(msg => (
                 <div
                   key={msg.id}
@@ -632,24 +644,22 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
                     'bg-white/[0.03] border border-white/5'
                   }`}
                 >
-                  <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${
+                  <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
                     msg.type === 'celebration' ? 'bg-yellow-500/20 text-yellow-400' :
                     msg.type === 'praise' ? 'bg-green-500/20 text-green-400' :
                     msg.type === 'warning' ? 'bg-orange-500/20 text-orange-400' :
                     msg.type === 'exercise' ? 'bg-blue-500/20 text-blue-400' :
-                    msg.type === 'advice' ? 'bg-purple-500/20 text-purple-400' :
-                    'bg-white/10 text-white/60'
+                    'bg-purple-500/20 text-purple-400'
                   }`}>
                     {msg.type === 'celebration' && <Trophy className="w-3.5 h-3.5" />}
                     {msg.type === 'praise' && <Heart className="w-3.5 h-3.5" />}
                     {msg.type === 'warning' && <Zap className="w-3.5 h-3.5" />}
                     {msg.type === 'exercise' && <Target className="w-3.5 h-3.5" />}
                     {msg.type === 'advice' && <Lightbulb className="w-3.5 h-3.5" />}
-                    {msg.type === 'celebration' && <Award className="w-3.5 h-3.5" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[11px] text-white/90 leading-relaxed">{msg.content}</p>
-                    <span className="text-[8px] text-white/30 font-mono">{msg.timestamp.toLocaleTimeString()}</span>
+                    <p className="text-xs text-white/90 leading-relaxed">{msg.content}</p>
+                    <span className="text-[10px] text-white/40 font-mono">{msg.timestamp.toLocaleTimeString()}</span>
                   </div>
                 </div>
               ))}
@@ -658,7 +668,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
 
           {coachAdvice.length > 0 && (
             <div className="glass-card p-3 space-y-2">
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-1">
                 <Lightbulb className="w-4 h-4 text-yellow-400" />
                 <span className="font-black text-xs text-white uppercase tracking-wider">Coach Insights</span>
               </div>
@@ -673,7 +683,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
                   }`}
                 >
                   <div className="flex items-start gap-2">
-                    <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
+                    <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${
                       advice.priority === 'critical' ? 'bg-red-500/20 text-red-400' :
                       advice.priority === 'high' ? 'bg-orange-500/20 text-orange-400' :
                       advice.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
@@ -685,10 +695,10 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
                       {advice.priority === 'low' && <MessageSquare className="w-3 h-3" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[10px] font-black text-white uppercase tracking-wider mb-0.5">{advice.title}</p>
-                      <p className="text-[9px] text-white/70 leading-relaxed">{advice.description}</p>
+                      <p className="text-[11px] font-black text-white uppercase tracking-wider mb-0.5">{advice.title}</p>
+                      <p className="text-xs text-white/75 leading-relaxed">{advice.description}</p>
                       {advice.move && (
-                        <span className="inline-block mt-1 px-1.5 py-0.5 rounded bg-white/10 text-[9px] font-mono font-black text-yellow-300">
+                        <span className="inline-block mt-1 px-1.5 py-0.5 rounded bg-white/10 text-[11px] font-mono font-black text-yellow-300">
                           {advice.move}
                         </span>
                       )}
@@ -700,52 +710,63 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
           )}
 
           <div className="glass-card p-3 space-y-2">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
                 <Target className="w-4 h-4 text-emerald-400" />
                 <span className="font-black text-xs text-white uppercase tracking-wider">Training</span>
               </div>
-              <span className="text-[9px] text-white/40 font-mono">{TRAINING_EXERCISES.filter(e => !e.completed).length} remaining</span>
+              <span className="text-[11px] text-white/50 font-mono">{remaining} of {TRAINING_EXERCISES.length} to solve</span>
             </div>
             <div className="space-y-1.5">
-              {TRAINING_EXERCISES.slice(0, 4).map(ex => (
-                <button
-                  key={ex.id}
-                  onClick={() => startExercise(ex)}
-                  className={`w-full text-left p-2.5 rounded-xl transition-all ${
-                    ex.completed
-                      ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300'
-                      : 'bg-white/[0.03] border border-white/5 hover:bg-white/[0.06] hover:border-white/10 text-white/80'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${
-                        ex.difficulty === 'easy' ? 'bg-green-500/20 text-green-400' :
-                        ex.difficulty === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
-                        ex.difficulty === 'hard' ? 'bg-orange-500/20 text-orange-400' :
-                        'bg-red-500/20 text-red-400'
-                      }`}>
-                        {ex.difficulty === 'easy' && <Sparkles className="w-3 h-3" />}
-                        {ex.difficulty === 'medium' && <Target className="w-3 h-3" />}
-                        {ex.difficulty === 'hard' && <Flame className="w-3 h-3" />}
-                        {ex.difficulty === 'master' && <Award className="w-3 h-3" />}
+              {visibleExercises.map(ex => {
+                const rec = memory.exercises[ex.id];
+                const done = (rec?.solved ?? 0) > 0;
+                const isNext = recommended?.id === ex.id;
+                return (
+                  <button
+                    key={ex.id}
+                    onClick={() => startExercise(ex)}
+                    className={`w-full text-left p-2.5 rounded-xl border transition-all ${
+                      currentExercise?.id === ex.id
+                        ? 'bg-blue-500/15 border-blue-500/40 text-white'
+                        : done
+                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
+                          : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.06] hover:border-white/10 text-white/80'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className={`w-6 h-6 shrink-0 rounded-full flex items-center justify-center ${
+                          ex.difficulty === 'easy' ? 'bg-green-500/20 text-green-400' :
+                          ex.difficulty === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                          ex.difficulty === 'hard' ? 'bg-orange-500/20 text-orange-400' :
+                          'bg-red-500/20 text-red-400'
+                        }`}>
+                          {ex.difficulty === 'easy' && <Sparkles className="w-3 h-3" />}
+                          {ex.difficulty === 'medium' && <Target className="w-3 h-3" />}
+                          {ex.difficulty === 'hard' && <Flame className="w-3 h-3" />}
+                          {ex.difficulty === 'master' && <Award className="w-3 h-3" />}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-black text-white truncate">{ex.title}</div>
+                          <div className="text-[11px] text-white/55 truncate">
+                            {themeLabel(ex.theme)} · {ex.difficulty}
+                            {rec?.bestTimeMs ? ` · best ${Math.max(1, Math.round(rec.bestTimeMs / 1000))}s` : ''}
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="text-[10px] font-black text-white truncate">{ex.title}</div>
-                        <div className="text-[8px] text-white/50 truncate">{ex.theme.replace('_', ' ')}</div>
-                      </div>
+                      {isNext && !currentExercise && <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-black">Next</span>}
+                      {done && !isNext && <CheckCircle2 className="shrink-0 w-4 h-4 text-emerald-400" aria-label="Solved" />}
                     </div>
-                    {ex.completed && <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-black">Done</span>}
-                  </div>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
               <button
-                onClick={() => startExercise(TRAINING_EXERCISES[0])}
-                className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white font-black text-[10px] uppercase tracking-wider transition-all hover:brightness-110 active:scale-[0.98] shadow-lg shadow-blue-500/20 flex items-center justify-center gap-1.5"
+                onClick={() => setShowAllExercises(v => !v)}
+                className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white font-black text-[11px] uppercase tracking-wider transition-all hover:brightness-110 active:scale-[0.98] shadow-lg shadow-blue-500/20 flex items-center justify-center gap-1.5"
               >
                 <BookOpen className="w-3.5 h-3.5" />
-                <span>All Exercises</span>
+                <span>{showAllExercises ? 'Show Fewer' : `All Exercises (${TRAINING_EXERCISES.length})`}</span>
               </button>
             </div>
           </div>
@@ -753,47 +774,82 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
           <div className="glass-card p-3">
             <div className="flex items-center justify-between mb-2">
               <span className="font-black text-xs text-white uppercase tracking-wider">Progress</span>
-              <span className="text-[9px] text-white/40 font-mono">
-                {coachProfile.gamesAnalyzed} games analyzed
+              <span className="text-[11px] text-white/50 font-mono">
+                {coachProfile.sessions} session{coachProfile.sessions === 1 ? '' : 's'}
               </span>
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <div className="p-2 rounded-xl bg-white/[0.03] border border-white/5 text-center">
                 <div className="text-lg font-black text-white">{coachProfile.rating}</div>
-                <div className="text-[8px] text-white/50 font-mono uppercase tracking-wider">Rating</div>
+                <div className="text-[10px] text-white/55 font-mono uppercase tracking-wider">Rating</div>
               </div>
               <div className="p-2 rounded-xl bg-white/[0.03] border border-white/5 text-center">
-                <div className="text-lg font-black text-emerald-400">{coachProfile.gamesAnalyzed}</div>
-                <div className="text-[8px] text-white/50 font-mono uppercase tracking-wider">Analyzed</div>
+                <div className="text-lg font-black text-emerald-400">{coachProfile.solved}</div>
+                <div className="text-[10px] text-white/55 font-mono uppercase tracking-wider">Solved</div>
               </div>
-              <div className="p-2 rounded-xl bg-white/[0.03] border border-white/5 text-center">
-                <div className="text-lg font-black text-amber-400">{coachProfile.improvementRate > 0 ? '+' : ''}{coachProfile.improvementRate.toFixed(1)}</div>
-                <div className="text-[8px] text-white/50 font-mono uppercase tracking-wider">Improvement</div>
+              <div className="p-2 rounded-xl bg-white/[0.03] border border-white/5 text-center" title="Change in success rate: your last 10 exercises compared with the 10 before">
+                <div className="text-lg font-black text-amber-400">
+                  {coachProfile.improvementRate === null ? '—' : `${coachProfile.improvementRate > 0 ? '+' : ''}${coachProfile.improvementRate}%`}
+                </div>
+                <div className="text-[10px] text-white/55 font-mono uppercase tracking-wider">Trend</div>
+              </div>
+              <div className="p-2 rounded-xl bg-white/[0.03] border border-white/5 text-center" title="How often your analysis moves match the engine's first choice">
+                <div className="text-lg font-black text-sky-400">{coachProfile.engineMatch === null ? '—' : `${coachProfile.engineMatch}%`}</div>
+                <div className="text-[10px] text-white/55 font-mono uppercase tracking-wider">Accuracy</div>
               </div>
             </div>
+            {(coachProfile.weaknesses.length > 0 || coachProfile.strengths.length > 0) && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {coachProfile.weaknesses.map(w => (
+                  <span key={`w_${w}`} className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-orange-500/15 text-orange-300 border border-orange-500/30">Work on {themeLabel(w)}</span>
+                ))}
+                {coachProfile.strengths.map(s => (
+                  <span key={`s_${s}`} className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Strong at {themeLabel(s)}</span>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-wrap gap-2">
             <button
-              onClick={() => startExercise(TRAINING_EXERCISES[0])}
-              className="flex-1 min-w-0 py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-black font-black text-[10px] uppercase tracking-wider transition-all hover:brightness-110 active:scale-[0.98] shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-1.5"
+              onClick={startRecommended}
+              disabled={!recommended}
+              className="flex-1 min-w-0 py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-black font-black text-[11px] uppercase tracking-wider transition-all hover:brightness-110 active:scale-[0.98] shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-1.5 disabled:opacity-50"
             >
               <Target className="w-3.5 h-3.5" />
-              <span>Start Training</span>
+              <span className="truncate">{recommended ? `Train: ${recommended.title}` : 'Start Training'}</span>
             </button>
             <button
               onClick={() => setShowCoachChat(!showCoachChat)}
-              className="px-3 py-2 rounded-xl bg-white/[0.06] hover:bg-white/10 border border-white/10 text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer"
+              aria-label={showCoachChat ? 'Hide coach messages' : 'Show coach messages'}
+              className="px-3 py-2 rounded-xl bg-white/[0.06] hover:bg-white/10 border border-white/10 transition-all cursor-pointer"
             >
               <MessageSquare className="w-3.5 h-3.5" />
             </button>
             <button
-              onClick={() => setShowFenModal(true)}
-              className="px-3 py-2 rounded-xl bg-white/[0.06] hover:bg-white/10 border border-white/10 text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer"
+              onClick={() => setShowFenModal(v => !v)}
+              aria-label="Load a position from FEN"
+              className="px-3 py-2 rounded-xl bg-white/[0.06] hover:bg-white/10 border border-white/10 transition-all cursor-pointer"
             >
               <ClipboardPaste className="w-3.5 h-3.5" />
             </button>
           </div>
+
+          {showFenModal && (
+            <div className="glass-card p-3 space-y-2">
+              <label htmlFor="coach-fen" className="text-[11px] font-black text-white/70 uppercase tracking-wider">Analyse a position (FEN)</label>
+              <input
+                id="coach-fen"
+                value={fenInput}
+                onChange={e => setFenInput(e.target.value)}
+                placeholder="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+                className="w-full bg-black/40 border border-white/10 rounded-lg py-2 px-3 text-white text-xs font-mono focus:outline-none focus:border-emerald-500/50"
+              />
+              <button onClick={handleLoadFen} className="w-full py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-black uppercase tracking-wider">
+                Load Position
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </PanelContainer>

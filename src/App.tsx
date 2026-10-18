@@ -764,6 +764,16 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [setSettings]);
 
+  // Rating change for a finished bot game, using the same rules as rated games in
+  // backend/elo.js: K by experience, capped at 50 per game.
+  const botGameEloDelta = (score: 0 | 0.5 | 1): number => {
+    const own = typeof authProfile?.elo === 'number' ? authProfile.elo : 800;
+    const games = authProfile?.gamesPlayed || 0;
+    const k = games < 30 ? 40 : games < 50 ? 30 : 20;
+    const expected = 1 / (1 + 10 ** ((currentBot.elo - own) / 400));
+    return Math.max(-50, Math.min(50, Math.round(k * (score - expected))));
+  };
+
   // Records wins, losses and draws against the bot. Checkmates the player delivers are
   // recorded by the Execute judgment instead, which sets resultRecordedRef first.
   useEffect(() => {
@@ -773,9 +783,9 @@ export default function App() {
     }
     if (activeMode !== 'ai' || resultRecordedRef.current || moveLogs.length < 2) return;
     resultRecordedRef.current = true;
-    if (gameResult.winner === playerColor) updateRespectMetrics({ wins: 1, gamesPlayed: 1 });
-    else if (gameResult.winner === 'w' || gameResult.winner === 'b') updateRespectMetrics({ losses: 1, gamesPlayed: 1 });
-    else updateRespectMetrics({ draws: 1, gamesPlayed: 1 });
+    if (gameResult.winner === playerColor) updateRespectMetrics({ wins: 1, gamesPlayed: 1, elo: botGameEloDelta(1) });
+    else if (gameResult.winner === 'w' || gameResult.winner === 'b') updateRespectMetrics({ losses: 1, gamesPlayed: 1, elo: botGameEloDelta(0) });
+    else updateRespectMetrics({ draws: 1, gamesPlayed: 1, elo: botGameEloDelta(0.5) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameResult]);
 
@@ -785,7 +795,7 @@ export default function App() {
     setRespectProfile(updated);
     // Pass-and-play is two people on one device, so only games against the bot count toward ranked stats.
     resultRecordedRef.current = true;
-    updateRespectMetrics(activeMode === 'ai' ? { executions: 1, wins: 1, gamesPlayed: 1 } : { executions: 1 });
+    updateRespectMetrics(activeMode === 'ai' ? { executions: 1, wins: 1, gamesPlayed: 1, elo: botGameEloDelta(1) } : { executions: 1 });
     if (pendingCheckmateResult) setGameResult(pendingCheckmateResult);
   };
 

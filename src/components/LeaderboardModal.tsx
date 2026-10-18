@@ -372,7 +372,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ profile, onC
                       <h4 className="text-[13px] font-black uppercase tracking-widest">Execute</h4>
                     </div>
                     <p className="text-[11px] font-black text-[#94A3B8] uppercase leading-relaxed tracking-widest opacity-80">
-                      Execute ends the game as a win with <span className="text-[#EF4444]">no Respect</span>. Rating (ELO) only changes in rated online games.
+                      Execute ends the game as a win with <span className="text-[#EF4444]">no Respect</span>. Rating (ELO) changes when a game against the bot or a rated online game ends.
                     </p>
                   </section>
                 </div>

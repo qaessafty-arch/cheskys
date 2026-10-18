@@ -70,6 +70,7 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
   'auth/invalid-verification-code': 'That code is not correct. Check the SMS and try again.',
   'auth/code-expired': 'That code has expired. Request a new one.',
   'auth/captcha-check-failed': 'Verification failed. Reload the page and try again.',
+  'auth/internal-error': 'Sign-in could not reach Google. Check your connection, turn off content blockers for this site, and try again.',
 };
 
 export function describeAuthError(error: any): string {
