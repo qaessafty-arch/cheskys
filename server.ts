@@ -287,19 +287,38 @@ app.post('/api/chess/validate-move', moveRateLimit, (req, res) => {
 // ----------------------------------------------------
 // 3. SECURE AUTHENTICATION (HttpOnly, Secure, SameSite=Strict)
 // ----------------------------------------------------
-app.post('/api/auth/session-login', authRateLimit, (req, res) => {
-  try {
-    const { uid, displayName, email, photoURL } = req.body;
+// Resolves a Firebase ID token to its account via the Identity Toolkit API, so the
+// session is only ever issued for an identity Firebase has actually signed.
+async function verifyFirebaseIdToken(idToken: string) {
+  const resp = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(firebaseConfig.apiKey)}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken }) }
+  );
+  if (!resp.ok) return null;
+  const data: any = await resp.json();
+  const account = data?.users?.[0];
+  return account?.localId ? account : null;
+}
 
-    if (!uid) {
-      return res.status(400).json({ error: 'UID is required for session establishment.' });
+app.post('/api/auth/session-login', authRateLimit, async (req, res) => {
+  try {
+    const { idToken } = req.body || {};
+
+    if (!idToken || typeof idToken !== 'string') {
+      return res.status(400).json({ error: 'A Firebase ID token is required for session establishment.' });
+    }
+
+    const account = await verifyFirebaseIdToken(idToken);
+    if (!account) {
+      return res.status(401).json({ error: 'Invalid or expired ID token.' });
     }
 
     const sessionPayload = {
-      uid: sanitizeString(uid),
-      displayName: sanitizeString(displayName || 'Grandmaster'),
-      email: sanitizeString(email || ''),
-      photoURL: photoURL || '',
+      uid: sanitizeString(account.localId),
+      displayName: sanitizeString(account.displayName || 'Grandmaster'),
+      email: sanitizeString(account.email || ''),
+      phoneNumber: sanitizeString(account.phoneNumber || ''),
+      photoURL: account.photoUrl || '',
       issuedAt: Date.now(),
       expiresAt: Date.now() + 1000 * 60 * 60 * 24 * 7, // 7 days
     };

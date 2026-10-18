@@ -8,6 +8,11 @@ import {
   GoogleAuthProvider, 
   onAuthStateChanged, 
   signInWithPopup, 
+  signInWithRedirect,
+  getRedirectResult,
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+  ConfirmationResult,
   signOut as firebaseSignOut,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -41,12 +46,54 @@ import {
 } from '../utils/firebase';
 import { RespectLeaderboardEntry, UserRole, UserFeedback, UserPermissions } from '../types/chess';
 import { getHonorRank } from '../utils/respectSystem';
+import { establishSecureSession } from '../utils/security';
+
+// Firebase auth error codes mapped to messages a player can act on.
+const AUTH_ERROR_MESSAGES: Record<string, string> = {
+  'auth/unauthorized-domain': 'This website is not authorised for sign-in yet. Add it under Firebase Console → Authentication → Settings → Authorized domains.',
+  'auth/operation-not-allowed': 'This sign-in method is not enabled. Enable it under Firebase Console → Authentication → Sign-in method.',
+  'auth/popup-blocked': 'Your browser blocked the sign-in window. Allow pop-ups for this site and try again.',
+  'auth/network-request-failed': 'Network error. Check your connection and try again.',
+  'auth/invalid-credential': 'Incorrect email or password.',
+  'auth/wrong-password': 'Incorrect email or password.',
+  'auth/user-not-found': 'No account exists with this email.',
+  'auth/email-already-in-use': 'An account already exists with this email. Sign in instead.',
+  'auth/weak-password': 'Password must be at least 8 characters.',
+  'auth/invalid-email': 'Please enter a valid email address.',
+  'auth/too-many-requests': 'Too many attempts. Wait a few minutes and try again.',
+  'auth/account-exists-with-different-credential': 'This email is already linked to another sign-in method. Use that method, then link this one from your profile.',
+  'auth/invalid-phone-number': 'Enter the phone number in international format, e.g. +964 750 123 4567.',
+  'auth/missing-phone-number': 'Please enter your phone number.',
+  'auth/quota-exceeded': 'SMS limit reached for today. Try again later or use email.',
+  'auth/invalid-verification-code': 'That code is not correct. Check the SMS and try again.',
+  'auth/code-expired': 'That code has expired. Request a new one.',
+  'auth/captcha-check-failed': 'Verification failed. Reload the page and try again.',
+};
+
+export function describeAuthError(error: any): string {
+  const code = error?.code as string | undefined;
+  if (code && AUTH_ERROR_MESSAGES[code]) return AUTH_ERROR_MESSAGES[code];
+  return error?.message || 'Sign-in failed. Please try again.';
+}
+
+function friendlyAuthError(error: any): Error {
+  const err = new Error(describeAuthError(error));
+  (err as any).code = error?.code;
+  return err;
+}
+
+// Popup sign-in fails in embedded browsers, some mobile browsers, and when pop-ups
+// are blocked; these are the cases where a full-page redirect still works.
+const POPUP_FALLBACK_CODES = new Set([
+  'auth/popup-blocked',
+  'auth/operation-not-supported-in-environment',
+  'auth/web-storage-unsupported',
+  'auth/cancelled-popup-request',
+]);
 
 export const DEVELOPER_EMAILS = [
   'qayssafty@gmail.com',
-  'qaessafty@gmail.com',
-  'dev@chessky.local',
-  'sky@chessky.local'
+  'qaessafty@gmail.com'
 ];
 
 export const SPECIAL_DEV_SKY_PASSWORD = '[q.brz]+[BLUEBERRY]';
@@ -161,10 +208,15 @@ interface AuthContextType {
   isAdmin: boolean;
   isSuperAdmin: boolean;
   devModeUnlocked: boolean;
+  /** Last sign-in error that happened outside a direct call, e.g. after a Google redirect. */
+  authError: string | null;
+  clearAuthError: () => void;
   signInWithGoogle: () => Promise<void>;
   signInWithApple: () => Promise<void>;
   signInAsGuest: (guestName?: string, country?: string) => Promise<void>;
   signInWithEmail: (email: string, pass: string) => Promise<void>;
+  sendPhoneCode: (phoneNumber: string, recaptchaContainerId: string) => Promise<void>;
+  confirmPhoneCode: (code: string) => Promise<void>;
   signUpWithEmail: (email: string, pass: string, displayName?: string) => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   signInAsSky: (passkey?: string) => Promise<boolean>;
@@ -254,6 +306,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfileData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isSkyAccount, setIsSkyAccount] = useState<boolean>(false);
@@ -410,6 +463,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
+        // Every sign-in path (popup, redirect, email, phone) lands here, so the
+        // server session is established once, from a verified ID token.
+        currentUser.getIdToken().then(establishSecureSession).catch(() => {});
         setIsSkyAccount(false);
         setIsGuest(false);
         localStorage.removeItem('chess_guest_profile');
@@ -560,19 +616,67 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsubscribe();
   }, []);
 
+  // Completes a Google sign-in that fell back to a full-page redirect.
+  useEffect(() => {
+    getRedirectResult(auth).catch((error) => {
+      console.error('Google redirect sign-in failed:', error);
+      setAuthError(describeAuthError(error));
+    });
+  }, []);
+
   const signInWithGoogle = async () => {
+    setIsSkyAccount(false);
+    setIsGuest(false);
+    setAuthError(null);
+    localStorage.removeItem('chess_active_account');
+    googleProvider.setCustomParameters({ prompt: 'select_account' });
     try {
-      setIsSkyAccount(false);
-      setIsGuest(false);
-      localStorage.removeItem('chess_active_account');
       await signInWithPopup(auth, googleProvider);
     } catch (error: any) {
-      if (error?.code === 'auth/popup-closed-by-user') {
-        // Silent catch for user cancellation to prevent console noise and unhandled rejections
+      if (error?.code === 'auth/popup-closed-by-user') return;
+      if (POPUP_FALLBACK_CODES.has(error?.code)) {
+        await signInWithRedirect(auth, googleProvider);
         return;
       }
       console.error('Google Sign-In failed:', error);
-      throw error;
+      throw friendlyAuthError(error);
+    }
+  };
+
+  const recaptchaRef = React.useRef<RecaptchaVerifier | null>(null);
+  const phoneConfirmationRef = React.useRef<ConfirmationResult | null>(null);
+
+  const sendPhoneCode = async (phoneNumber: string, recaptchaContainerId: string) => {
+    const normalized = phoneNumber.replace(/[\s()-]/g, '');
+    if (!/^\+[1-9]\d{6,14}$/.test(normalized)) {
+      throw friendlyAuthError({ code: 'auth/invalid-phone-number' });
+    }
+    setIsSkyAccount(false);
+    setIsGuest(false);
+    localStorage.removeItem('chess_active_account');
+    try {
+      if (!recaptchaRef.current) {
+        recaptchaRef.current = new RecaptchaVerifier(auth, recaptchaContainerId, { size: 'invisible' });
+      }
+      phoneConfirmationRef.current = await signInWithPhoneNumber(auth, normalized, recaptchaRef.current);
+    } catch (error: any) {
+      // A failed verifier cannot be reused; the next attempt renders a fresh one.
+      recaptchaRef.current?.clear();
+      recaptchaRef.current = null;
+      console.error('Phone sign-in failed:', error);
+      throw friendlyAuthError(error);
+    }
+  };
+
+  const confirmPhoneCode = async (code: string) => {
+    if (!phoneConfirmationRef.current) {
+      throw new Error('Request a code first.');
+    }
+    try {
+      await phoneConfirmationRef.current.confirm(code.trim());
+      phoneConfirmationRef.current = null;
+    } catch (error: any) {
+      throw friendlyAuthError(error);
     }
   };
 
@@ -625,59 +729,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signInWithEmail = async (email: string, pass: string) => {
-    let targetEmail = email.trim().toLowerCase();
-    
-    // Auto-map quick usernames back to emails if they somehow bypassed UI mapping
-    let isDevLogin = false;
-    if (targetEmail === 'dev' || targetEmail === 'dev@chessky.local') {
-      targetEmail = 'dev@chessky.local';
-      isDevLogin = true;
-    } else if (targetEmail === 'sky' || targetEmail === 'sky one' || targetEmail === 'sky@chessky.local') {
-      targetEmail = 'sky@chessky.local';
-      isDevLogin = true;
-    }
-
     try {
       setIsSkyAccount(false);
       setIsGuest(false);
       localStorage.removeItem('chess_active_account');
-      await signInWithEmailAndPassword(auth, targetEmail, pass);
+      await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), pass);
     } catch (error: any) {
       console.warn('Firebase email login notice:', error);
-      
-      if (error?.code === 'auth/operation-not-allowed') {
-        throw new Error('Email/Password Sign-In is not enabled in your Firebase Project. Please enable it in Firebase Console -> Authentication -> Sign-in method.');
-      }
-
-      // Auto-create dev accounts if they don't exist yet
-      if (isDevLogin && (error?.code === 'auth/invalid-credential' || error?.code === 'auth/user-not-found')) {
-        try {
-          const userCredential = await createUserWithEmailAndPassword(auth, targetEmail, pass);
-          if (userCredential.user) {
-            await firebaseUpdateProfile(userCredential.user, { displayName: targetEmail === 'dev@chessky.local' ? 'q.brz' : 'sky' });
-            // Save admin role in Firestore so security rules can grant access
-            const userDocRef = doc(db, 'users', userCredential.user.uid);
-            await safeSetDoc(userDocRef, {
-              uid: userCredential.user.uid,
-              displayName: targetEmail === 'dev@chessky.local' ? 'q.brz' : 'sky',
-              username: targetEmail === 'dev@chessky.local' ? 'q.brz' : 'sky',
-              email: targetEmail,
-              role: targetEmail === 'dev@chessky.local' ? 'owner' : 'admin',
-              isDeveloper: true,
-              createdAt: serverTimestamp(),
-              updatedAt: serverTimestamp()
-            }, { merge: true });
-          }
-          return;
-        } catch (createErr: any) {
-          console.error('Failed to auto-create dev account', createErr);
-          if (createErr?.code === 'auth/operation-not-allowed') {
-            throw new Error('Email/Password Sign-In is not enabled in your Firebase Project. Please enable it in Firebase Console -> Authentication -> Sign-in method.');
-          }
-          throw createErr;
-        }
-      }
-      throw error;
+      throw friendlyAuthError(error);
     }
   };
 
@@ -698,7 +757,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
       }
-      throw error;
+      throw friendlyAuthError(error);
     }
   };
 
@@ -1148,10 +1207,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAdmin,
         isSuperAdmin: isSuperAdminValue,
         devModeUnlocked,
+        authError,
+        clearAuthError: () => setAuthError(null),
         signInWithGoogle,
         signInWithApple,
         signInAsGuest,
         signInWithEmail,
+        sendPhoneCode,
+        confirmPhoneCode,
         signUpWithEmail,
         sendPasswordReset,
         signInAsSky,

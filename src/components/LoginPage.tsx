@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { auth } from '../utils/firebase';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Lock, Mail, Eye, EyeOff, UserPlus, ArrowRight, User, X,
-  ShieldCheck, Zap, ChevronLeft, KeyRound, CheckCircle2, AlertCircle
+  ShieldCheck, Zap, ChevronLeft, CheckCircle2, AlertCircle, Smartphone, MessageSquareText
 } from 'lucide-react';
 import { useGlassFloat } from '../hooks/useGlassFloat';
 import { useTranslation } from 'react-i18next';
@@ -17,8 +16,9 @@ interface LoginPageProps {
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onCancel, onNavigateHome }) => {
   const { 
-    user, profile, signInWithGoogle, signInWithApple, signInWithEmail, 
-    signUpWithEmail, signInAsGuest, sendPasswordReset, signOut 
+    profile, signInWithGoogle, signInWithApple, signInWithEmail,
+    signUpWithEmail, signInAsGuest, sendPasswordReset, signOut,
+    sendPhoneCode, confirmPhoneCode, authError, clearAuthError
   } = useAuth();
   
   const { t } = useTranslation();
@@ -26,6 +26,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onCancel, onNav
   
   const [screen, setScreen] = useState<'landing' | 'auth'>('landing');
   const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot'>('login');
+  const [method, setMethod] = useState<'email' | 'phone'>('email');
   
   // Inputs
   const [email, setEmail] = useState('');
@@ -35,15 +36,23 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onCancel, onNav
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   
-  // Dev
-  const [showDev, setShowDev] = useState(false);
-  const [devPassword, setDevPassword] = useState('');
-  const [skyPassword, setSkyPassword] = useState('');
+  // Phone
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneCode, setPhoneCode] = useState('');
+  const [codeSent, setCodeSent] = useState(false);
   
   // State
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // Errors from a Google redirect sign-in arrive after the page reloads.
+  useEffect(() => {
+    if (authError) {
+      setError(authError);
+      clearAuthError();
+    }
+  }, [authError, clearAuthError]);
 
   useEffect(() => {
     const savedEmail = localStorage.getItem('chess_saved_email');
@@ -56,19 +65,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onCancel, onNav
 
   const handleSuccess = async (message: string) => {
     setSuccess(message);
-    const currentUser = auth.currentUser;
-    if (currentUser) {
-      try {
-        const idToken = await currentUser.getIdToken();
-        await fetch('/api/auth/session-login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ idToken })
-        });
-      } catch (e) {
-        console.error('Session login failed', e);
-      }
-    }
     setTimeout(() => {
       if (onSuccess) onSuccess();
       else if (onNavigateHome) onNavigateHome();
@@ -93,6 +89,26 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onCancel, onNav
       await handleSuccess(`Signed in with ${provider === 'google' ? 'Google' : 'Apple'}`);
     } catch (err: any) {
       if (err?.code !== 'auth/popup-closed-by-user') setError(err.message);
+      setLoading(false);
+    }
+  };
+
+  const handlePhoneAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null); setLoading(true);
+    try {
+      if (!codeSent) {
+        await sendPhoneCode(phoneNumber, 'phone-recaptcha');
+        setCodeSent(true);
+        setSuccess('Code sent. Check your SMS messages.');
+        setLoading(false);
+      } else {
+        await confirmPhoneCode(phoneCode);
+        await handleSuccess('Signed in with your phone number.');
+      }
+    } catch (err: any) {
+      setSuccess(null);
+      setError(err.message);
       setLoading(false);
     }
   };
@@ -124,40 +140,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onCancel, onNav
       }
     } catch (err: any) {
       setError(err.message || 'Authentication failed');
-      setLoading(false);
-    }
-  };
-
-  const handleDevAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!devPassword) return;
-    setError(null); setLoading(true);
-    try {
-      if (devPassword === 'q.brz') {
-        await signInWithEmail('dev@chessky.local', 'q.brz1234');
-        await handleSuccess('Developer account signed in.');
-      } else {
-        throw new Error('Invalid passkey');
-      }
-    } catch (err: any) {
-      setError(err.message);
-      setLoading(false);
-    }
-  };
-
-  const handleSkyAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!skyPassword) return;
-    setError(null); setLoading(true);
-    try {
-      if (skyPassword === 'BLUEBERRY') {
-        await signInWithEmail('sky@chessky.local', 'BLUEBERRY1234');
-        await handleSuccess('Sky account signed in.');
-      } else {
-        throw new Error('Invalid passkey');
-      }
-    } catch (err: any) {
-      setError(err.message);
       setLoading(false);
     }
   };
@@ -246,19 +228,28 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onCancel, onNav
                 <ShieldCheck className="w-5 h-5" /> Sign In / Register
               </button>
 
-              <div className="flex gap-3 mt-2">
+              <div className="grid grid-cols-3 gap-2 mt-2">
+                <button
+                  onClick={() => { setMethod('phone'); setScreen('auth'); setError(null); }}
+                  disabled={loading}
+                  className="py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-bold text-white transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <Smartphone className="w-4 h-4 text-sky-400" /> Phone
+                </button>
                 <button
                   onClick={() => handleOAuth('google')}
-                  className="flex-1 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-bold text-white transition-all flex items-center justify-center gap-2"
+                  disabled={loading}
+                  className="py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-bold text-white transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-4 h-4" alt="Google" /> Google
                 </button>
                 <button
                   onClick={() => handleOAuth('apple')}
-                  className="flex-1 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-bold text-white transition-all flex items-center justify-center gap-2"
+                  disabled={loading}
+                  className="py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-bold text-white transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.989C18.343 21.129 22 16.99 22 12c0-5.523-4.477-10-10-10z"/>
+                  <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M16.37 12.75c-.02-2.3 1.88-3.4 1.96-3.46-1.07-1.56-2.73-1.77-3.32-1.8-1.41-.14-2.76.83-3.48.83-.72 0-1.82-.81-3-.79-1.54.02-2.96.9-3.76 2.28-1.6 2.78-.41 6.9 1.15 9.16.76 1.1 1.67 2.34 2.86 2.3 1.15-.05 1.58-.74 2.97-.74 1.38 0 1.77.74 2.98.72 1.23-.02 2.01-1.12 2.77-2.23.87-1.28 1.23-2.52 1.25-2.58-.03-.01-2.4-.92-2.42-3.65zM14.1 6c.63-.77 1.06-1.84.94-2.9-.91.04-2.01.6-2.66 1.37-.58.67-1.09 1.76-.95 2.8 1.01.08 2.04-.51 2.67-1.27z"/>
                   </svg> Apple
                 </button>
               </div>
@@ -269,12 +260,49 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onCancel, onNav
                 <button onClick={() => setScreen('landing')} className="text-slate-400 hover:text-white mr-3">
                   <ChevronLeft className="w-5 h-5" />
                 </button>
+                {method === 'phone' ? (
+                  <span className="flex-1 text-sm font-bold text-white">Sign in with phone</span>
+                ) : (
                 <div className="flex flex-1 bg-black/40 rounded-lg p-1">
                   <button onClick={() => {setAuthMode('login'); setError(null);}} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${authMode === 'login' ? 'bg-slate-700 text-white' : 'text-slate-400'}`}>Log In</button>
                   <button onClick={() => {setAuthMode('signup'); setError(null);}} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${authMode === 'signup' ? 'bg-slate-700 text-white' : 'text-slate-400'}`}>Sign Up</button>
                 </div>
+                )}
               </div>
 
+              <div className="flex bg-black/40 rounded-lg p-1 mb-4" role="tablist" aria-label="Sign-in method">
+                <button type="button" role="tab" aria-selected={method === 'email'} onClick={() => { setMethod('email'); setError(null); setSuccess(null); }} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors flex items-center justify-center gap-1.5 ${method === 'email' ? 'bg-slate-700 text-white' : 'text-slate-400'}`}>
+                  <Mail className="w-3.5 h-3.5" /> Email
+                </button>
+                <button type="button" role="tab" aria-selected={method === 'phone'} onClick={() => { setMethod('phone'); setError(null); setSuccess(null); }} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors flex items-center justify-center gap-1.5 ${method === 'phone' ? 'bg-slate-700 text-white' : 'text-slate-400'}`}>
+                  <Smartphone className="w-3.5 h-3.5" /> Phone
+                </button>
+              </div>
+
+              {method === 'phone' ? (
+              <form onSubmit={handlePhoneAuth} className="space-y-4">
+                <div className="relative">
+                  <Smartphone className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <input type="tel" inputMode="tel" autoComplete="tel" value={phoneNumber} onChange={e => { setPhoneNumber(e.target.value); setCodeSent(false); }} disabled={codeSent && loading} className="w-full bg-black/40 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-emerald-500/50" placeholder="+964 750 123 4567" aria-label="Phone number" required />
+                </div>
+                {codeSent && (
+                  <div className="relative">
+                    <MessageSquareText className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <input type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={phoneCode} onChange={e => setPhoneCode(e.target.value.replace(/\D/g, ''))} className="w-full bg-black/40 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white text-sm tracking-[0.4em] font-mono placeholder:tracking-normal placeholder:font-sans placeholder:text-slate-600 focus:outline-none focus:border-emerald-500/50" placeholder="6-digit code" aria-label="Verification code" required />
+                  </div>
+                )}
+                <p className="text-[11px] text-slate-500 px-1">Include your country code. A new number creates an account automatically.</p>
+                <button type="submit" disabled={loading || (codeSent && phoneCode.length < 6)} className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
+                  {loading ? 'Processing...' : codeSent ? 'Verify & Sign In' : 'Send Code'}
+                  {!loading && <ArrowRight className="w-4 h-4" />}
+                </button>
+                {codeSent && (
+                  <button type="button" disabled={loading} onClick={() => { setCodeSent(false); setPhoneCode(''); setSuccess(null); }} className="w-full text-xs font-bold text-emerald-400 hover:text-emerald-300 disabled:opacity-50">
+                    Change number or resend code
+                  </button>
+                )}
+              </form>
+              ) : (
               <form onSubmit={handleEmailAuth} className="space-y-4">
                 {authMode === 'signup' && (
                   <div className="relative">
@@ -322,37 +350,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onCancel, onNav
                   {!loading && <ArrowRight className="w-4 h-4" />}
                 </button>
               </form>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
+        {/* Invisible reCAPTCHA required by Firebase phone sign-in. */}
+        <div id="phone-recaptcha" />
 
-        {/* Master Access */}
-        <div className="mt-6 pt-4 border-t border-white/10 flex flex-col items-center">
-          <button onClick={() => setShowDev(!showDev)} className="text-[10px] font-bold text-slate-500 hover:text-slate-300 uppercase tracking-widest flex items-center gap-1 transition-colors">
-            <KeyRound className="w-3 h-3" /> Developer Access
-          </button>
-          
-          <AnimatePresence>
-            {showDev && (
-              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="w-full overflow-hidden mt-3">
-                <div className="flex flex-col gap-2">
-                  <form onSubmit={handleDevAuth} className="flex gap-2">
-                    <input type="password" value={devPassword} onChange={e => setDevPassword(e.target.value)} placeholder="Dev Passkey..." autoComplete="off" className="flex-1 bg-black/40 border border-white/10 rounded-lg py-2 px-3 text-white text-xs font-mono focus:outline-none focus:border-amber-500/50" />
-                    <button type="submit" disabled={loading} className="px-3 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30 rounded-lg text-xs font-bold transition-colors disabled:opacity-50">
-                      Unlock Dev
-                    </button>
-                  </form>
-                  <form onSubmit={handleSkyAuth} className="flex gap-2">
-                    <input type="password" value={skyPassword} onChange={e => setSkyPassword(e.target.value)} placeholder="Sky Passkey..." autoComplete="off" className="flex-1 bg-black/40 border border-white/10 rounded-lg py-2 px-3 text-white text-xs font-mono focus:outline-none focus:border-sky-500/50" />
-                    <button type="submit" disabled={loading} className="px-3 py-2 bg-sky-500/20 hover:bg-sky-500/30 text-sky-400 border border-sky-500/30 rounded-lg text-xs font-bold transition-colors disabled:opacity-50">
-                      Unlock Sky
-                    </button>
-                  </form>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
       </motion.div>
     </div>
   );

@@ -79,17 +79,12 @@ export async function validateMoveOnServer(params: {
 }
 
 // 4. Secure Auth Session Management (HttpOnly Cookies)
-export async function establishSecureSession(userData: {
-  uid: string;
-  displayName: string;
-  email?: string;
-  photoURL?: string;
-}): Promise<boolean> {
+export async function establishSecureSession(idToken: string): Promise<boolean> {
   try {
     const res = await fetch('/api/auth/session-login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(userData),
+      body: JSON.stringify({ idToken }),
     });
     return res.ok;
   } catch (e) {

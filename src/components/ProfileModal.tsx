@@ -612,7 +612,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onO
             {authTab === 'google' && (
               <div className="py-2 text-center space-y-3 animate-in fade-in duration-150">
                 <button
-                  onClick={signInWithGoogle}
+                  onClick={() => signInWithGoogle().catch((err: any) => setAuthError(err?.message || 'Google sign-in failed.'))}
                   disabled={loading || authLoading}
                   className="w-full inline-flex items-center justify-center gap-3 px-6 py-3 rounded-2xl bg-white hover:bg-white/90 text-[#161c12] font-black text-sm transition-all shadow-xl hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
                 >
