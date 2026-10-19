@@ -3,7 +3,7 @@ import { PanelContainer } from './PanelContainer';
 import { Trophy, Search, Zap, ChevronLeft, ChevronRight, Flame, Snowflake, Medal, Shield, Globe, Users, Clock, Hash, Percent, History, BarChart2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { getLeaderboardEntries, getRespectProfile } from '../utils/respectSystem';
+import { fetchRankedPlayers, fetchRankForScore, RankedPlayer } from '../services/leaderboardService';
 
 interface LeaderboardUser {
   uid: string;
@@ -32,45 +32,7 @@ interface HistogramData {
   start: number;
 }
 
-const toInt = (v: number | string | undefined): number => {
-  const n = typeof v === 'number' ? v : parseInt(String(v ?? ''), 10);
-  return Number.isFinite(n) ? n : 0;
-};
-
-// Local ladder shown when the cloud leaderboard (/api/leaderboard, backed by Firestore) fails or is
-// empty, e.g. for guests. Reuses the sample players from respectSystem; entries for real-world
-// champions (ids "gm-*") and the immortal tiers (no numeric rating) are left out of this rated table.
-const buildLocalLeaderboard = (): LeaderboardUser[] => {
-  const respect = getRespectProfile();
-  return getLeaderboardEntries(respect, 'elo')
-    .filter(e => !e.isImmortal && !e.id.startsWith('gm-') && toInt(e.elo) > 0)
-    .map((e, i): LeaderboardUser => {
-      // respectSystem accounting: every judged game is played, only executions count as wins.
-      const wins = e.isCurrentUser ? toInt(respect.wins) : toInt(e.executions);
-      const played = e.isCurrentUser ? toInt(respect.gamesPlayed) : wins + toInt(e.mercies);
-      const losses = Math.max(0, played - wins);
-      return {
-        uid: e.id,
-        displayName: e.username,
-        username: e.isCurrentUser ? '' : e.username.toLowerCase().replace(/\s+/g, ''),
-        photoURL: '',
-        avatar: e.avatar,
-        country: e.country,
-        flag: e.flag,
-        elo: toInt(e.elo),
-        wins,
-        losses,
-        draws: 0,
-        winRate: wins + losses > 0 ? Math.round((wins / (wins + losses)) * 100) : 0,
-        streak: 0,
-        streakType: 'win',
-        rank: i + 1,
-        title: (e.title || '').split(' ')[0],
-        isCurrentUser: !!e.isCurrentUser
-      };
-    });
-};
-
+const PAGE_SIZE = 50;
 // Unreachable avatar URLs would show the browser's broken-image icon: swap in a
 // plain king silhouette instead (inline SVG, allowed by the CSP's data: img-src).
 const AVATAR_PLACEHOLDER = `data:image/svg+xml,${encodeURIComponent(
@@ -92,6 +54,19 @@ const buildLocalHistogram = (list: LeaderboardUser[]): HistogramData[] => {
     .map(([start, count]) => ({ range: `${start}-${start + 200}`, count, start }));
 };
 
+// The rating bracket that holds the middle player, weighting each bracket by its player count.
+const medianBracket = (data: HistogramData[]): string | null => {
+  const sorted = [...data].sort((a, b) => a.start - b.start);
+  const total = sorted.reduce((sum, d) => sum + d.count, 0);
+  if (total === 0) return null;
+  let seen = 0;
+  for (const d of sorted) {
+    seen += d.count;
+    if (seen >= total / 2) return `${d.start}–${d.start + 200}`;
+  }
+  return null;
+};
+
 export const WorldwideLeaderboardView: React.FC = () => {
   const { user, profile } = useAuth();
   const [activeMode, setActiveMode] = useState<'bullet' | 'blitz' | 'rapid' | 'puzzle' | 'daily'>('blitz');
@@ -105,7 +80,9 @@ export const WorldwideLeaderboardView: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [players, setPlayers] = useState<LeaderboardUser[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isOfflineLadder, setIsOfflineLadder] = useState(false);
+  const [needsSignIn, setNeedsSignIn] = useState(false);
+  // Rows read directly from Firestore when the server ranking is unavailable.
+  const directRowsRef = React.useRef<{ key: string; rows: RankedPlayer[] } | null>(null);
   const [histogramData, setHistogramData] = useState<HistogramData[]>([]);
   
   const [myRankData, setMyRankData] = useState<LeaderboardUser | null>(null);
@@ -144,20 +121,65 @@ export const WorldwideLeaderboardView: React.FC = () => {
           }));
           setPlayers(formattedPlayers);
           setTotalPages(data.totalPages || 1);
-          setIsOfflineLadder(false);
+          setNeedsSignIn(false);
           setIsLoading(false);
           return;
         }
       } catch (e) {
         console.error('Failed to fetch leaderboard', e);
       }
-      // Cloud leaderboard failed or is empty (guest / Firestore unreachable): fall back to the local ladder.
-      const local = buildLocalLeaderboard();
-      const term = debouncedSearch.trim().toLowerCase().replace('@', '');
-      setPlayers(term ? local.filter(p => p.displayName.toLowerCase().includes(term) || p.username.includes(term)) : local);
-      setTotalPages(1);
-      setIsOfflineLadder(true);
-      if (!user?.uid) setMyRankData(local.find(p => p.isCurrentUser) || null);
+      // The server could not read the ranking (it has no signed-in Firestore session), so
+      // signed-in players read the same users collection directly. Guests cannot read it.
+      if (!user?.uid) {
+        setPlayers([]);
+        setTotalPages(1);
+        setNeedsSignIn(true);
+        setIsLoading(false);
+        return;
+      }
+      setNeedsSignIn(false);
+      try {
+        const key = `${activeMode}:${user.uid}`;
+        if (directRowsRef.current?.key !== key) {
+          directRowsRef.current = { key, rows: await fetchRankedPlayers('elo', 500, user.uid, activeMode) };
+        }
+        let rows = directRowsRef.current.rows;
+        const term = debouncedSearch.trim().toLowerCase().replace('@', '');
+        if (term) rows = rows.filter(p => p.displayName.toLowerCase().includes(term) || p.username.toLowerCase().includes(term));
+        if (scope === 'country' && profile?.country) rows = rows.filter(p => p.country === profile.country);
+        setPlayers(rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE));
+        setTotalPages(Math.max(1, Math.ceil(rows.length / PAGE_SIZE)));
+        setHistogramData(buildLocalHistogram(directRowsRef.current.rows));
+        const mine = directRowsRef.current.rows.find(p => p.uid === user.uid);
+        if (mine) {
+          setMyRankData(mine);
+        } else if (profile && typeof profile.elo === 'number') {
+          const rank = (profile.gamesPlayed || 0) > 0 ? await fetchRankForScore('elo', profile.elo, activeMode) : null;
+          setMyRankData({
+            uid: user.uid,
+            displayName: profile.displayName,
+            username: profile.username || '',
+            photoURL: profile.photoURL || '',
+            avatar: profile.photoURL || '',
+            country: profile.country,
+            flag: profile.flag,
+            elo: profile.elo,
+            wins: profile.wins || 0,
+            losses: profile.losses || 0,
+            draws: profile.draws || 0,
+            winRate: 0,
+            streak: 0,
+            streakType: 'win',
+            rank: rank || 0,
+            title: '',
+            isCurrentUser: true
+          });
+        }
+      } catch (e) {
+        console.error('Failed to read leaderboard from Firestore', e);
+        setPlayers([]);
+        setTotalPages(1);
+      }
       setIsLoading(false);
     };
     
@@ -171,7 +193,7 @@ export const WorldwideLeaderboardView: React.FC = () => {
         const histData = await fetch(`/api/leaderboard/distribution?mode=${activeMode}`, { signal: AbortSignal.timeout(8000) })
           .then(r => r.json())
           .catch(() => null);
-        setHistogramData(Array.isArray(histData) && histData.length > 0 ? histData : buildLocalHistogram(buildLocalLeaderboard()));
+        if (Array.isArray(histData) && histData.length > 0) setHistogramData(histData);
         
         if (user?.uid) {
           const rankRes = await fetch(`/api/leaderboard/rank/${user.uid}?mode=${activeMode}`);
@@ -206,7 +228,7 @@ export const WorldwideLeaderboardView: React.FC = () => {
     else if (title === 'NM') bg = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.3)]';
     
     return (
-      <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-sm border ${bg}`}>
+      <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-sm border ${bg}`}>
         {title === 'CELESTIAL' ? '🦋 CELESTIAL' : title}
       </span>
     );
@@ -240,9 +262,9 @@ export const WorldwideLeaderboardView: React.FC = () => {
           <div>
             <h1 className="text-2xl font-black text-white tracking-tight">Leaderboard</h1>
             <p className="text-sm text-[#DFD0B0]/70">See the top players and play rated games to move up.</p>
-            {isOfflineLadder && (
+            {needsSignIn && (
               <p className="mt-1 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-[11px] font-bold text-amber-300">
-                Offline ladder: sample players, shown while the global ranking can't be reached
+                Sign in to see the worldwide ranking
               </p>
             )}
           </div>
@@ -394,7 +416,12 @@ export const WorldwideLeaderboardView: React.FC = () => {
                     </tr>
                   ) : players.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="p-8 text-center text-white/40">No players found in this category.</td>
+                      <td colSpan={6} className="p-8 text-white/50">
+                        {/* Pinned to the visible part of the horizontally scrolling table on phones. */}
+                        <p className="sticky left-4 max-w-[16rem] sm:static sm:max-w-none sm:text-center whitespace-normal">
+                          {needsSignIn ? 'Sign in with Google, email or phone to see real players.' : 'No ranked players yet. Finish a game against the bot to appear here.'}
+                        </p>
+                      </td>
                     </tr>
                   ) : (
                     players.map((p) => (
@@ -598,11 +625,9 @@ export const WorldwideLeaderboardView: React.FC = () => {
             </div>
             
             <div className="mt-4 p-4 rounded-xl bg-black/30 border border-white/5 flex flex-col gap-2">
-              <div className="text-xs text-white/50">Current Median Rating</div>
+              <div className="text-xs text-white/50">Median Rating</div>
               <div className="text-xl font-black text-white font-mono">
-                {histogramData.length > 0 
-                  ? (parseInt(histogramData[Math.floor(histogramData.length / 2)]?.range?.split('-')[0]) + 100 || 1200) 
-                  : 1200}
+                {medianBracket(histogramData) ?? '—'}
               </div>
             </div>
           </div>

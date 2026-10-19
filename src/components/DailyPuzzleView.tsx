@@ -234,8 +234,7 @@ export const DailyPuzzleView: React.FC<DailyPuzzleViewProps> = ({
           // Reward Respect points (+25 Respect). Rating is not changed by puzzles.
           if (updateRespectMetrics) {
             updateRespectMetrics({
-              respectPoints: 25,
-              wins: 1
+              respectPoints: 25
             });
           }
 

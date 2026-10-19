@@ -239,6 +239,8 @@ export default function App() {
   const [viewingMoveIndex, setViewingMoveIndex] = useState<number>(-1);
   const [evalScore, setEvalScore] = useState<number>(0);
   const [gameResult, setGameResult] = useState<GameResult | null>(null);
+  // True once the current game's outcome has been written to the player's stats.
+  const resultRecordedRef = useRef(false);
   const [isAiThinking, setIsAiThinking] = useState(false);
   const [whiteTime, setWhiteTime] = useState<number>(timeControl.initialSeconds);
   const [blackTime, setBlackTime] = useState<number>(timeControl.initialSeconds);
@@ -762,11 +764,38 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [setSettings]);
 
+  // Rating change for a finished bot game, using the same rules as rated games in
+  // backend/elo.js: K by experience, capped at 50 per game.
+  const botGameEloDelta = (score: 0 | 0.5 | 1): number => {
+    const own = typeof authProfile?.elo === 'number' ? authProfile.elo : 800;
+    const games = authProfile?.gamesPlayed || 0;
+    const k = games < 30 ? 40 : games < 50 ? 30 : 20;
+    const expected = 1 / (1 + 10 ** ((currentBot.elo - own) / 400));
+    return Math.max(-50, Math.min(50, Math.round(k * (score - expected))));
+  };
+
+  // Records wins, losses and draws against the bot. Checkmates the player delivers are
+  // recorded by the Execute judgment instead, which sets resultRecordedRef first.
+  useEffect(() => {
+    if (!gameResult) {
+      resultRecordedRef.current = false;
+      return;
+    }
+    if (activeMode !== 'ai' || resultRecordedRef.current || moveLogs.length < 2) return;
+    resultRecordedRef.current = true;
+    if (gameResult.winner === playerColor) updateRespectMetrics({ wins: 1, gamesPlayed: 1, elo: botGameEloDelta(1) });
+    else if (gameResult.winner === 'w' || gameResult.winner === 'b') updateRespectMetrics({ losses: 1, gamesPlayed: 1, elo: botGameEloDelta(0) });
+    else updateRespectMetrics({ draws: 1, gamesPlayed: 1, elo: botGameEloDelta(0.5) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameResult]);
+
   const handleExecuteJudgment = () => {
     setIsJudgmentModalOpen(false);
     const updated = recordVictory(respectProfile);
     setRespectProfile(updated);
-    updateRespectMetrics({ respectPoints: 0, executions: 1, wins: 1, gamesPlayed: 1 });
+    // Pass-and-play is two people on one device, so only games against the bot count toward ranked stats.
+    resultRecordedRef.current = true;
+    updateRespectMetrics(activeMode === 'ai' ? { executions: 1, wins: 1, gamesPlayed: 1, elo: botGameEloDelta(1) } : { executions: 1 });
     if (pendingCheckmateResult) setGameResult(pendingCheckmateResult);
   };
 
@@ -774,7 +803,8 @@ export default function App() {
     setIsJudgmentModalOpen(false);
     const updated = recordMercy(respectProfile);
     setRespectProfile(updated);
-    updateRespectMetrics({ respectPoints: 12, merciesGranted: 1, gamesPlayed: 1 });
+    // Spare takes back the mating move and play continues, so the game is counted when it really ends.
+    updateRespectMetrics({ respectPoints: 12, merciesGranted: 1 });
     setPendingCheckmateResult(null);
     if (moveLogs.length > 0) {
       const remainingLogs = moveLogs.slice(0, moveLogs.length - 1);
@@ -1014,7 +1044,7 @@ export default function App() {
                     <div className="w-2.5 h-2.5 rounded-full bg-[var(--secondary-accent)] gold-glow" />
                     <div className="flex flex-col">
                       <span className="text-[10px] font-black text-white uppercase tracking-widest leading-none">{activeMode === 'ai' ? `VS ${currentBot.name}` : 'Local Game'}</span>
-                      <span className="text-[9px] font-mono text-[#94A3B8] mt-1">Game in progress</span>
+                      <span className="text-[10px] font-mono text-[#94A3B8] mt-1">Game in progress</span>
                     </div>
                   </div>
                   <div className="px-3 py-1.5 rounded-lg bg-[var(--app-bg)] border border-[var(--glass-border)] text-[10px] font-black text-[var(--secondary-accent)] uppercase tracking-tighter">{timeControl.name}</div>

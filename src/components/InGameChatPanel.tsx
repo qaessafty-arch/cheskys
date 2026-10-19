@@ -130,7 +130,7 @@ export const InGameChatPanel: React.FC<InGameChatPanelProps> = ({
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center opacity-30 space-y-2">
             <Smile className="w-8 h-8 text-[var(--secondary-accent)]" />
-            <p className="text-[9px] font-black uppercase tracking-widest">Quiet in the Arena</p>
+            <p className="text-[10px] font-black uppercase tracking-widest">Quiet in the Arena</p>
           </div>
         ) : (
           messages.map((msg, idx) => {
@@ -140,7 +140,7 @@ export const InGameChatPanel: React.FC<InGameChatPanelProps> = ({
             if (isSystem) {
               return (
                 <div key={msg.id || idx} className="flex justify-center">
-                  <span className="px-2 py-0.5 rounded-full bg-white/5 text-[9px] font-bold text-[#94A3B8] uppercase">
+                  <span className="px-2 py-0.5 rounded-full bg-white/5 text-[10px] font-bold text-[#94A3B8] uppercase">
                     {msg.text}
                   </span>
                 </div>
@@ -155,7 +155,7 @@ export const InGameChatPanel: React.FC<InGameChatPanelProps> = ({
                 className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} space-y-1`}
               >
                 {!isMe && (
-                  <span className="text-[8px] font-black uppercase tracking-widest text-[#64748B] px-1">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[#64748B] px-1">
                     {msg.senderName}
                   </span>
                 )}
@@ -183,7 +183,7 @@ export const InGameChatPanel: React.FC<InGameChatPanelProps> = ({
             <span className="w-1 h-1 rounded-full bg-[var(--secondary-accent)] animate-bounce [animation-delay:0.2s]" />
             <span className="w-1 h-1 rounded-full bg-[var(--secondary-accent)] animate-bounce [animation-delay:0.4s]" />
           </div>
-          <span className="text-[8px] font-black uppercase text-[var(--secondary-accent)]">{opponentName} is transmitting...</span>
+          <span className="text-[10px] font-black uppercase text-[var(--secondary-accent)]">{opponentName} is transmitting...</span>
         </div>
       )}
 
@@ -208,7 +208,7 @@ export const InGameChatPanel: React.FC<InGameChatPanelProps> = ({
             <button
               key={phrase}
               onClick={() => handleCanned(phrase)}
-              className="shrink-0 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-wider text-[#94A3B8] hover:text-white hover:bg-[var(--secondary-accent)]/20 transition-all"
+              className="shrink-0 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-wider text-[#94A3B8] hover:text-white hover:bg-[var(--secondary-accent)]/20 transition-all"
             >
               {phrase}
             </button>

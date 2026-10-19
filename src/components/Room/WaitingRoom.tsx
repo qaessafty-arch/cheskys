@@ -616,7 +616,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
       </AnimatePresence>
 
       {/* Debug Info Overlay (Internal Only) */}
-      <div className="fixed bottom-4 right-4 z-[100] p-2 rounded bg-black/80 border border-white/10 text-[9px] font-mono text-white/40 pointer-events-none">
+      <div className="fixed bottom-4 right-4 z-[100] p-2 rounded bg-black/80 border border-white/10 text-[10px] font-mono text-white/40 pointer-events-none">
         <div>Mode: {isCreator ? 'Creator' : isInvitee ? 'Invitee' : 'Spectator'}</div>
         <div>Status: {roomStatus}</div>
         <div>Guard: {hasDetectedValidGameId ? 'Unlocked' : 'Locked'}</div>
@@ -808,7 +808,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
                   alt=""
                   className="w-11 h-11 rounded-full object-cover border-2 border-[#F5C453]"
                 />
-                <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-[#F5C453] text-black text-[9px] font-black flex items-center justify-center">
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-[#F5C453] text-black text-[10px] font-black flex items-center justify-center">
                   👑
                 </div>
               </div>
@@ -817,7 +817,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
                   <span className="text-sm font-bold text-white truncate">
                     {currentRoom.creatorName}
                   </span>
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-[#52673A] text-white">
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-black uppercase bg-[#52673A] text-white">
                     Host
                   </span>
                 </div>
@@ -853,7 +853,7 @@ export const WaitingRoom: React.FC<WaitingRoomProps> = ({ onLeave }) => {
                     <span className="text-sm font-bold text-white truncate">
                       {currentRoom.opponentName}
                     </span>
-                    <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                       Opponent
                     </span>
                   </div>

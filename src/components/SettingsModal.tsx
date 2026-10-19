@@ -565,7 +565,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                               <span className="text-xl select-none">{theme.icon}</span>
                               <span className="text-xs font-black text-white">{theme.name}</span>
                             </div>
-                            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${
+                            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${
                               isSelected ? 'bg-[#F5C453] text-black' : 'bg-white/10 text-white/70'
                             }`}>
                               {theme.tag}

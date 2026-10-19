@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { RespectProfile, RespectLeaderboardEntry } from '../types/chess';
-import { getLeaderboardEntries, HONOR_RANKS, getHonorRank } from '../utils/respectSystem';
+import { HONOR_RANKS, getHonorRank } from '../utils/respectSystem';
+import { fetchRankForScore } from '../services/leaderboardService';
 import { Trophy, Sword, HeartHandshake, Shield, Sparkles, X, Award, ChevronRight, Flame, RefreshCw, Zap } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -12,54 +13,54 @@ interface LeaderboardModalProps {
   onClose: () => void;
 }
 
+const AVATAR_PLACEHOLDER = `data:image/svg+xml,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#1F293D"/><text x="32" y="44" font-size="34" text-anchor="middle" fill="#F59E0B">♚</text></svg>'
+)}`;
+
 export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ profile, onClose }) => {
-  const { syncWithCloudLeaderboard } = useAuth();
+  const { syncWithCloudLeaderboard, user, profile: account } = useAuth();
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'leaderboard' | 'ranks' | 'lore'>('leaderboard');
   const [leaderboardType, setLeaderboardType] = useState<'respect' | 'elo'>('respect');
-  const [leaderboard, setLeaderboard] = useState<RespectLeaderboardEntry[]>(() => getLeaderboardEntries(profile, 'respect'));
+  const [leaderboard, setLeaderboard] = useState<RespectLeaderboardEntry[]>([]);
   const [isLoadingCloud, setIsLoadingCloud] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const rankInfo = getHonorRank(profile.respectPoints);
   const floatVariants = useGlassFloat(1.15);
 
   const fetchCloudData = async (type: 'respect' | 'elo') => {
+    setLoadError(null);
+    // The ranking lives in Firestore, which only signed-in players can read.
+    if (!user || !account || account.isGuest) {
+      setLeaderboard([]);
+      return;
+    }
     setIsLoadingCloud(true);
     try {
-      const cloudData = await syncWithCloudLeaderboard(type);
-      const defaultEntries = getLeaderboardEntries(profile, type);
-      const immortalEntry = defaultEntries.find(e => e.isImmortal) || defaultEntries[0];
-      
-      let listToRank: RespectLeaderboardEntry[] = [];
-      if (cloudData && cloudData.length > 0) {
-        const nonImmortalCloud = cloudData.filter(e => e.id !== immortalEntry.id);
-        listToRank = [immortalEntry, ...nonImmortalCloud];
-      } else {
-        listToRank = defaultEntries;
+      const entries = await syncWithCloudLeaderboard(type);
+      // Keep the player's own row visible even when they are outside the top 50.
+      const myScore = type === 'elo' ? account.elo : account.respectPoints;
+      if (!entries.some(e => e.isCurrentUser) && typeof myScore === 'number') {
+        const rank = await fetchRankForScore(type, myScore);
+        entries.push({
+          id: account.uid,
+          rank: rank ?? '—',
+          username: account.displayName,
+          title: account.honorRank,
+          country: account.country,
+          flag: account.flag,
+          respectPoints: account.respectPoints,
+          elo: account.elo,
+          executions: account.executions,
+          mercies: account.merciesGranted,
+          avatar: account.photoURL || '',
+          isCurrentUser: true,
+        });
       }
-
-      // Re-sort based on type
-      const mortals = listToRank.filter(e => !e.isImmortal);
-      mortals.sort((a, b) => {
-        if (type === 'elo') {
-          const aVal = typeof a.elo === 'number' ? a.elo : parseInt(String(a.elo)) || 0;
-          const bVal = typeof b.elo === 'number' ? b.elo : parseInt(String(b.elo)) || 0;
-          return bVal - aVal;
-        }
-        const aVal = typeof a.respectPoints === 'number' ? a.respectPoints : parseInt(String(a.respectPoints)) || 0;
-        const bVal = typeof b.respectPoints === 'number' ? b.respectPoints : parseInt(String(b.respectPoints)) || 0;
-        return bVal - aVal;
-      });
-
-      const reRanked = [
-        immortalEntry,
-        ...mortals.map((entry, idx) => ({
-          ...entry,
-          rank: idx + 2
-        }))
-      ];
-      setLeaderboard(reRanked);
+      setLeaderboard(entries);
     } catch (err) {
       console.error('Failed to sync leaderboard:', err);
+      setLoadError('The leaderboard could not be loaded. Check your connection and try again.');
     } finally {
       setIsLoadingCloud(false);
     }
@@ -67,7 +68,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ profile, onC
 
   useEffect(() => {
     fetchCloudData(leaderboardType);
-  }, [leaderboardType, profile]);
+  }, [leaderboardType, user?.uid]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
@@ -137,14 +138,14 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ profile, onC
 
             <div className="flex items-center gap-4">
               <div className="text-center px-4 py-2 rounded-xl bg-[var(--glass-bg)] border border-[var(--glass-border)]">
-                <span className="text-[9px] text-[var(--text-muted)] uppercase block font-black mb-1">Respect</span>
+                <span className="text-[10px] text-[var(--text-muted)] uppercase block font-black mb-1">Respect</span>
                 <span className="text-lg font-black text-[var(--secondary-accent)] flex items-center justify-center gap-1">
                   ✊ {profile.respectPoints}
                 </span>
               </div>
 
               <div className="text-center px-4 py-2 rounded-xl bg-[var(--glass-bg)] border border-[var(--glass-border)]">
-                <span className="text-[9px] text-[var(--text-muted)] uppercase block font-black mb-1">Rating</span>
+                <span className="text-[10px] text-[var(--text-muted)] uppercase block font-black mb-1">Rating</span>
                 <span className="text-lg font-black text-[var(--text-main)]">
                   ⚔️ {profile.elo}
                 </span>
@@ -192,7 +193,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ profile, onC
             <div className="flex items-center p-1 rounded-xl bg-[var(--glass-bg)] border border-[var(--glass-border)]">
               <button
                 onClick={() => setLeaderboardType('respect')}
-                className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all ${
                   leaderboardType === 'respect'
                     ? 'bg-[var(--secondary-accent)] text-[var(--app-bg)]'
                     : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
@@ -202,7 +203,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ profile, onC
               </button>
               <button
                 onClick={() => setLeaderboardType('elo')}
-                className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all ${
                   leaderboardType === 'elo'
                     ? 'bg-[var(--secondary-accent)] text-[var(--app-bg)]'
                     : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
@@ -225,7 +226,15 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ profile, onC
                 exit={{ opacity: 0, x: 10 }}
                 className="space-y-3"
               >
-                {leaderboard.map((entry, idx) => {
+                {!isLoadingCloud && leaderboard.length === 0 && (
+                  <div className="p-6 rounded-2xl bg-[var(--app-bg)] border border-[var(--glass-border)] text-center text-xs font-bold text-[var(--text-muted)]">
+                    {loadError
+                      ?? (!user || account?.isGuest
+                        ? 'Sign in with Google, email or phone to see the real leaderboard and your position.'
+                        : 'No ranked players yet. Finish a game against the bot to appear here.')}
+                  </div>
+                )}
+                {leaderboard.map((entry) => {
                   const isTop3 = Number(entry.rank) <= 3;
                   const isCelestial = entry.id === 'sky_celestial_account_uid';
                   return (
@@ -252,7 +261,9 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ profile, onC
                         </div>
                         <div className="relative">
                           <img
-                            src={entry.avatar}
+                            src={entry.avatar || AVATAR_PLACEHOLDER}
+                            onError={e => { if (e.currentTarget.src !== AVATAR_PLACEHOLDER) e.currentTarget.src = AVATAR_PLACEHOLDER; }}
+                            referrerPolicy="no-referrer"
                             alt={entry.username}
                             className={`w-10 h-10 rounded-xl object-cover border ${
                               isTop3 ? 'border-[var(--secondary-accent)]' : 'border-[var(--glass-border)]'
@@ -267,7 +278,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ profile, onC
                             <span className={`text-[13px] font-black uppercase tracking-tight ${isCelestial ? 'text-purple-300' : 'text-[var(--text-main)]'}`}>{entry.username}</span>
                             <span className="text-xs">{entry.flag}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-[9px] font-black uppercase text-[var(--text-muted)] tracking-widest">
+                          <div className="flex items-center gap-2 text-[10px] font-black uppercase text-[var(--text-muted)] tracking-widest">
                             <span className={isCelestial ? 'text-purple-300' : 'text-[var(--secondary-accent)]'}>
                               {isCelestial ? '🦋 CELESTIAL' : entry.title}
                             </span>
@@ -280,7 +291,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ profile, onC
                         <div className={`text-lg font-black ${isCelestial ? 'text-purple-300' : 'text-[var(--text-main)]'}`}>
                           {leaderboardType === 'elo' ? `⚔️ ${entry.elo}` : `✊ ${entry.respectPoints}`}
                         </div>
-                        <div className="text-[9px] font-black uppercase text-[var(--text-muted)] tracking-tighter opacity-60">
+                        <div className="text-[10px] font-black uppercase text-[var(--text-muted)] tracking-tighter opacity-60">
                           Total {leaderboardType}
                         </div>
                       </div>
@@ -325,7 +336,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ profile, onC
                           <span className="text-xs font-black text-[var(--secondary-accent)] block">
                             {rank.minRespect} ✊
                           </span>
-                          <span className="text-[9px] font-black uppercase tracking-tighter text-[var(--text-muted)]">
+                          <span className="text-[10px] font-black uppercase tracking-tighter text-[var(--text-muted)]">
                             Requirement
                           </span>
                         </div>
@@ -351,7 +362,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ profile, onC
                       <h4 className="text-[13px] font-black uppercase tracking-widest">Spare (Mercy)</h4>
                     </div>
                     <p className="text-[11px] font-black text-[#94A3B8] uppercase leading-relaxed tracking-widest opacity-80">
-                      After checkmate you choose Spare or Execute. Spare gives <span className="text-[#10B981]">+12 ELO</span> and <span className="text-[#F59E0B]">+20 Respect</span>.
+                      After checkmate you choose Spare or Execute. Spare gives <span className="text-[#F59E0B]">+12 Respect</span>, takes back the mating move, and play goes on.
                     </p>
                   </section>
                   
@@ -361,7 +372,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ profile, onC
                       <h4 className="text-[13px] font-black uppercase tracking-widest">Execute</h4>
                     </div>
                     <p className="text-[11px] font-black text-[#94A3B8] uppercase leading-relaxed tracking-widest opacity-80">
-                      Execute gives <span className="text-[#EF4444]">+8 ELO</span> and <span className="text-[#F59E0B]">+10 Respect</span>.
+                      Execute ends the game as a win with <span className="text-[#EF4444]">no Respect</span>. Rating (ELO) changes when a game against the bot or a rated online game ends.
                     </p>
                   </section>
                 </div>

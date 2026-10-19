@@ -3,6 +3,8 @@ import { PanelContainer } from './PanelContainer';
 import { Lock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getLocalGameLogs } from '../services/loggingService';
+import { Chess } from 'chess.js';
+import { detectOpening } from '../utils/openings';
 import { 
   Trophy, 
   Swords, 
@@ -61,6 +63,18 @@ interface RatingCategory {
   badgeBg: string;
 }
 
+// Names the opening from the moves actually played, instead of a fixed label.
+const openingFromPgn = (pgn?: string): string => {
+  if (!pgn) return 'Unknown opening';
+  try {
+    const g = new Chess();
+    g.loadPgn(pgn);
+    return detectOpening(g.history())?.name || 'Unknown opening';
+  } catch {
+    return 'Unknown opening';
+  }
+};
+
 interface MatchItem {
   id: string;
   opponentName: string;
@@ -68,7 +82,8 @@ interface MatchItem {
   opponentRating: number;
   result: 'win' | 'loss' | 'draw';
   ratingChange: number;
-  accuracy: number;
+  /** Null when the game was never analysed. */
+  accuracy: number | null;
   timeControl: string;
   playerColor: 'w' | 'b';
   date: string;
@@ -303,166 +318,20 @@ const displayName = profile?.displayName || user?.displayName || 'Guest';
       id: l.id || `log-${idx}`,
       opponentName: l.opponentName || 'Peshmerga Tactician',
       opponentAvatar: l.opponentAvatar || '♚',
-      opponentRating: l.opponentElo || 1850,
+      opponentRating: l.opponentElo || 0,
       result: l.result === 'win' || l.result === 'executed' ? 'win' : l.result === 'draw' ? 'draw' : 'loss',
-      ratingChange: l.eloChange || (l.result === 'win' ? 12 : l.result === 'draw' ? 0 : -9),
-      accuracy: l.accuracy || Math.round(75 + (Math.random() * 20)),
+      ratingChange: typeof l.eloChange === 'number' ? l.eloChange : 0,
+      accuracy: typeof l.accuracy === 'number' ? l.accuracy : null,
       timeControl: l.timeControlName || 'Rapid (10m)',
       playerColor: l.playerColor || 'w',
       date: l.date ? new Date(l.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Today',
-      openingName: 'Sicilian Defense: Najdorf',
+      openingName: openingFromPgn(l.pgn),
       pgn: l.pgn,
       fen: l.finalFen
     }));
 
-    const fallbackMatches: MatchItem[] = [
-      {
-        id: 'm-1',
-        opponentName: 'GM Alan Kurdistan',
-        opponentAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
-        opponentRating: 2280,
-        result: 'win',
-        ratingChange: 14,
-        accuracy: 94.2,
-        timeControl: 'Rapid (10m)',
-        playerColor: 'w',
-        date: 'Aug 29',
-        openingName: "Queen's Gambit Accepted",
-        fen: 'r1bqk2r/pp2bppp/2n1pn2/8/3P4/2N2N2/PP2BPPP/R1BQ1RK1 w kq - 0 10'
-      },
-      {
-        id: 'm-2',
-        opponentName: 'Citadel Sentinel 🛡️',
-        opponentAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80',
-        opponentRating: 2195,
-        result: 'win',
-        ratingChange: 10,
-        accuracy: 89.6,
-        timeControl: 'Blitz (3m)',
-        playerColor: 'b',
-        date: 'Aug 28',
-        openingName: 'King’s Indian Defense',
-        fen: 'rnbq1rk1/ppp1ppbp/3p1np1/8/2PPP3/2N2N2/PP2BPPP/R1BQK2R b KQ - 0 6'
-      },
-      {
-        id: 'm-3',
-        opponentName: 'Erbil Grandmaster',
-        opponentAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80',
-        opponentRating: 2310,
-        result: 'loss',
-        ratingChange: -11,
-        accuracy: 78.4,
-        timeControl: 'Rapid (15m)',
-        playerColor: 'w',
-        date: 'Aug 28',
-        openingName: 'Ruy Lopez: Berlin Defense',
-        fen: 'r1bqkb1r/pppp1ppp/2n5/4p3/1bB1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4'
-      },
-      {
-        id: 'm-4',
-        opponentName: 'Zagros Mountain Wolf',
-        opponentAvatar: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=100&auto=format&fit=crop&q=80',
-        opponentRating: 2150,
-        result: 'win',
-        ratingChange: 9,
-        accuracy: 92.1,
-        timeControl: 'Bullet (1m)',
-        playerColor: 'b',
-        date: 'Aug 27',
-        openingName: 'Sicilian: Dragon Variation',
-        fen: 'r1bqk2r/pp2ppbp/2np1np1/8/3NP3/2N1BP2/PPP3PP/R2QKB1R w KQkq - 0 8'
-      },
-      {
-        id: 'm-5',
-        opponentName: 'Stockfish Neural Bot',
-        opponentAvatar: '🤖',
-        opponentRating: 2200,
-        result: 'draw',
-        ratingChange: 0,
-        accuracy: 96.8,
-        timeControl: 'Daily (24h)',
-        playerColor: 'w',
-        date: 'Aug 26',
-        openingName: 'Catalan Opening: Closed',
-        fen: 'r1bq1rk1/pp1nbppp/2p1pn2/8/2PP4/5NP1/PP2NPBP/R1BQ1RK1 b - - 0 9'
-      },
-      {
-        id: 'm-6',
-        opponentName: 'SoranTactics',
-        opponentAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80',
-        opponentRating: 2090,
-        result: 'win',
-        ratingChange: 8,
-        accuracy: 86.4,
-        timeControl: 'Blitz (5m)',
-        playerColor: 'w',
-        date: 'Aug 25',
-        openingName: 'French Defense: Winawer',
-        fen: 'r1bqk1nr/pp3ppp/2n1p3/2bpP3/8/2PB1N2/PP3PPP/RNBQK2R b KQkq - 0 7'
-      },
-      {
-        id: 'm-7',
-        opponentName: 'Duhok Knight 🏰',
-        opponentAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80',
-        opponentRating: 2185,
-        result: 'win',
-        ratingChange: 11,
-        accuracy: 91.0,
-        timeControl: 'Rapid (10m)',
-        playerColor: 'b',
-        date: 'Aug 24',
-        openingName: 'Caro-Kann: Classical',
-        fen: 'r2qkbnr/pp1n1ppp/2p1p3/5b2/3PN3/5N2/PPP1BPPP/R1BQK2R w KQkq - 0 7'
-      },
-      {
-        id: 'm-8',
-        opponentName: 'Sulaymaniyah Master',
-        opponentAvatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=100&auto=format&fit=crop&q=80',
-        opponentRating: 2260,
-        result: 'loss',
-        ratingChange: -12,
-        accuracy: 74.5,
-        timeControl: 'Blitz (3m)',
-        playerColor: 'w',
-        date: 'Aug 23',
-        openingName: 'English Opening: Four Knights',
-        fen: 'r1bqkb1r/pppp1ppp/2n2n2/4p3/2P5/2N2N2/PP1PPPPP/R1BQKB1R w KQkq - 0 4'
-      },
-      {
-        id: 'm-9',
-        opponentName: 'Vanguard Ranger ⚔️',
-        opponentAvatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&auto=format&fit=crop&q=80',
-        opponentRating: 2040,
-        result: 'win',
-        ratingChange: 7,
-        accuracy: 88.2,
-        timeControl: 'Bullet (2m)',
-        playerColor: 'b',
-        date: 'Aug 22',
-        openingName: 'Modern Defense',
-        fen: 'rnbqk1nr/ppp1ppbp/3p2p1/8/2PPP3/8/PP3PPP/RNBQKBNR w KQkq - 0 4'
-      },
-      {
-        id: 'm-10',
-        opponentName: 'Peshmerga Colonel',
-        opponentAvatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100&auto=format&fit=crop&q=80',
-        opponentRating: 2215,
-        result: 'win',
-        ratingChange: 13,
-        accuracy: 95.3,
-        timeControl: 'Rapid (10m)',
-        playerColor: 'w',
-        date: 'Aug 21',
-        openingName: 'Nimzo-Indian Defense',
-        fen: 'r1bqk2r/pppp1ppp/2n1pn2/8/1bPP4/2N1PN2/PP3PPP/R1BQKB1R b KQkq - 0 5'
-      }
-    ];
-
-    // A player with no games (e.g. a fresh guest) has no history: showing sample wins
-    // next to "0 games" and a 1200 rating would contradict the rating cards.
-    if (formattedFromLogs.length === 0 && !profile?.gamesPlayed) return [];
-    return [...formattedFromLogs, ...fallbackMatches].slice(0, 10);
-  }, [profile?.gamesPlayed]);
+    return formattedFromLogs;
+  }, []);
 
   // Filtered Matches
   const filteredMatches = useMemo(() => {
@@ -1005,7 +874,7 @@ const displayName = profile?.displayName || user?.displayName || 'Guest';
                           <div className={`font-mono font-bold text-sm ${m.ratingChange >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                             {m.ratingChange >= 0 ? `+${m.ratingChange}` : m.ratingChange}
                           </div>
-                          <div className="text-xs text-slate-400 font-mono">{m.accuracy}% acc</div>
+                          <div className="text-xs text-slate-400 font-mono">{m.accuracy === null ? '— acc' : `${m.accuracy}% acc`}</div>
                         </div>
                       </div>
                     ))}
@@ -1165,7 +1034,7 @@ const displayName = profile?.displayName || user?.displayName || 'Guest';
                           {/* Accuracy */}
                           <div>
                             <div className="text-sm font-mono font-bold text-slate-200">
-                              {match.accuracy}%
+                              {match.accuracy === null ? '—' : `${match.accuracy}%`}
                             </div>
                             <div className="text-[10px] text-slate-500 uppercase font-bold">Accuracy</div>
                           </div>
@@ -1513,7 +1382,7 @@ const displayName = profile?.displayName || user?.displayName || 'Guest';
                         <span className="text-xs font-bold leading-tight line-clamp-1 block">{badge.name}</span>
                         <span className="text-[10px] text-slate-400 line-clamp-2 leading-tight block">{badge.desc}</span>
                       </div>
-                      <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-black/40 text-slate-300 border border-white/10 mt-auto">
+                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-black/40 text-slate-300 border border-white/10 mt-auto">
                         {badge.rarity}
                       </span>
                     </div>
@@ -1550,7 +1419,7 @@ const displayName = profile?.displayName || user?.displayName || 'Guest';
               <div className="relative">
                 {item.icon}
                 {item.count !== undefined && (
-                  <span className="absolute -top-1 -right-2.5 px-1.5 py-0.2 rounded-full bg-[#F5C453] text-slate-950 text-[9px] font-black font-mono">
+                  <span className="absolute -top-1 -right-2.5 px-1.5 py-0.2 rounded-full bg-[#F5C453] text-slate-950 text-[10px] font-black font-mono">
                     {item.count}
                   </span>
                 )}

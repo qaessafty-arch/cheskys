@@ -45,6 +45,17 @@ service cloud.firestore {
       );
     }
 
+    // Founder accounts, matching DEVELOPER_EMAILS in src/context/AuthContext.tsx.
+    function isFounder() {
+      return isSignedIn()
+        && request.auth.token.get('email_verified', false) == true
+        && request.auth.token.get('email', '') in ['qaessafty@gmail.com', 'qayssafty@gmail.com'];
+    }
+
+    function isPrivileged() {
+      return isDeveloper() || isFounder();
+    }
+
     function isOwnerOf(targetUid) {
       return isSignedIn() && (uid() == targetUid || isDeveloper());
     }
@@ -57,6 +68,62 @@ service cloud.firestore {
       return data.keys().hasAll(['uid', 'displayName'])
         && data.uid is string && data.uid.size() <= 128
         && data.displayName is string && data.displayName.size() <= 100;
+    }
+
+    /* Leaderboard integrity: players write their own stats from the client, so each
+     * write may only move them by what one finished game can, at most once every 5s,
+     * and nobody can promote themselves to owner/admin or a lower badge number. */
+
+    function fieldUnchanged(field) {
+      return incoming().get(field, null) == existing().get(field, null);
+    }
+
+    function stepWithin(field, startValue, lo, hi) {
+      let before = existing().get(field, startValue);
+      let after = incoming().get(field, startValue);
+      return fieldUnchanged(field)
+        || (after is number && before is number && after - before >= lo && after - before <= hi);
+    }
+
+    function statsUnchanged() {
+      return fieldUnchanged('elo') && fieldUnchanged('respectPoints')
+        && fieldUnchanged('wins') && fieldUnchanged('losses') && fieldUnchanged('draws')
+        && fieldUnchanged('gamesPlayed') && fieldUnchanged('executions') && fieldUnchanged('merciesGranted');
+    }
+
+    function isPacedStatWrite() {
+      let last = existing().get('updatedAt', null);
+      return incoming().get('updatedAt', null) == request.time
+        && (!(last is timestamp) || request.time > last + duration.value(5, 's'));
+    }
+
+    function isValidStatUpdate() {
+      return statsUnchanged() || (
+        isPacedStatWrite()
+        && stepWithin('elo', 800, -64, 64)
+        && stepWithin('respectPoints', 100, -50, 50)
+        && stepWithin('wins', 0, 0, 1)
+        && stepWithin('losses', 0, 0, 1)
+        && stepWithin('draws', 0, 0, 1)
+        && stepWithin('gamesPlayed', 0, 0, 1)
+        && stepWithin('executions', 0, 0, 1)
+        && stepWithin('merciesGranted', 0, 0, 1)
+      );
+    }
+
+    function keepsPrivilegedFields() {
+      return fieldUnchanged('role') && fieldUnchanged('isDeveloper')
+        && fieldUnchanged('badgeNumber') && fieldUnchanged('isSample');
+    }
+
+    function isValidNewProfileStats(data) {
+      return data.get('role', 'member') == 'member'
+        && data.get('isDeveloper', false) == false
+        && data.get('isSample', false) == false
+        && data.get('elo', 800) is number && data.get('elo', 800) <= 1200
+        && data.get('respectPoints', 100) is number && data.get('respectPoints', 100) <= 200
+        && data.get('gamesPlayed', 0) == 0 && data.get('wins', 0) == 0
+        && data.get('badgeNumber', 10) is number && data.get('badgeNumber', 10) >= 10;
     }
 
     function isValidOnlineMatch(data) {
@@ -82,8 +149,10 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow create: if isOwnerOf(userId) && isValidUserProfile(incoming());
-      allow update: if isOwnerOf(userId) && isValidUserProfile(incoming());
+      allow create: if isOwnerOf(userId) && isValidUserProfile(incoming())
+        && (isPrivileged() || isValidNewProfileStats(incoming()));
+      allow update: if isOwnerOf(userId) && isValidUserProfile(incoming())
+        && (isPrivileged() || (keepsPrivilegedFields() && isValidStatUpdate()));
       allow delete: if false;
 
       match /friends/{friendId} {

@@ -46,7 +46,7 @@ const ChessClockInner = React.memo<ChessClockProps>(({
     else if (title === 'NM') bg = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.3)]';
     
     return (
-      <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-sm border ${bg} ml-1`}>
+      <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-sm border ${bg} ml-1`}>
         {title}
       </span>
     );
@@ -134,7 +134,7 @@ const ChessClockInner = React.memo<ChessClockProps>(({
             {/* ELO Rating with stats */}
             <div className="flex items-center gap-2 mt-0.5">
               <div className="flex items-center gap-1">
-                <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Elo</span>
+                <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Elo</span>
                 <span className="text-[10px] font-black font-mono text-[#F5C453]">
                   {isNaN(Number(elo)) ? 1200 : elo}
                 </span>
@@ -143,7 +143,7 @@ const ChessClockInner = React.memo<ChessClockProps>(({
               <div className="w-[1px] h-2.5 bg-white/15" />
 
               {/* Small win/loss/draw stat counters (hidden on phones to keep the timer visible) */}
-              <div className="hidden sm:flex items-center gap-1.5 text-[9px] font-mono text-white/50">
+              <div className="hidden sm:flex items-center gap-1.5 text-[10px] font-mono text-white/50">
                 <span className="text-emerald-400 font-bold" title="Wins">W:{wins}</span>
                 <span>•</span>
                 <span className="text-rose-400 font-bold" title="Losses">L:{losses}</span>

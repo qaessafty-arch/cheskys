@@ -211,7 +211,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: 'worldwide',
       label: t('sidebar.worldwideLive'),
       badge: t('sidebar.realPlayers'),
-      badgeClass: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1',
+      badgeClass: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1',
       badgeDot: true,
       icon: <Globe className="w-5 h-5 text-emerald-400" />,
       action: () => {
@@ -348,7 +348,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     {item.badge && (
                       <div className="flex items-center gap-2">
                         {item.badgeDot && <span className="w-2 h-2 bg-[#10B981] rounded-full animate-pulse" />}
-                        <span className={`text-[9px] font-black uppercase tracking-tighter px-2 py-0.5 rounded-lg border ${
+                        <span className={`text-[10px] font-black uppercase tracking-tighter px-2 py-0.5 rounded-lg border ${
                           isActive ? 'bg-white/10 text-white border-white/20' : 'bg-[var(--app-bg)] text-[var(--text-muted)] border-[var(--glass-border)]'
                         }`}>
                           {item.badge}
@@ -379,11 +379,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <div className="text-left leading-tight">
                     <div className="text-xs font-black text-white flex items-center gap-2">
                       <span>{t('sidebar.astralCores')}</span>
-                      <span className="text-[8px] px-1.5 py-0.5 rounded bg-[var(--secondary-accent)] text-[var(--app-bg)] font-black font-mono">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--secondary-accent)] text-[var(--app-bg)] font-black font-mono">
                         {t('sidebar.new')}
                       </span>
                     </div>
-                    <span className="text-[9px] text-[var(--text-muted)] font-mono uppercase tracking-widest opacity-60">
+                    <span className="text-[10px] text-[var(--text-muted)] font-mono uppercase tracking-widest opacity-60">
                       {t('sidebar.designPresets')}
                     </span>
                   </div>

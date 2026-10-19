@@ -1407,7 +1407,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                   <div>
                     <div className="text-xs font-black text-emerald-300 flex items-center gap-1.5">
                       <span>You Are Watching</span>
-                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/30 border border-emerald-500/40 font-mono font-bold text-emerald-200">
+                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/30 border border-emerald-500/40 font-mono font-bold text-emerald-200">
                         READ ONLY
                       </span>
                     </div>
@@ -1565,7 +1565,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                   <MessageSquare className="w-3.5 h-3.5 relative z-10" />
                   <span className="relative z-10">Chat</span>
                   {unreadChatCount > 0 && activeTab !== 'chat' && (
-                    <span className="absolute top-1 right-2 w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center animate-bounce shadow-lg border-2 border-[var(--app-bg)] relative z-20">
+                    <span className="absolute top-1 right-2 w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center animate-bounce shadow-lg border-2 border-[var(--app-bg)] relative z-20">
                       {unreadChatCount}
                     </span>
                   )}
@@ -1586,7 +1586,7 @@ export const OnlineMatchView: React.FC<OnlineMatchViewProps> = ({
                         <h4 className="text-[10px] font-black text-[#DFD0B0]/50 uppercase tracking-widest">
                           Moves
                         </h4>
-                        <span className="px-2 py-0.5 rounded bg-white/5 text-[9px] text-white/60 font-mono">
+                        <span className="px-2 py-0.5 rounded bg-white/5 text-[10px] text-white/60 font-mono">
                           {moveHistory.length} Moves
                         </span>
                       </div>

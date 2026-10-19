@@ -57,7 +57,7 @@ export const ModernSpectatorWidget: React.FC<ModernSpectatorWidgetProps> = ({
             </div>
           ))}
           {spectatorCount > 3 && (
-            <div className="w-5 h-5 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-[8px] font-mono font-bold text-white/70">
+            <div className="w-5 h-5 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-[10px] font-mono font-bold text-white/70">
               +{spectatorCount - 3}
             </div>
           )}

@@ -100,7 +100,7 @@ export const CheckmateJudgmentModal: React.FC<CheckmateJudgmentModalProps> = ({
                 Take the full win. More rating, no Respect.
               </p>
             </div>
-            <div className="w-full mt-4 pt-3 border-t border-[#1F293D] flex items-center justify-between text-[9px] font-black uppercase tracking-tighter">
+            <div className="w-full mt-4 pt-3 border-t border-[#1F293D] flex items-center justify-between text-[10px] font-black uppercase tracking-tighter">
               <span className="text-[#94A3B8]">Reward</span>
               <span className="text-[#EF4444]">+15 ELO · +0 Respect</span>
             </div>
@@ -128,7 +128,7 @@ export const CheckmateJudgmentModal: React.FC<CheckmateJudgmentModalProps> = ({
                 Spare your opponent. Less rating, more Respect.
               </p>
             </div>
-            <div className="w-full mt-4 pt-3 border-t border-[#1F293D] flex items-center justify-between text-[9px] font-black uppercase tracking-tighter">
+            <div className="w-full mt-4 pt-3 border-t border-[#1F293D] flex items-center justify-between text-[10px] font-black uppercase tracking-tighter">
               <span className="text-[#94A3B8]">Bonus</span>
               <span className="text-[#F59E0B]">+5 ELO · +12 Respect</span>
             </div>

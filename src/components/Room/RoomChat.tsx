@@ -103,7 +103,7 @@ export const RoomChat: React.FC = () => {
                     {msg.message}
                   </div>
                   <span
-                    className={`text-[9px] text-white/30 px-1 ${
+                    className={`text-[10px] text-white/30 px-1 ${
                       isMe ? 'text-right' : 'text-left'
                     }`}
                   >

@@ -64,7 +64,7 @@ export const TournamentBracket: React.FC<TournamentBracketProps> = ({
 
                 <div className="flex items-center gap-2">
                   <div className="h-[1px] flex-1 bg-white/5" />
-                  <span className="text-[9px] font-black text-white/20">VS</span>
+                  <span className="text-[10px] font-black text-white/20">VS</span>
                   <div className="h-[1px] flex-1 bg-white/5" />
                 </div>
 
