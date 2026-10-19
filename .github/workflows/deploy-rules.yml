@@ -8,7 +8,7 @@ name: Deploy Firestore rules
 #
 # Create it with:
 #   gcloud iam service-accounts keys create key.json \
-#     --iam-account=<name>@gen-lang-client-0398037098.iam.gserviceaccount.com
+#     --iam-account=<name>@gen-lang-client-0785877481.iam.gserviceaccount.com
 # then paste the file contents into
 #   GitHub → Settings → Secrets and variables → Actions → New repository secret.
 #

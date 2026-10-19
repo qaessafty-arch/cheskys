@@ -134,7 +134,7 @@ moves. Previously a forged position was simply rendered and played on.
 you deploy it:
 
 ```bash
-npx firebase deploy --only firestore:rules --project gen-lang-client-0398037098
+npx firebase deploy --only firestore:rules --project gen-lang-client-0785877481
 ```
 
 Test them in the Firebase console → Firestore → Rules → **Rules Playground**:
