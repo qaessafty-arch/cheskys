@@ -1,6 +1,6 @@
 {
   "firestore": {
-    "database": "ai-studio-chesskyspro-81bf19f6-839d-4d8e-8c71-e9af0de56150",
+    "database": "ai-studio-remixchesskys-6c088f58-af18-48d5-9cf2-00c06a6d836a",
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   }
