@@ -4,7 +4,7 @@ import { Chess, Square, Move } from 'chess.js';
 import confetti from 'canvas-confetti';
 import { ChessPiece } from './ChessPiece';
 import { PieceThemeId, BoardThemeId, PieceColor, PieceType } from '../types/chess';
-import { UkhLogo } from './UkhLogo';
+import ukhLogo from '../assets/themes/ukh-logo.webp';
 import { ComponentErrorBoundary } from "./ComponentErrorBoundary";
 
 interface ChessBoardProps {
@@ -262,12 +262,17 @@ const BatmanBoardWatermark: React.FC = () => {
   );
 };
 
-// UKH Official University Erbil Citadel Emblem Board Watermark
+// University of Kurdistan Hewlêr logo, shown through the squares of the UKH board.
 const UkhBoardWatermark: React.FC = () => (
-  <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-[8] select-none overflow-hidden p-6">
-    <div className="w-[82%] h-[82%] opacity-35 transition-opacity duration-300 drop-shadow-[0_0_25px_rgba(22,91,170,0.35)]">
-      <UkhLogo showText={true} textColor="#DFD0B0" />
-    </div>
+  <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-[8] select-none overflow-hidden p-4">
+    <img
+      src={ukhLogo}
+      alt=""
+      draggable={false}
+      // Difference blending lightens the logo on navy squares and darkens it on parchment ones,
+      // so it reads on both colours of the board.
+      className="w-[78%] opacity-45 mix-blend-difference transition-opacity duration-300"
+    />
   </div>
 );
 // Attack on Titan: Wall Maria Battlement & Wings of Freedom Board Watermark
