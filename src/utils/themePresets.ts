@@ -526,6 +526,8 @@ export const PRESET_THEMES: UITheme[] = [
 ];
 
 const LOCAL_STORAGE_KEY_THEME = 'chesskys_active_theme_id';
+// New visitors start on the bright theme; a theme they pick is remembered instead.
+export const DEFAULT_THEME_ID = 'brutalist';
 const LOCAL_STORAGE_KEY_CUSTOM_THEMES = 'chesskys_custom_themes_list';
 
 // Helper: Convert HEX to RGBA string
@@ -779,11 +781,11 @@ export function deleteCustomTheme(themeId: string): UITheme[] {
 }
 
 export function getActiveThemeId(): string {
-  if (typeof window === 'undefined') return 'peshmerga';
+  if (typeof window === 'undefined') return DEFAULT_THEME_ID;
   try {
-    return localStorage.getItem(LOCAL_STORAGE_KEY_THEME) || 'peshmerga';
+    return localStorage.getItem(LOCAL_STORAGE_KEY_THEME) || DEFAULT_THEME_ID;
   } catch (e) {
-    return 'peshmerga';
+    return DEFAULT_THEME_ID;
   }
 }
 

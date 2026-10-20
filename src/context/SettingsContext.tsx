@@ -30,7 +30,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   flipBoard: false,
   whiteBottom: false,
   premoveEnabled: true,
-  boardTheme: 'obsidian',
+  boardTheme: 'brutalist',
   pieceTheme: 'classic',
   showCoordinates: true,
   highlightLastMove: true,

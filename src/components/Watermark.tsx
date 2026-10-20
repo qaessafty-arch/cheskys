@@ -21,7 +21,9 @@ export const Watermark: React.FC<WatermarkProps> = ({ className = '', onClick })
         and{' '}
         <span className="text-[#FF4444] opacity-90 font-semibold drop-shadow-[0_0_6px_rgba(255,68,68,0.4)]">
           passion
-        </span>
+        </span>{' '}
+        by{' '}
+        <span className="font-semibold text-white/70">null-tech</span>
       </p>
     </div>
   );
