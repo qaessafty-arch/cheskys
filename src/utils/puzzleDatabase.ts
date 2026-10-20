@@ -1,6 +1,12 @@
 import { Puzzle } from '../types/chess';
+import { VERIFIED_PUZZLES, toPuzzle } from '../data/verifiedPuzzles';
 
-export type TacticalTheme = 'Mate in 1' | 'Mate in 2' | 'Fork' | 'Pin' | 'Skewer' | 'Discovered Attack' | 'Deflection' | 'Sacrifice' | 'Endgame' | 'Mixed';
+export type TacticalTheme = 'Mate in 1' | 'Mate in 2' | 'Fork' | 'Pin' | 'Skewer' | 'Discovered Attack' | 'Deflection' | 'Hanging Piece' | 'Sacrifice' | 'Endgame' | 'Mixed';
+
+/** Categories in menu order, listing only those that have puzzles. */
+export const PRACTICE_CATEGORIES: TacticalTheme[] = (
+  ['Mate in 1', 'Mate in 2', 'Fork', 'Pin', 'Skewer', 'Discovered Attack', 'Deflection', 'Hanging Piece', 'Sacrifice', 'Endgame'] as TacticalTheme[]
+).filter(c => VERIFIED_PUZZLES.some(p => p.category === c));
 export type DifficultyLevel = 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert' | 'Grandmaster';
 
 export interface ExtendedPuzzle extends Puzzle {
@@ -8,32 +14,15 @@ export interface ExtendedPuzzle extends Puzzle {
   level: DifficultyLevel;
 }
 
-export const EXTENDED_PUZZLES: ExtendedPuzzle[] = [
-  // Mate in 1
-  { id: 't-1', title: 'Back Rank Basics', difficulty: 'Easy', level: 'Beginner', rating: 800, playerColor: 'w', fen: '6k1/5ppp/8/8/8/8/5PPP/R5K1 w - - 0 1', solutionMoves: ['Ra8#'], theme: 'Mate in 1', category: 'Mate in 1', description: 'Classic back-rank mate.' },
-  { id: 't-2', title: 'Kiss of Death', difficulty: 'Easy', level: 'Beginner', rating: 900, playerColor: 'w', fen: '4k3/8/4K3/8/7Q/8/8/8 w - - 0 1', solutionMoves: ['Qe7#'], theme: 'Mate in 1', category: 'Mate in 1', description: 'Queen and King mate.' },
-  { id: 't-3', title: 'Smothered Mate', difficulty: 'Easy', level: 'Beginner', rating: 1100, playerColor: 'w', fen: '6rk/6pp/7N/8/8/8/8/7K w - - 0 1', solutionMoves: ['Nf7#'], theme: 'Mate in 1', category: 'Mate in 1', description: 'Knight jumps in for the kill.' },
+const levelFor = (rating: number): DifficultyLevel =>
+  rating <= 1000 ? 'Beginner' : rating <= 1500 ? 'Intermediate' : rating <= 1900 ? 'Advanced' : rating <= 2200 ? 'Expert' : 'Grandmaster';
 
-  // Mate in 2
-  { id: 't-4', title: 'Grecian Gift', difficulty: 'Medium', level: 'Intermediate', rating: 1400, playerColor: 'w', fen: 'r1bq1rk1/ppp2ppp/2n1pn2/3p4/2PP4/2N1PN2/PPB2PPP/R1BQK2R w KQ - 0 8', solutionMoves: ['Bxh7+', 'Kxh7', 'Ng5+', 'Kg8', 'Qh5'], theme: 'Sacrifice', category: 'Sacrifice', description: 'Standard Bxh7 sacrifice sequence.' },
-  { id: 't-5', title: 'Rook Roller', difficulty: 'Medium', level: 'Intermediate', rating: 1300, playerColor: 'w', fen: '8/4k3/R7/8/8/8/8/1R4K1 w - - 0 1', solutionMoves: ['Rb7+', 'Ke8', 'Ra8#'], theme: 'Mate in 2', category: 'Mate in 2', description: 'Ladder mate with two rooks.' },
-
-  // Forks
-  { id: 't-6', title: 'Knight Fork', difficulty: 'Easy', level: 'Beginner', rating: 1200, playerColor: 'w', fen: '2q3k1/8/8/3N4/8/8/8/6K1 w - - 0 1', solutionMoves: ['Ne7+'], theme: 'Fork', category: 'Fork', description: 'Fork the King and Queen.' },
-  { id: 't-7', title: 'Royal Fork', difficulty: 'Medium', level: 'Intermediate', rating: 1500, playerColor: 'w', fen: 'r1bqk2r/pppp1ppp/8/4n3/1bP5/2N2N2/PP2PPPP/R1BQKB1R w KQkq - 0 6', solutionMoves: ['Nxe5'], theme: 'Fork', category: 'Fork', description: 'Win a piece and attack the center.' },
-
-  // Pins
-  { id: 't-8', title: 'Absolute Pin', difficulty: 'Medium', level: 'Intermediate', rating: 1350, playerColor: 'w', fen: '4k3/8/8/4q3/8/8/5K2/R7 w - - 0 1', solutionMoves: ['Re1'], theme: 'Pin', category: 'Pin', description: 'Pin the Queen to the King.' },
-  
-  // Skewers
-  { id: 't-9', title: 'Queen Skewer', difficulty: 'Medium', level: 'Intermediate', rating: 1450, playerColor: 'w', fen: '7q/8/8/4k3/8/8/8/2Q3K1 w - - 0 1', solutionMoves: ['Qc3+'], theme: 'Skewer', category: 'Skewer', description: 'Skewer the King to win material behind it.' },
-
-  // Discoveries
-  { id: 't-10', title: 'Discovered Attack', difficulty: 'Hard', level: 'Advanced', rating: 1800, playerColor: 'w', fen: '3qk3/8/8/8/8/3B4/8/3R2K1 w - - 0 1', solutionMoves: ['Bb5+'], theme: 'Discovered Attack', category: 'Discovered Attack', description: 'Move the Bishop to unleash the Rook on the Queen.' },
-  
-  // Endgames
-  { id: 't-11', title: 'Pawn Promotion', difficulty: 'Hard', level: 'Advanced', rating: 1900, playerColor: 'w', fen: '8/6P1/8/8/8/8/6k1/K7 w - - 0 1', solutionMoves: ['g8=Q+'], theme: 'Endgame', category: 'Endgame', description: 'Promote the pawn with check.' }
-];
+// Practice puzzles by tactical theme, from the engine-checked set in src/data/verifiedPuzzles.ts.
+export const EXTENDED_PUZZLES: ExtendedPuzzle[] = VERIFIED_PUZZLES.map(p => ({
+  ...toPuzzle(p),
+  category: p.category,
+  level: levelFor(p.rating)
+}));
 
 export const getPuzzlesByCategory = (category: TacticalTheme | 'All'): ExtendedPuzzle[] => {
   if (category === 'All' || category === 'Mixed') return EXTENDED_PUZZLES;

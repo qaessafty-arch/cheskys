@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Glasses, Share2 } from 'lucide-react';
 
 interface AiMangaRecapProps {
@@ -8,28 +8,30 @@ interface AiMangaRecapProps {
 export const AiMangaRecap: React.FC<AiMangaRecapProps> = ({ pgn }) => {
   const [recap, setRecap] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchRecap = async () => {
     if (!pgn) return;
     setLoading(true);
+    setError(null);
     try {
       const res = await fetch('/api/gemini/recap', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pgn })
       });
-      const data = await res.json();
-      if (data.recap) {
-        setRecap(data.recap);
-      }
-    } catch (e) {
-      console.error(e);
+      const data = res.ok ? await res.json() : null;
+      if (data?.recap) setRecap(data.recap);
+      else setError('The recap service is not available right now. Try again later.');
+    } catch {
+      setError('The recap service is not available right now. Try again later.');
     }
     setLoading(false);
   };
 
   if (!recap && !loading) {
     return (
+      <>
       <button 
         onClick={fetchRecap}
         className="w-full flex items-center justify-center gap-2 py-3 px-4 mt-2 rounded-2xl bg-gradient-to-r from-orange-500 to-rose-600 text-white font-black uppercase text-xs hover:opacity-95 transition-all shadow-[0_0_15px_rgba(249,115,22,0.4)]"
@@ -37,6 +39,8 @@ export const AiMangaRecap: React.FC<AiMangaRecapProps> = ({ pgn }) => {
         <Glasses className="w-4 h-4" />
         Generate AI Manga Recap
       </button>
+      {error && <p className="mt-2 text-[11px] font-bold text-rose-300">{error}</p>}
+      </>
     );
   }
 

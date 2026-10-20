@@ -2,67 +2,41 @@ import { doc, getDoc, collection, getDocs, increment, query, orderBy, limit } fr
 import { db, safeSetDoc, safeDeleteDoc, safeUpdateDoc } from '../utils/firebase';
 import { AuthoredPuzzle, PieceColor } from '../types/chess';
 import { Chess } from 'chess.js';
+import { VERIFIED_PUZZLES } from '../data/verifiedPuzzles';
 
 const LOCAL_STORAGE_KEY = 'chesskys_authored_puzzles';
 
-export const DEFAULT_AUTHORED_TEMPLATES: AuthoredPuzzle[] = [
-  {
-    id: 'template-sunburst-mate',
-    title: 'The Kurdish Sunburst Mate',
-    description: 'Sacrifice the queen on the h-file to unleash the double bishop and knight crossfire for a legendary royal checkmate.',
-    theme: 'Queen Sacrifice & Mate',
-    difficulty: 'Master',
-    rating: 2150,
-    fen: 'r1b2rk1/pp3ppp/2n1p3/3pP3/5P2/2NB1N2/PPP3PP/R2Q1RK1 w - - 0 1',
-    playerColor: 'w',
-    solutionMoves: ['Bxh7+', 'Kxh7', 'Ng5+', 'Kg8', 'Qh5', 'Re8', 'Qxf7+', 'Kh8', 'Qh5+', 'Kg8', 'Qh7+', 'Kf8', 'Qh8+', 'Ke7', 'Qxg7#'],
-    hints: ['Look for the classical Greek gift sacrifice on h7!', 'Follow up with Ng5+ to drag the king into the open.'],
-    authorUid: 'citadel-grandmaster',
-    authorName: 'Grandmaster Qays',
-    authorBadge: '👑',
-    createdAt: new Date().toISOString(),
-    likesCount: 84,
-    solvesCount: 192,
+// Example puzzles shown in the authoring view, taken from the engine-checked set.
+const TEMPLATE_SOURCE_IDS = ['game-opera-1858', 'game-evergreen-1852', 'game-rotlewi-rubinstein-1907'];
+const TEMPLATE_DIFFICULTY = (rating: number): AuthoredPuzzle['difficulty'] =>
+  rating <= 1000 ? 'Easy' : rating <= 1500 ? 'Medium' : rating <= 2000 ? 'Hard' : 'Master';
+
+export const DEFAULT_AUTHORED_TEMPLATES: AuthoredPuzzle[] = TEMPLATE_SOURCE_IDS
+  .map(id => VERIFIED_PUZZLES.find(p => p.id === id)!)
+  .map(p => ({
+    id: `template-${p.id}`,
+    title: p.title,
+    description: p.game ? `${p.description} ${p.game.white} – ${p.game.black}, ${p.game.event} ${p.game.year}.` : p.description,
+    theme: p.theme,
+    difficulty: TEMPLATE_DIFFICULTY(p.rating),
+    rating: p.rating,
+    fen: p.fen,
+    playerColor: p.playerColor,
+    solutionMoves: p.solutionMoves,
+    hints: [p.tip],
+    authorUid: 'chesskys',
+    authorName: 'Chesskys',
+    authorBadge: '♟️',
+    createdAt: '2026-10-20T00:00:00.000Z',
+    likesCount: 0,
+    solvesCount: 0,
     isPublished: true
-  },
-  {
-    id: 'template-erbil-citadel',
-    title: 'Erbil Citadel Rook Tempest',
-    description: 'White infiltrates the 7th rank to trap Black’s king against the citadel walls.',
-    theme: '7th Rank Rook Infiltration',
-    difficulty: 'Medium',
-    rating: 1550,
-    fen: '5rk1/1R4pp/p3p3/4P3/8/5N2/PP3PPP/6K1 w - - 0 1',
-    playerColor: 'w',
-    solutionMoves: ['Rb6', 'Re8', 'Rxa6'],
-    hints: ['Attack the weak isolated pawn on e6 or a6 while dominating the open file.'],
-    authorUid: 'erbil-tactician',
-    authorName: 'Peshmerga Commander',
-    authorBadge: '🛡️',
-    createdAt: new Date().toISOString(),
-    likesCount: 42,
-    solvesCount: 118,
-    isPublished: true
-  },
-  {
-    id: 'template-knight-fork',
-    title: 'Jamadani Knight Royal Fork',
-    description: 'Black exploits White’s uncoordinated royal pieces with a devastating tactical knight maneuver.',
-    theme: 'Royal Fork',
-    difficulty: 'Easy',
-    rating: 1100,
-    fen: 'r1bqk2r/pppp1ppp/2n5/4p3/1b2n3/2NP1N2/PPP1BPPP/R1BQK2R b KQkq - 0 5',
-    playerColor: 'b',
-    solutionMoves: ['Nxc3', 'bxc3', 'Bxc3+', 'Bd2', 'Bxa1'],
-    hints: ['Look at the pin on the c3 knight and win the exchange!'],
-    authorUid: 'soran-coach',
-    authorName: 'Coach Barzan',
-    authorBadge: '⚡',
-    createdAt: new Date().toISOString(),
-    likesCount: 56,
-    solvesCount: 230,
-    isPublished: true
-  }
+  }));
+
+/** Built-in templates always come from the current list; the player's own puzzles are kept. */
+const withCurrentTemplates = (stored: AuthoredPuzzle[]): AuthoredPuzzle[] => [
+  ...DEFAULT_AUTHORED_TEMPLATES,
+  ...stored.filter(p => !String(p.id).startsWith('template-'))
 ];
 
 export function getLocalAuthoredPuzzles(): AuthoredPuzzle[] {
@@ -73,7 +47,7 @@ export function getLocalAuthoredPuzzles(): AuthoredPuzzle[] {
       return DEFAULT_AUTHORED_TEMPLATES;
     }
     const parsed: AuthoredPuzzle[] = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_AUTHORED_TEMPLATES;
+    return Array.isArray(parsed) ? withCurrentTemplates(parsed) : DEFAULT_AUTHORED_TEMPLATES;
   } catch (e) {
     console.error('Failed to load authored puzzles from localStorage:', e);
     return DEFAULT_AUTHORED_TEMPLATES;

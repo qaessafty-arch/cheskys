@@ -26,7 +26,7 @@ export const TRAINING_EXERCISES: TrainingExercise[] = [
     id: 'fork_knight',
     title: 'Knight Fork',
     description: 'Attack the king and queen at once, then win the queen',
-    fen: 'q3k3/8/8/1N6/8/8/8/4K3 w - - 0 1',
+    fen: 'q3k3/8/8/1N6/8/8/5PPP/6K1 w - - 0 1',
     solution: ['Nc7+', 'Kd7', 'Nxa8'],
     difficulty: 'easy',
     theme: 'tactics_fork',
@@ -83,13 +83,13 @@ export const TRAINING_EXERCISES: TrainingExercise[] = [
     hint: 'Take the centre with a pawn, develop the king-side knight, then aim the bishop at f7'
   },
   {
-    id: 'prophylaxis_1',
-    title: 'Prophylactic Thinking',
-    description: "Prevent your opponent's plan before executing your own",
-    fen: 'r1bq1rk1/ppp2ppp/2np1n1p/4p3/2PP4/2N1PN2/PP2BPPP/R1BQ1RK1 w - - 0 9',
-    solution: ['a3', 'Bg4', 'h3', 'Bh5'],
+    id: 'endgame_breakthrough',
+    title: 'Pawn Breakthrough',
+    description: 'Three pawns against three, with the black king far away. Make a queen',
+    fen: '8/ppp5/8/PPP5/8/8/5k2/7K w - - 0 1',
+    solution: ['b6', 'axb6', 'c6', 'bxc6', 'a6'],
     difficulty: 'hard',
-    theme: 'prophylaxis',
-    hint: 'First take b4 away from Black, then ask the bishop on g4 a question'
+    theme: 'endgame',
+    hint: 'Sacrifice the middle pawn first, then the c-pawn, and the a-pawn walks through'
   }
 ];

@@ -84,6 +84,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
           {title}
         </h2>
         <p className="text-xs font-black text-[#94A3B8] uppercase tracking-[0.2em] mb-4 opacity-80">
+          <span className="font-mono text-white mr-2">{isWhiteWin ? '1-0' : isBlackWin ? '0-1' : '½-½'}</span>
           {result.reason}
         </p>
         {ratingChange && (
@@ -134,10 +135,10 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
           {onPracticePuzzles && (
             <button
               onClick={onPracticePuzzles}
-              className="w-full flex-1 min-w-[120px] glass-button border-white/5 hover:bg-emerald-500/20 hover:border-emerald-500/50 hover:text-emerald-300 interactive-btn shadow-lg group py-3 rounded-xl transition-all"
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-[#0B0F19] text-[#94A3B8] font-black text-[11px] hover:text-emerald-300 hover:border-emerald-500/40 border border-[#1F293D] transition-all uppercase tracking-widest active:scale-95 cursor-pointer"
             >
-              <Award className="w-4 h-4 mx-auto mb-1 group-hover:scale-110 transition-transform" />
-              <span className="text-[10px] uppercase font-black tracking-widest block text-center">Practice Puzzles</span>
+              <Award className="w-4 h-4" />
+              <span>Practice Puzzles</span>
             </button>
           )}
           <button

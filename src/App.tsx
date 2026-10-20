@@ -12,7 +12,7 @@ import {
   OpeningInfo,
   RespectProfile
 } from './types/chess';
-import { BOT_PROFILES, TIME_CONTROLS, getBotMove, evaluateBoard, getCapturedMaterial, classifyMove, findBestMove } from './utils/chessEngine';
+import { BOT_PROFILES, TIME_CONTROLS, getBotMove, evaluateBoard, getCapturedMaterial, classifyMove } from './utils/chessEngine';
 import { detectOpening } from './utils/openings';
 import { soundManager } from './utils/audio';
 import { AntiCheatEngine } from "./utils/security";
@@ -49,6 +49,7 @@ import { InGameMessage } from './services/chatService';
 import { logCompletedGame } from './services/loggingService';
 import { FriendUser } from './types/chess';
 import { engine } from './engine/client';
+import { cloneGame, drawReason, canStillMate, pgnWithHeaders } from './utils/gameRules';
 
 const lazyPreload = <P extends object>(load: () => Promise<{ default: React.ComponentType<P> }>) => {
   const Component = lazy(load) as React.LazyExoticComponent<React.ComponentType<P>> & { preload: () => void };
@@ -241,6 +242,8 @@ export default function App() {
   const [gameResult, setGameResult] = useState<GameResult | null>(null);
   // True once the current game's outcome has been written to the player's stats.
   const resultRecordedRef = useRef(false);
+  // Rating change applied for the current game, so the saved game log shows the real number.
+  const lastEloDeltaRef = useRef(0);
   const [isAiThinking, setIsAiThinking] = useState(false);
   const [whiteTime, setWhiteTime] = useState<number>(timeControl.initialSeconds);
   const [blackTime, setBlackTime] = useState<number>(timeControl.initialSeconds);
@@ -359,10 +362,10 @@ export default function App() {
     }
     if (currentGame.isCheckmate()) {
       const winner = currentGame.turn() === 'w' ? 'b' : 'w';
-      return { winner, reason: `Checkmate! ${winner === 'w' ? 'White' : 'Black'} wins by checkmate.` };
+      return { winner, reason: 'by checkmate' };
     }
     if (currentGame.isDraw()) {
-      return { winner: 'draw', reason: 'Game drawn.' };
+      return { winner: 'draw', reason: drawReason(currentGame) };
     }
     return null;
   }, []);
@@ -378,7 +381,9 @@ export default function App() {
         setWhiteTime(prev => {
           if (prev <= 1) {
             clearInterval(timer);
-            setGameResult({ winner: 'b', reason: 'White ran out of time!' });
+            setGameResult(canStillMate(game, 'b')
+              ? { winner: 'b', reason: 'White ran out of time' }
+              : { winner: 'draw', reason: 'White ran out of time, but Black has no mating material' });
             soundManager.playDefeat();
             return 0;
           }
@@ -388,7 +393,9 @@ export default function App() {
         setBlackTime(prev => {
           if (prev <= 1) {
             clearInterval(timer);
-            setGameResult({ winner: 'w', reason: 'Black ran out of time!' });
+            setGameResult(canStillMate(game, 'w')
+              ? { winner: 'w', reason: 'Black ran out of time' }
+              : { winner: 'draw', reason: 'Black ran out of time, but White has no mating material' });
             soundManager.playVictory();
             return 0;
           }
@@ -402,10 +409,9 @@ export default function App() {
   const executeMove = useCallback(
     (from: Square, to: Square, promotionPiece?: PieceType) => {
       try {
-        const prevEval = evalScore;
         AntiCheatEngine.recordMoveTiming();
         const isWhiteTurn = game.turn() === 'w';
-        const newGame = new Chess(game.fen());
+        const newGame = cloneGame(game);
         const moveResult = newGame.move({ from, to, promotion: promotionPiece || 'q' });
         if (!moveResult) return false;
         soundManager.setLastMoveInfo(moveResult.piece, moveResult.color);
@@ -419,12 +425,14 @@ export default function App() {
         }
         if (!isClockRunning && timeControl.category !== 'unlimited') setIsClockRunning(true);
 
+        // A quick static score until the engine search below replaces it; moves are
+        // labelled only from searched scores, so sacrifices are not called blunders.
         const newScore = evaluateBoard(newGame);
-        const classification = classifyMove(prevEval, newScore, isWhiteTurn, !!moveResult.captured, newGame.isCheckmate());
         const newLog: MoveLog = {
           san: moveResult.san, from: moveResult.from, to: moveResult.to, piece: moveResult.piece as PieceType,
           color: moveResult.color as PieceColor, captured: moveResult.captured as PieceType | undefined,
-          promotion: moveResult.promotion as PieceType | undefined, fen: newGame.fen(), evaluation: newScore, classification
+          promotion: moveResult.promotion as PieceType | undefined, fen: newGame.fen(), evaluation: newScore,
+          classification: newGame.isCheckmate() ? 'best' : undefined
         };
 
         setGame(newGame);
@@ -461,10 +469,12 @@ export default function App() {
     if (!isAiTurn) { setIsAiThinking(false); return; }
     setIsAiThinking(true);
     const delay = Math.min(1500, Math.max(400, 300 + currentBot.depth * 80));
-    const currentFen = game.fen();
+    // The bot gets the whole game, not just the current position, so it can see repetitions.
+    const startFen = game.getHeaders().FEN || new Chess().fen();
+    const playedUci = game.history({ verbose: true }).map(m => m.from + m.to + (m.promotion ?? ''));
     const timeoutId = setTimeout(async () => {
       try {
-        const res = await engine.botMove({ fen: currentFen }, currentBot.id);
+        const res = await engine.botMove({ fen: startFen, moves: playedUci }, currentBot.id);
         if (res.bestMove && res.bestMove.length >= 4) {
           executeMove(res.bestMove.slice(0, 2) as Square, res.bestMove.slice(2, 4) as Square, res.bestMove[4] as PieceType | undefined);
         }
@@ -546,7 +556,7 @@ export default function App() {
     if (gameResult || isJudgmentModalOpen) return;
     const resigningColor = game.turn();
     const winningColor = resigningColor === 'w' ? 'b' : 'w';
-    setGameResult({ winner: winningColor, reason: `${resigningColor === 'w' ? 'White' : 'Black'} resigned the match.` });
+    setGameResult({ winner: winningColor, reason: `${resigningColor === 'w' ? 'White' : 'Black'} resigned` });
     soundManager.playDefeat();
     setIsClockRunning(false);
   };
@@ -586,17 +596,24 @@ export default function App() {
     soundManager.playMove();
   };
 
+  // Latest position, for async callbacks that must not act on a position that has changed.
+  const currentFenRef = useRef(game.fen());
+  currentFenRef.current = game.fen();
+
   const handleGetHint = () => {
     if (gameResult || isAiThinking) return;
-    try {
-      const isWhite = game.turn() === 'w';
-      const best = findBestMove(game, 12, isWhite, 700);
-      if (best.move) {
+    const fen = game.fen();
+    // Searched in the engine worker so the board and clocks keep running.
+    engine
+      .search({ fen }, { timeMs: 800, depth: 16 })
+      .then(res => {
+        if (!res.bestMove || currentFenRef.current !== fen) return;
+        const move = new Chess(fen).move({ from: res.bestMove.slice(0, 2), to: res.bestMove.slice(2, 4), promotion: res.bestMove[4] as PieceType | undefined });
         soundManager.playCheck();
-        setHintMessage(`💡 Hint: Play ${best.move.san} (${best.move.from} to ${best.move.to})`);
+        setHintMessage(`💡 Hint: Play ${move.san} (${move.from} to ${move.to})`);
         setTimeout(() => setHintMessage(null), 5000);
-      }
-    } catch {}
+      })
+      .catch(() => {});
   };
 
   const handleUndoRef = useRef(handleUndo);
@@ -774,6 +791,93 @@ export default function App() {
     return Math.max(-50, Math.min(50, Math.round(k * (score - expected))));
   };
 
+  // The player's own rating and record for the clock card: the account's when signed in,
+  // otherwise the local profile kept for guests.
+  const playerRating = typeof authProfile?.elo === 'number' ? authProfile.elo : Number(respectProfile.elo) || 1200;
+  const playerRecord = authProfile && !authProfile.isGuest
+    ? { wins: authProfile.wins || 0, losses: authProfile.losses || 0, draws: authProfile.draws || 0 }
+    : {};
+
+  // Each clock belongs to a colour; in a bot game the side that is not the player's is the bot.
+  const renderClock = (color: PieceColor) => {
+    const isWhite = color === 'w';
+    const isBot = activeMode === 'ai' && color !== playerColor;
+    const isPlayer = activeMode === 'ai' && color === playerColor;
+    return (
+      <ChessClock
+        timeSeconds={isWhite ? whiteTime : blackTime}
+        totalTimeSeconds={timeControl.initialSeconds}
+        isActive={isClockRunning && game.turn() === color}
+        isWhite={isWhite}
+        playerName={isBot ? currentBot.name : isPlayer ? 'Player (You)' : isWhite ? 'White Player' : 'Black Player'}
+        playerTitle={isBot ? currentBot.title : undefined}
+        avatar={isBot ? currentBot.avatar : isWhite ? '♔' : '♚'}
+        elo={isBot ? currentBot.elo : playerRating}
+        {...(isPlayer ? playerRecord : {})}
+        isUnlimited={timeControl.category === 'unlimited'}
+      />
+    );
+  };
+
+  // Searched evaluation of each position (White's view, in pawns), cached by FEN.
+  const searchedEvalRef = useRef<Map<string, { pawns: number; mate: number | null }>>(new Map());
+  const [evalMate, setEvalMate] = useState<number | null>(null);
+
+  // After every move, a short engine search gives the real evaluation for the eval bar
+  // and header, and labels the move by how much it lost compared with the best move.
+  useEffect(() => {
+    if (activeMode !== 'ai' && activeMode !== 'pass_and_play') return;
+    let cancelled = false;
+    const evalOf = async (fen: string) => {
+      const cached = searchedEvalRef.current.get(fen);
+      if (cached) return cached;
+      const probe = new Chess(fen);
+      if (probe.isCheckmate()) return { pawns: probe.turn() === 'w' ? -100 : 100, mate: 0 };
+      if (probe.isDraw()) return { pawns: 0, mate: null };
+      const res = await engine.search({ fen }, { timeMs: 350, depth: 14 });
+      const whiteToMove = probe.turn() === 'w';
+      const mate = res.mateIn === null ? null : whiteToMove ? res.mateIn : -res.mateIn;
+      const value = { pawns: mate !== null ? Math.sign(mate) * 50 : res.scoreWhite / 100, mate };
+      searchedEvalRef.current.set(fen, value);
+      return value;
+    };
+    (async () => {
+      try {
+        const n = moveLogs.length;
+        const cur = await evalOf(game.fen());
+        if (cancelled) return;
+        setEvalScore(cur.pawns);
+        setEvalMate(cur.mate);
+        if (n === 0) return;
+        const last = moveLogs[n - 1];
+        const prevFen = n >= 2 ? moveLogs[n - 2].fen : (game.getHeaders().FEN || new Chess().fen());
+        const prev = await evalOf(prevFen);
+        if (cancelled) return;
+        const classification = classifyMove(prev.pawns, cur.pawns, last.color === 'w', {
+          isCapture: !!last.captured,
+          isCheckmate: last.san.endsWith('#')
+        });
+        setMoveLogs(logs => (logs.length === n && logs[n - 1].fen === last.fen
+          ? logs.map((l, i) => (i === n - 1 ? { ...l, evaluation: cur.pawns, classification } : l))
+          : logs));
+      } catch {
+        // Engine unavailable: keep the static score.
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [moveLogs.length, activeMode]);
+
+  // PGN for copying, saving and the result screen, with real player names and result.
+  const exportPgn = React.useMemo(() => {
+    const you = authProfile?.displayName || 'Player';
+    const bot = currentBot.name;
+    const white = activeMode === 'ai' ? (playerColor === 'w' ? you : bot) : 'White';
+    const black = activeMode === 'ai' ? (playerColor === 'w' ? bot : you) : 'Black';
+    const result = !gameResult ? '*' : gameResult.winner === 'w' ? '1-0' : gameResult.winner === 'b' ? '0-1' : '1/2-1/2';
+    return pgnWithHeaders(game, { white, black, result, event: activeMode === 'ai' ? `Game against ${bot}` : 'Casual game' });
+  }, [game, gameResult, activeMode, playerColor, currentBot.name, authProfile?.displayName]);
+
   // Records wins, losses and draws against the bot. Checkmates the player delivers are
   // recorded by the Execute judgment instead, which sets resultRecordedRef first.
   useEffect(() => {
@@ -783,9 +887,12 @@ export default function App() {
     }
     if (activeMode !== 'ai' || resultRecordedRef.current || moveLogs.length < 2) return;
     resultRecordedRef.current = true;
-    if (gameResult.winner === playerColor) updateRespectMetrics({ wins: 1, gamesPlayed: 1, elo: botGameEloDelta(1) });
-    else if (gameResult.winner === 'w' || gameResult.winner === 'b') updateRespectMetrics({ losses: 1, gamesPlayed: 1, elo: botGameEloDelta(0) });
-    else updateRespectMetrics({ draws: 1, gamesPlayed: 1, elo: botGameEloDelta(0.5) });
+    const score = gameResult.winner === playerColor ? 1 : gameResult.winner === 'w' || gameResult.winner === 'b' ? 0 : 0.5;
+    const elo = botGameEloDelta(score);
+    lastEloDeltaRef.current = elo;
+    if (score === 1) updateRespectMetrics({ wins: 1, gamesPlayed: 1, elo });
+    else if (score === 0) updateRespectMetrics({ losses: 1, gamesPlayed: 1, elo });
+    else updateRespectMetrics({ draws: 1, gamesPlayed: 1, elo });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameResult]);
 
@@ -795,7 +902,8 @@ export default function App() {
     setRespectProfile(updated);
     // Pass-and-play is two people on one device, so only games against the bot count toward ranked stats.
     resultRecordedRef.current = true;
-    updateRespectMetrics(activeMode === 'ai' ? { executions: 1, wins: 1, gamesPlayed: 1, elo: botGameEloDelta(1) } : { executions: 1 });
+    lastEloDeltaRef.current = activeMode === 'ai' ? botGameEloDelta(1) : 0;
+    updateRespectMetrics(activeMode === 'ai' ? { executions: 1, wins: 1, gamesPlayed: 1, elo: lastEloDeltaRef.current } : { executions: 1 });
     if (pendingCheckmateResult) setGameResult(pendingCheckmateResult);
   };
 
@@ -829,8 +937,8 @@ export default function App() {
         userId: user?.uid, mode: activeMode, opponentName: activeMode === 'ai' ? currentBot.name : 'Opponent Player',
         opponentAvatar: activeMode === 'ai' ? currentBot.avatar : '♚', opponentElo: activeMode === 'ai' ? currentBot.elo : 1200,
         playerColor, result: resultType, reason: gameResult.reason, movesCount: moveLogs.length,
-        timeControlName: timeControl.name, pgn: game.pgn(), finalFen: game.fen(),
-        respectChange: isWin ? 20 : isDraw ? 5 : 0, eloChange: isWin ? 15 : isDraw ? 0 : -10
+        timeControlName: timeControl.name, pgn: exportPgn, finalFen: game.fen(),
+        respectChange: 0, eloChange: activeMode === 'ai' ? lastEloDeltaRef.current : 0
       });
     } catch (e) { console.warn(e); }
   }, [gameResult]);
@@ -871,7 +979,10 @@ export default function App() {
       />
 
       <AmbientBackground />
-      <Header onToggleSidebar={() => setIsSidebarOpen(prev => !prev)} isSidebarOpen={isSidebarOpen} onOpenProfile={() => setActiveMode('profile_page')} onOpenLogin={() => setActiveMode('login')} respectProfile={respectProfile} />
+      <Header onToggleSidebar={() => setIsSidebarOpen(prev => !prev)} isSidebarOpen={isSidebarOpen} onOpenProfile={() => setActiveMode('profile_page')} onOpenLogin={() => setActiveMode('login')} respectProfile={respectProfile}
+        evaluation={activeMode === 'ai' || activeMode === 'pass_and_play' ? evalScore : null}
+        mateIn={activeMode === 'ai' || activeMode === 'pass_and_play' ? evalMate : null}
+        resultLabel={(activeMode === 'ai' || activeMode === 'pass_and_play') && gameResult ? (gameResult.winner === 'w' ? '1-0' : gameResult.winner === 'b' ? '0-1' : '½-½') : null} />
 
       <main className="flex-1 flex flex-col justify-start overflow-y-auto w-full z-10 min-h-0">
         <Suspense fallback={<ViewFallback />}>
@@ -964,18 +1075,18 @@ export default function App() {
                 <div className="w-full max-w-[644px] lg:max-w-[min(644px,calc(100svh-300px))] grid grid-cols-[auto_1fr] gap-x-2 sm:gap-x-4 gap-y-3 items-stretch">
                   <div className="col-start-2 flex flex-col gap-3 min-w-0">
                     <GlassCard intensity="low" className="p-3 !rounded-2xl">
-                      <ChessClock timeSeconds={isBoardFlipped ? whiteTime : blackTime} totalTimeSeconds={timeControl.initialSeconds} isActive={isClockRunning && (isBoardFlipped ? game.turn() === 'w' : game.turn() === 'b')} isWhite={isBoardFlipped} playerName={activeMode === 'ai' ? (isBoardFlipped ? 'Player (You)' : `${currentBot.name}`) : (isBoardFlipped ? 'White Player' : 'Black Player')} playerTitle={activeMode === 'ai' && !isBoardFlipped ? currentBot.title : undefined} avatar={activeMode === 'ai' && !isBoardFlipped ? currentBot.avatar : isBoardFlipped ? '♔' : '♚'} elo={activeMode === 'ai' && !isBoardFlipped ? currentBot.elo : Number(respectProfile.elo)} isUnlimited={timeControl.category === 'unlimited'} />
+                      {renderClock(isBoardFlipped ? 'w' : 'b')}
                     </GlassCard>
                     <div className="px-1 flex items-center justify-between">
                       <CapturedPieces pieces={isBoardFlipped ? capturedMaterial.capturedByBlack : capturedMaterial.capturedByWhite} pieceTheme={settings.pieceTheme} colorOfCapturedPieces={isBoardFlipped ? 'w' : 'b'} materialAdvantage={isBoardFlipped ? (capturedMaterial.materialDifference < 0 ? Math.abs(capturedMaterial.materialDifference) : 0) : (capturedMaterial.materialDifference > 0 ? capturedMaterial.materialDifference : 0)} />
-                      {isAiThinking && !isBoardFlipped && (
+                      {isAiThinking && (isBoardFlipped ? 'w' : 'b') !== playerColor && (
                         <div className="flex items-center gap-2 text-[10px] text-[var(--secondary-accent)] font-black uppercase tracking-widest animate-pulse px-3 py-1 rounded-full bg-[var(--app-bg)] border border-[var(--secondary-accent)]/30 shadow-lg"><span className="w-1.5 h-1.5 rounded-full bg-[var(--secondary-accent)] animate-ping" /><span>Thinking...</span></div>
                       )}
                     </div>
                   </div>
                   {settings.showEvalBar && (
                     <div className="col-start-1 row-start-2 flex">
-                      <div className="w-5 sm:w-8 h-full glass-premium overflow-hidden !rounded-xl border-white/10"><EvalBar score={evalScore} isFlipped={isBoardFlipped} /></div>
+                      <div className="w-5 sm:w-8 h-full glass-premium overflow-hidden !rounded-xl border-white/10"><EvalBar score={evalScore} isFlipped={isBoardFlipped} mateIn={activeMode === 'ai' || activeMode === 'pass_and_play' ? evalMate : null} /></div>
                     </div>
                   )}
                   <div className="col-start-2 row-start-2 flex justify-center min-w-0">
@@ -988,12 +1099,12 @@ export default function App() {
                   <div className="col-start-2 row-start-3 flex flex-col gap-3 min-w-0">
                     <div className="px-1 flex items-center justify-between">
                       <CapturedPieces pieces={isBoardFlipped ? capturedMaterial.capturedByWhite : capturedMaterial.capturedByBlack} pieceTheme={settings.pieceTheme} colorOfCapturedPieces={isBoardFlipped ? 'b' : 'w'} materialAdvantage={isBoardFlipped ? (capturedMaterial.materialDifference > 0 ? capturedMaterial.materialDifference : 0) : (capturedMaterial.materialDifference < 0 ? Math.abs(capturedMaterial.materialDifference) : 0)} />
-                      {isAiThinking && isBoardFlipped && (
+                      {isAiThinking && (isBoardFlipped ? 'b' : 'w') !== playerColor && (
                         <div className="flex items-center gap-2 text-[10px] text-[#FFD700] font-black uppercase tracking-widest animate-pulse px-3 py-1 rounded-full bg-white/5 border border-[#FFD700]/30 shadow-lg backdrop-blur-md"><span className="w-1.5 h-1.5 rounded-full bg-[#FFD700] animate-ping" /><span>Thinking...</span></div>
                       )}
                     </div>
                     <GlassCard intensity="low" className="p-3 !rounded-2xl border-white/10">
-                      <ChessClock timeSeconds={isBoardFlipped ? blackTime : whiteTime} totalTimeSeconds={timeControl.initialSeconds} isActive={isClockRunning && (isBoardFlipped ? game.turn() === 'b' : game.turn() === 'w')} isWhite={!isBoardFlipped} playerName={activeMode === 'ai' ? (isBoardFlipped ? `${currentBot.name}` : 'Player (You)') : (isBoardFlipped ? 'Black Player' : 'White Player')} playerTitle={activeMode === 'ai' && isBoardFlipped ? currentBot.title : undefined} avatar={activeMode === 'ai' && isBoardFlipped ? currentBot.avatar : isBoardFlipped ? '♔' : '♚'} elo={activeMode === 'ai' && isBoardFlipped ? currentBot.elo : Number(respectProfile.elo)} isUnlimited={timeControl.category === 'unlimited'} />
+                      {renderClock(isBoardFlipped ? 'b' : 'w')}
                     </GlassCard>
                   </div>
                 </div>
@@ -1024,7 +1135,7 @@ export default function App() {
                         {activeTacticalTab === 'moves' ? (
                           <motion.div key="tab-moves" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="h-full flex flex-col">
                             <div className="flex-1 min-h-0 flex flex-col p-1">
-                              <MoveHistory moveLogs={moveLogs} currentMoveIndex={viewingMoveIndex >= 0 ? viewingMoveIndex : moveLogs.length - 1} onSelectMoveIndex={idx => { if (idx === moveLogs.length - 1) setViewingMoveIndex(-1); else setViewingMoveIndex(idx); }} openingInfo={openingInfo} pgn={game.pgn()} fen={displayGame.fen()} />
+                              <MoveHistory moveLogs={moveLogs} currentMoveIndex={viewingMoveIndex >= 0 ? viewingMoveIndex : moveLogs.length - 1} onSelectMoveIndex={idx => { if (idx === moveLogs.length - 1) setViewingMoveIndex(-1); else setViewingMoveIndex(idx); }} openingInfo={openingInfo} pgn={exportPgn} fen={displayGame.fen()} />
                             </div>
                           </motion.div>
                         ) : (
@@ -1062,12 +1173,12 @@ export default function App() {
       )}
       <Suspense fallback={null}>
       {isJudgmentModalOpen && (
-        <CheckmateJudgmentModal onExecute={handleExecuteJudgment} onMercy={handleMercyJudgment} onClose={() => { setIsJudgmentModalOpen(false); if (pendingCheckmateResult) setGameResult(pendingCheckmateResult); }} opponentName={activeMode === 'ai' ? currentBot.name : 'Opponent'} />
+        <CheckmateJudgmentModal onExecute={handleExecuteJudgment} onMercy={handleMercyJudgment} onClose={() => { setIsJudgmentModalOpen(false); if (pendingCheckmateResult) setGameResult(pendingCheckmateResult); }} winnerName={activeMode === 'ai' ? undefined : pendingCheckmateResult?.winner === 'w' ? 'White' : 'Black'} opponentName={activeMode === 'ai' ? currentBot.name : pendingCheckmateResult?.winner === 'w' ? 'Black' : 'White'} eloGain={activeMode === 'ai' ? botGameEloDelta(1) : null} />
       )}
       {gameResult && !isJudgmentModalOpen && (activeMode === 'ai' || activeMode === 'pass_and_play') && (
         <GameOverModal
           result={gameResult}
-          pgn={game.pgn()}
+          pgn={exportPgn}
           onRematch={() => {
             handleStartGame({
               mode: activeMode,

@@ -4,10 +4,11 @@ import { motion, AnimatePresence } from 'motion/react';
 import { AppSettings } from '../types/chess';
 import { ChessBoard } from './ChessBoard';
 import { soundManager } from '../utils/audio';
-import { EXTENDED_PUZZLES, TacticalTheme, DifficultyLevel, getRandomPuzzle, ExtendedPuzzle } from '../utils/puzzleDatabase';
+import { EXTENDED_PUZZLES, TacticalTheme, DifficultyLevel, getRandomPuzzle, ExtendedPuzzle, PRACTICE_CATEGORIES } from '../utils/puzzleDatabase';
 import { PanelContainer } from './PanelContainer';
 import { Trophy, Flame, Target, Clock, ArrowRight, RotateCcw, CheckCircle2, XCircle, Lightbulb } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { isCorrectPuzzleMove, isPuzzleFinished } from '../utils/puzzleCheck';
 
 interface PuzzlePracticeProps {
   settings: AppSettings;
@@ -51,6 +52,9 @@ export const PuzzlePractice: React.FC<PuzzlePracticeProps> = ({ settings, onNavi
   const handleMove = (source: Square, target: Square, promotion?: string) => {
     if (puzzleState !== 'playing' || !currentPuzzle || !game) return false;
 
+    // The opponent's reply is still being played: only the solver's moves count.
+    if (game.turn() !== currentPuzzle.playerColor) return false;
+
     const gameCopy = new Chess(game.fen());
     try {
       const move = gameCopy.move({ from: source, to: target, promotion: promotion || 'q' });
@@ -58,16 +62,12 @@ export const PuzzlePractice: React.FC<PuzzlePracticeProps> = ({ settings, onNavi
 
       const expectedMoveSan = currentPuzzle.solutionMoves[moveStep];
       
-      // We check if the move matches expected SAN or simple coordinate check
-      const expectedGame = new Chess(game.fen());
-      const expectedMoveObj = expectedGame.move(expectedMoveSan);
-      
-      if (move.san === expectedMoveSan || (move.from === expectedMoveObj?.from && move.to === expectedMoveObj?.to)) {
+      if (isCorrectPuzzleMove(game.fen(), move, expectedMoveSan)) {
         // Correct Move
         setGame(gameCopy);
         soundManager.playMove();
         
-        if (moveStep + 1 >= currentPuzzle.solutionMoves.length) {
+        if (isPuzzleFinished(move, moveStep + 1, currentPuzzle.solutionMoves.length)) {
           // Solved completely
           const timeMs = Date.now() - startTime;
           setTimeTaken(timeMs / 1000);
@@ -210,12 +210,9 @@ export const PuzzlePractice: React.FC<PuzzlePracticeProps> = ({ settings, onNavi
               onChange={(e) => setSelectedCategory(e.target.value as any)}
             >
               <option value="All">All Categories (Mixed)</option>
-              <option value="Mate in 1">Mate in 1</option>
-              <option value="Mate in 2">Mate in 2</option>
-              <option value="Fork">Forks</option>
-              <option value="Pin">Pins</option>
-              <option value="Skewer">Skewers</option>
-              <option value="Endgame">Endgames</option>
+              {PRACTICE_CATEGORIES.map(category => (
+                <option key={category} value={category}>{category}</option>
+              ))}
             </select>
           </div>
         </PanelContainer>
