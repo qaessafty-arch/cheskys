@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { PanelContainer } from './PanelContainer';
 import { Chess, Square } from 'chess.js';
-import { AppSettings, OpeningInfo } from '../types/chess';
+import { AppSettings, OpeningInfo, PieceColor, PieceType } from '../types/chess';
+import { PromotionModal } from './PromotionModal';
 import { ChessBoard } from './ChessBoard';
 import { EvalBar } from './EvalBar';
 import { MoveHistory } from './MoveHistory';
@@ -65,15 +66,26 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
   useEffect(() => {
     let cancelled = false;
     const fen = analysisGame.fen();
+    if (analysisGame.isGameOver()) {
+      const mated = analysisGame.isCheckmate();
+      setMateIn(mated ? 0 : null);
+      setEvalScore(mated ? (analysisGame.turn() === 'w' ? -100 : 100) : 0);
+      setSearchDepth(0);
+      setBestMoveSan(null);
+      setIsThinking(false);
+      return;
+    }
     setIsThinking(true);
 
     engine
       .search({ fen }, { depth: 14, timeMs: 1200 })
       .then(result => {
         if (cancelled) return;
-        setEvalScore(result.mateIn !== null ? (result.mateIn > 0 ? 1000 : -1000) : result.scoreWhite / 100);
+        // mateIn counts from the side to move; everything shown here is from White's view.
+        const whiteMate = result.mateIn === null ? null : analysisGame.turn() === 'w' ? result.mateIn : -result.mateIn;
+        setEvalScore(whiteMate !== null ? Math.sign(whiteMate) * 50 : result.scoreWhite / 100);
         setSearchDepth(result.depth);
-        setMateIn(result.mateIn);
+        setMateIn(whiteMate);
         if (!result.bestMove) {
           setBestMoveSan(null);
           return;
@@ -102,10 +114,18 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
     };
   }, [analysisGame]);
 
-  const handleAnalysisMove = (from: Square, to: Square) => {
+  const [pendingPromotion, setPendingPromotion] = useState<{ from: Square; to: Square } | null>(null);
+
+  const handleAnalysisMove = (from: Square, to: Square, promotion?: PieceType) => {
+    const piece = analysisGame.get(from);
+    const promoting = piece?.type === 'p' && (to[1] === '8' || to[1] === '1');
+    if (promoting && !promotion) {
+      if (analysisGame.moves({ square: from, verbose: true }).some(m => m.to === to)) setPendingPromotion({ from, to });
+      return;
+    }
     try {
       const newGame = new Chess(analysisGame.fen());
-      const move = newGame.move({ from, to, promotion: 'q' });
+      const move = newGame.move({ from, to, promotion });
       if (!move) return;
 
       soundManager.playMove();
@@ -176,7 +196,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
       <div className="flex items-stretch justify-center gap-2 sm:gap-3 w-full lg:flex-1 lg:max-w-[640px]">
         {settings.showEvalBar && (
           <div className="w-5 sm:w-8 shrink-0 flex glass-premium overflow-hidden !rounded-xl border-white/10">
-            <EvalBar score={evalScore} isFlipped={isFlipped} />
+            <EvalBar score={evalScore} isFlipped={isFlipped} mateIn={mateIn} />
           </div>
         )}
         <ChessBoard
@@ -203,7 +223,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
               Engine Analysis
             </span>
             <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 backdrop-blur-md">
-              Depth 18
+              {isThinking ? 'Thinking…' : searchDepth > 0 ? `Depth ${searchDepth}` : 'Engine'}
             </span>
           </div>
 
@@ -216,7 +236,9 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
                 )}
               </div>
               <div className="text-lg font-mono font-extrabold text-white">
-                {mateIn !== null
+                {mateIn === 0
+                  ? (evalScore > 0 ? '1-0' : '0-1')
+                  : mateIn !== null
                   ? `#${mateIn > 0 ? '' : '-'}${Math.abs(mateIn)}`
                   : evalScore > 0
                     ? `+${evalScore.toFixed(2)}`
@@ -360,6 +382,17 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
             </div>
           </div>
         </div>
+      )}
+      {pendingPromotion && (
+        <PromotionModal
+          color={analysisGame.turn() as PieceColor}
+          pieceTheme={settings.pieceTheme}
+          onSelect={piece => {
+            const { from, to } = pendingPromotion;
+            setPendingPromotion(null);
+            handleAnalysisMove(from, to, piece);
+          }}
+        />
       )}
     </PanelContainer>
   );

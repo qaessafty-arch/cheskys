@@ -41,7 +41,8 @@ import {
   RotateCcw,
   CheckCircle2
 } from 'lucide-react';
-import { AppSettings } from '../types/chess';
+import { AppSettings, PieceColor, PieceType } from '../types/chess';
+import { PromotionModal } from './PromotionModal';
 import { TRAINING_EXERCISES, TrainingExercise } from '../data/coachExercises';
 
 interface CoachPanelProps {
@@ -401,10 +402,10 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [analysisGame]);
 
-  const applyMove = (game: Chess, from: Square, to: Square): { next: Chess; move: Move } | null => {
+  const applyMove = (game: Chess, from: Square, to: Square, promotion?: PieceType): { next: Chess; move: Move } | null => {
     try {
       const next = new Chess(game.fen());
-      const move = next.move({ from, to, promotion: 'q' });
+      const move = next.move({ from, to, promotion });
       return move ? { next, move } : null;
     } catch {
       return null;
@@ -421,8 +422,8 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
     return { newFens, newSans };
   };
 
-  const handleAnalysisMove = (from: Square, to: Square) => {
-    const applied = applyMove(analysisGame, from, to);
+  const handleAnalysisMove = (from: Square, to: Square, promotion?: PieceType) => {
+    const applied = applyMove(analysisGame, from, to, promotion);
     if (!applied) return;
     const { next, move } = applied;
     soundManager.playMove();
@@ -493,10 +494,10 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
     }
   };
 
-  const handleExerciseMove = (from: Square, to: Square) => {
+  const handleExerciseMove = (from: Square, to: Square, promotion?: PieceType) => {
     // Odd steps are the coach's reply, which is still being played.
     if (!currentExercise || currentExerciseStep % 2 === 1) return;
-    const applied = applyMove(analysisGame, from, to);
+    const applied = applyMove(analysisGame, from, to, promotion);
     if (!applied) return;
     const { next, move } = applied;
     soundManager.playMove();
@@ -570,6 +571,18 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
   const visibleExercises = showAllExercises ? TRAINING_EXERCISES : TRAINING_EXERCISES.slice(0, 4);
   const remaining = TRAINING_EXERCISES.filter(e => !((memory.exercises[e.id]?.solved ?? 0) > 0)).length;
 
+  // A pawn reaching the last rank asks which piece to promote to before the move is played.
+  const [pendingPromotion, setPendingPromotion] = useState<{ from: Square; to: Square } | null>(null);
+  const handleBoardMove = (from: Square, to: Square) => {
+    const piece = analysisGame.get(from);
+    const promoting = piece?.type === 'p' && (to[1] === '8' || to[1] === '1');
+    if (promoting) {
+      if (analysisGame.moves({ square: from, verbose: true }).some(m => m.to === to)) setPendingPromotion({ from, to });
+      return;
+    }
+    (currentExercise ? handleExerciseMove : handleAnalysisMove)(from, to);
+  };
+
   return (
     <PanelContainer className="flex flex-col lg:flex-row items-center lg:items-start justify-center gap-5">
       <div className="flex items-stretch justify-center gap-2 sm:gap-3 w-full lg:flex-1 lg:max-w-[640px]">
@@ -587,7 +600,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
           highlightLastMove={settings.highlightLastMove}
           showLegalMoves={settings.showLegalMoves}
           lastMove={null}
-          onMove={currentExercise ? handleExerciseMove : handleAnalysisMove}
+          onMove={handleBoardMove}
           showTerritory={settings.showTerritory}
           showWeather={settings.showWeather}
         />
@@ -859,6 +872,17 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
           )}
         </div>
       </div>
+      {pendingPromotion && (
+        <PromotionModal
+          color={analysisGame.turn() as PieceColor}
+          pieceTheme={settings.pieceTheme}
+          onSelect={piece => {
+            const { from, to } = pendingPromotion;
+            setPendingPromotion(null);
+            (currentExercise ? handleExerciseMove : handleAnalysisMove)(from, to, piece);
+          }}
+        />
+      )}
     </PanelContainer>
   );
 };
