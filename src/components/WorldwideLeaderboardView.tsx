@@ -4,6 +4,10 @@ import { Trophy, Search, Zap, ChevronLeft, ChevronRight, Flame, Snowflake, Medal
 import { useAuth } from '../context/AuthContext';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { fetchRankedPlayers, fetchRankForScore, RankedPlayer } from '../services/leaderboardService';
+import { FriendUser } from '../types/chess';
+import { useSocialGraph } from '../hooks/useSocialGraph';
+import { fetchSuggestedPlayers } from '../services/friendService';
+import { PlayerRow, RelationButton } from './social/PlayerRow';
 
 interface LeaderboardUser {
   uid: string;
@@ -67,8 +71,33 @@ const medianBracket = (data: HistogramData[]): string | null => {
   return null;
 };
 
-export const WorldwideLeaderboardView: React.FC = () => {
-  const { user, profile } = useAuth();
+const asFriendUser = (p: LeaderboardUser): FriendUser => ({
+  uid: p.uid,
+  displayName: p.displayName,
+  username: p.username || undefined,
+  photoURL: p.photoURL || p.avatar || undefined,
+  elo: p.elo,
+  respectPoints: 0,
+  honorRank: p.honorRank || '',
+  rankBadge: '',
+});
+
+export const WorldwideLeaderboardView: React.FC<{ onOpenChat?: (friend: FriendUser) => void }> = ({ onOpenChat }) => {
+  const { user, profile, isGuest } = useAuth();
+  // Friends, requests and suggestions for the signed-in player.
+  const graph = useSocialGraph(user?.uid, !!user && !isGuest);
+  const [suggested, setSuggested] = useState<FriendUser[]>([]);
+  const [toast, setToast] = useState<{ text: string; ok: boolean } | null>(null);
+  const notify = (text: string, ok: boolean) => {
+    setToast({ text, ok });
+    setTimeout(() => setToast(t => (t?.text === text ? null : t)), 3500);
+  };
+  const socialKey = [...graph.friendIds, ...graph.outgoing.map(r => r.toUserId), ...graph.incoming.map(r => r.fromUserId), ...graph.blocked.map(b => b.uid)].join(',');
+  useEffect(() => {
+    if (!user?.uid || isGuest) return;
+    const myElo = typeof profile?.elo === 'number' ? profile.elo : 800;
+    fetchSuggestedPlayers(user.uid, myElo, new Set(socialKey.split(',').filter(Boolean)), 5).then(setSuggested);
+  }, [user?.uid, isGuest, socialKey, profile?.elo]);
   const [activeMode, setActiveMode] = useState<'bullet' | 'blitz' | 'rapid' | 'puzzle' | 'daily'>('blitz');
   const [scope, setScope] = useState<'global' | 'country' | 'friends'>('global');
   const [period, setPeriod] = useState<'week' | 'month' | 'all'>('all');
@@ -83,6 +112,7 @@ export const WorldwideLeaderboardView: React.FC = () => {
   const [needsSignIn, setNeedsSignIn] = useState(false);
   // Rows read directly from Firestore when the server ranking is unavailable.
   const directRowsRef = React.useRef<{ key: string; rows: RankedPlayer[] } | null>(null);
+  const friendIdsRef = React.useRef<Set<string>>(new Set());
   const [histogramData, setHistogramData] = useState<HistogramData[]>([]);
   
   const [myRankData, setMyRankData] = useState<LeaderboardUser | null>(null);
@@ -114,7 +144,7 @@ export const WorldwideLeaderboardView: React.FC = () => {
         const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
         const data = await res.json();
         
-        if (Array.isArray(data.data) && data.data.length > 0) {
+        if (Array.isArray(data.data) && data.data.length > 0 && scope !== 'friends') {
           const formattedPlayers = data.data.map((p: any) => ({
             ...p,
             isCurrentUser: p.uid === user?.uid
@@ -147,6 +177,7 @@ export const WorldwideLeaderboardView: React.FC = () => {
         const term = debouncedSearch.trim().toLowerCase().replace('@', '');
         if (term) rows = rows.filter(p => p.displayName.toLowerCase().includes(term) || p.username.toLowerCase().includes(term));
         if (scope === 'country' && profile?.country) rows = rows.filter(p => p.country === profile.country);
+        if (scope === 'friends') rows = rows.filter(p => p.uid === user.uid || friendIdsRef.current.has(p.uid));
         setPlayers(rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE));
         setTotalPages(Math.max(1, Math.ceil(rows.length / PAGE_SIZE)));
         setHistogramData(buildLocalHistogram(directRowsRef.current.rows));
@@ -184,7 +215,7 @@ export const WorldwideLeaderboardView: React.FC = () => {
     };
     
     fetchLeaderboard();
-  }, [activeMode, scope, period, page, debouncedSearch, user?.uid, profile?.country]);
+  }, [activeMode, scope, period, page, debouncedSearch, user?.uid, profile?.country, scope === 'friends' ? graph.friendIds.size : 0]);
   
   // Fetch Histogram & My Rank
   useEffect(() => {
@@ -215,6 +246,7 @@ export const WorldwideLeaderboardView: React.FC = () => {
     fetchMeta();
   }, [activeMode, user?.uid]);
 
+  friendIdsRef.current = graph.friendIds;
   const top3 = players.slice(0, 3);
   
   // Helper to render title badge
@@ -407,19 +439,20 @@ export const WorldwideLeaderboardView: React.FC = () => {
                     <th className="p-4 text-xs font-bold text-white/50 text-right">W/L/D</th>
                     <th className="p-4 text-xs font-bold text-white/50 text-right">Win %</th>
                     <th className="p-4 text-xs font-bold text-white/50 text-right">Streak</th>
+                    {user && !isGuest && <th className="p-4 text-xs font-bold text-white/50 text-right"><span className="sr-only">Friend</span></th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {isLoading ? (
                     <tr>
-                      <td colSpan={6} className="p-8 text-center text-white/40">Loading ranking data...</td>
+                      <td colSpan={7} className="p-8 text-center text-white/40">Loading ranking data...</td>
                     </tr>
                   ) : players.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="p-8 text-white/50">
+                      <td colSpan={7} className="p-8 text-white/50">
                         {/* Pinned to the visible part of the horizontally scrolling table on phones. */}
                         <p className="sticky left-4 max-w-[16rem] sm:static sm:max-w-none sm:text-center whitespace-normal">
-                          {needsSignIn ? 'Sign in with Google, email or phone to see real players.' : 'No ranked players yet. Finish a game against the bot to appear here.'}
+                          {needsSignIn ? 'Sign in with Google to see real players.' : scope === 'friends' ? 'No friends on the board yet. Add players from the list or the suggestions.' : 'No ranked players yet. Finish a game against the bot to appear here.'}
                         </p>
                       </td>
                     </tr>
@@ -486,6 +519,11 @@ export const WorldwideLeaderboardView: React.FC = () => {
                             <span className="text-white/20">-</span>
                           )}
                         </td>
+                        {user && !isGuest && (
+                          <td className="p-4 text-right">
+                            <RelationButton player={asFriendUser(p)} relation={graph.relationTo(p.uid)} graph={graph} onMessage={onOpenChat} onResult={notify} compact />
+                          </td>
+                        )}
                       </tr>
                     ))
                   )}
@@ -570,6 +608,17 @@ export const WorldwideLeaderboardView: React.FC = () => {
 
         {/* Right Column: Rating Distribution */}
         <div className="xl:col-span-4 flex flex-col gap-6">
+          {user && !isGuest && suggested.length > 0 && (
+            <div className="glass-panel p-5 rounded-3xl border border-white/10 shadow-xl space-y-2">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-2">
+                <Users className="w-4 h-4 text-[#F5C453]" />
+                <span>Suggested players</span>
+              </h3>
+              {suggested.map(p => (
+                <PlayerRow key={p.uid} player={p} graph={graph} onMessage={onOpenChat} onResult={notify} />
+              ))}
+            </div>
+          )}
           <div className="glass-panel p-5 rounded-3xl border border-white/10 shadow-xl">
             <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-6">
               <BarChart2 className="w-4 h-4 text-blue-400" />
@@ -634,6 +683,11 @@ export const WorldwideLeaderboardView: React.FC = () => {
         </div>
         
       </div>
+      {toast && (
+        <div role="status" className={`fixed left-1/2 -translate-x-1/2 bottom-6 z-50 px-4 py-2.5 rounded-xl text-sm font-bold shadow-xl ${toast.ok ? 'bg-emerald-500 text-black' : 'bg-rose-500 text-white'}`}>
+          {toast.text}
+        </div>
+      )}
     </PanelContainer>
   );
 };

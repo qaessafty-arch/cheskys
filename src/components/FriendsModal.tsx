@@ -1,5 +1,2 @@
-import { FriendPanel } from './Friends/FriendPanel';
-
-export { FriendPanel as FriendsModal, FriendPanel as default } from './Friends/FriendPanel';
+export { SocialPanel as FriendsModal, SocialPanel as default } from './social/SocialPanel';
 export type { FriendUser } from '../types/chess';
-
