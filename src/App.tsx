@@ -362,7 +362,7 @@ export default function App() {
     }
     if (currentGame.isCheckmate()) {
       const winner = currentGame.turn() === 'w' ? 'b' : 'w';
-      return { winner, reason: `Checkmate! ${winner === 'w' ? 'White' : 'Black'} wins by checkmate.` };
+      return { winner, reason: 'by checkmate' };
     }
     if (currentGame.isDraw()) {
       return { winner: 'draw', reason: drawReason(currentGame) };
@@ -382,8 +382,8 @@ export default function App() {
           if (prev <= 1) {
             clearInterval(timer);
             setGameResult(canStillMate(game, 'b')
-              ? { winner: 'b', reason: 'White ran out of time!' }
-              : { winner: 'draw', reason: 'White ran out of time, but Black cannot checkmate: draw.' });
+              ? { winner: 'b', reason: 'White ran out of time' }
+              : { winner: 'draw', reason: 'White ran out of time, but Black has no mating material' });
             soundManager.playDefeat();
             return 0;
           }
@@ -394,8 +394,8 @@ export default function App() {
           if (prev <= 1) {
             clearInterval(timer);
             setGameResult(canStillMate(game, 'w')
-              ? { winner: 'w', reason: 'Black ran out of time!' }
-              : { winner: 'draw', reason: 'Black ran out of time, but White cannot checkmate: draw.' });
+              ? { winner: 'w', reason: 'Black ran out of time' }
+              : { winner: 'draw', reason: 'Black ran out of time, but White has no mating material' });
             soundManager.playVictory();
             return 0;
           }
@@ -556,7 +556,7 @@ export default function App() {
     if (gameResult || isJudgmentModalOpen) return;
     const resigningColor = game.turn();
     const winningColor = resigningColor === 'w' ? 'b' : 'w';
-    setGameResult({ winner: winningColor, reason: `${resigningColor === 'w' ? 'White' : 'Black'} resigned the match.` });
+    setGameResult({ winner: winningColor, reason: `${resigningColor === 'w' ? 'White' : 'Black'} resigned` });
     soundManager.playDefeat();
     setIsClockRunning(false);
   };
@@ -1173,7 +1173,7 @@ export default function App() {
       )}
       <Suspense fallback={null}>
       {isJudgmentModalOpen && (
-        <CheckmateJudgmentModal onExecute={handleExecuteJudgment} onMercy={handleMercyJudgment} onClose={() => { setIsJudgmentModalOpen(false); if (pendingCheckmateResult) setGameResult(pendingCheckmateResult); }} opponentName={activeMode === 'ai' ? currentBot.name : 'Opponent'} />
+        <CheckmateJudgmentModal onExecute={handleExecuteJudgment} onMercy={handleMercyJudgment} onClose={() => { setIsJudgmentModalOpen(false); if (pendingCheckmateResult) setGameResult(pendingCheckmateResult); }} winnerName={activeMode === 'ai' ? undefined : pendingCheckmateResult?.winner === 'w' ? 'White' : 'Black'} opponentName={activeMode === 'ai' ? currentBot.name : pendingCheckmateResult?.winner === 'w' ? 'Black' : 'White'} eloGain={activeMode === 'ai' ? botGameEloDelta(1) : null} />
       )}
       {gameResult && !isJudgmentModalOpen && (activeMode === 'ai' || activeMode === 'pass_and_play') && (
         <GameOverModal
