@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { AppSettings } from '../types/chess';
 import { ChessBoard } from './ChessBoard';
 import { soundManager } from '../utils/audio';
-import { EXTENDED_PUZZLES, TacticalTheme, DifficultyLevel, getRandomPuzzle, ExtendedPuzzle } from '../utils/puzzleDatabase';
+import { EXTENDED_PUZZLES, TacticalTheme, DifficultyLevel, getRandomPuzzle, ExtendedPuzzle, PRACTICE_CATEGORIES } from '../utils/puzzleDatabase';
 import { PanelContainer } from './PanelContainer';
 import { Trophy, Flame, Target, Clock, ArrowRight, RotateCcw, CheckCircle2, XCircle, Lightbulb } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -210,12 +210,9 @@ export const PuzzlePractice: React.FC<PuzzlePracticeProps> = ({ settings, onNavi
               onChange={(e) => setSelectedCategory(e.target.value as any)}
             >
               <option value="All">All Categories (Mixed)</option>
-              <option value="Mate in 1">Mate in 1</option>
-              <option value="Mate in 2">Mate in 2</option>
-              <option value="Fork">Forks</option>
-              <option value="Pin">Pins</option>
-              <option value="Skewer">Skewers</option>
-              <option value="Endgame">Endgames</option>
+              {PRACTICE_CATEGORIES.map(category => (
+                <option key={category} value={category}>{category}</option>
+              ))}
             </select>
           </div>
         </PanelContainer>

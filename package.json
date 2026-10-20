@@ -12,7 +12,7 @@
     "lint": "tsc --noEmit",
     "test": "npm run test:engine && npm run test:multiplayer && npm run test:multiplayer-platform && npm run test:phase1 && npm run test:coach && npm run test:rules",
     "test:rules": "tsx src/utils/gameRules.test.ts && tsx src/utils/openings.test.ts && tsx src/utils/lichessPuzzle.test.ts",
-    "test:coach": "tsx src/services/coachMemory.test.ts && tsx src/data/coachExercises.test.ts",
+    "test:coach": "tsx src/services/coachMemory.test.ts && tsx src/data/coachExercises.test.ts && tsx src/data/verifiedPuzzles.test.ts",
     "test:phase1": "tsx src/services/phase1Harden.test.ts",
     "test:engine": "tsx src/engine/perft.test.ts && tsx src/engine/bench.ts 600",
     "test:multiplayer": "tsx src/services/matchRules.test.ts",
