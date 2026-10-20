@@ -12,7 +12,7 @@ import {
   OpeningInfo,
   RespectProfile
 } from './types/chess';
-import { BOT_PROFILES, TIME_CONTROLS, getBotMove, evaluateBoard, getCapturedMaterial, classifyMove, findBestMove } from './utils/chessEngine';
+import { BOT_PROFILES, TIME_CONTROLS, getBotMove, evaluateBoard, getCapturedMaterial, classifyMove } from './utils/chessEngine';
 import { detectOpening } from './utils/openings';
 import { soundManager } from './utils/audio';
 import { AntiCheatEngine } from "./utils/security";
@@ -596,17 +596,24 @@ export default function App() {
     soundManager.playMove();
   };
 
+  // Latest position, for async callbacks that must not act on a position that has changed.
+  const currentFenRef = useRef(game.fen());
+  currentFenRef.current = game.fen();
+
   const handleGetHint = () => {
     if (gameResult || isAiThinking) return;
-    try {
-      const isWhite = game.turn() === 'w';
-      const best = findBestMove(game, 12, isWhite, 700);
-      if (best.move) {
+    const fen = game.fen();
+    // Searched in the engine worker so the board and clocks keep running.
+    engine
+      .search({ fen }, { timeMs: 800, depth: 16 })
+      .then(res => {
+        if (!res.bestMove || currentFenRef.current !== fen) return;
+        const move = new Chess(fen).move({ from: res.bestMove.slice(0, 2), to: res.bestMove.slice(2, 4), promotion: res.bestMove[4] as PieceType | undefined });
         soundManager.playCheck();
-        setHintMessage(`💡 Hint: Play ${best.move.san} (${best.move.from} to ${best.move.to})`);
+        setHintMessage(`💡 Hint: Play ${move.san} (${move.from} to ${move.to})`);
         setTimeout(() => setHintMessage(null), 5000);
-      }
-    } catch {}
+      })
+      .catch(() => {});
   };
 
   const handleUndoRef = useRef(handleUndo);
