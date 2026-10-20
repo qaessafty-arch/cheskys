@@ -135,8 +135,28 @@ service cloud.firestore {
 
     function isValidDirectMessage(data) {
       return data.keys().hasAll(['senderId', 'text'])
+        && data.keys().hasOnly(['senderId', 'senderName', 'senderAvatar', 'senderBadge', 'text', 'type', 'audio', 'audioMs', 'challengeData', 'createdAt'])
         && data.senderId is string && data.senderId.size() <= 128
-        && data.text is string && data.text.size() <= 5000;
+        && data.text is string && data.text.size() <= 2000
+        && data.get('type', 'text') in ['text', 'quick', 'voice', 'challenge']
+        // Voice messages are short Opus clips stored inline (about 30 seconds at most).
+        && (!('audio' in data) || (data.audio is string && data.audio.size() <= 400000));
+    }
+
+    /* New accounts are created with Google sign-in only. */
+    function isGoogleAccount() {
+      return isSignedIn() && request.auth.token.firebase.sign_in_provider == 'google.com';
+    }
+
+    /* A friendship exists only after one of the two players accepted the other's request.
+     * Request ids are "<from>_<to>", so the rules can find them. */
+    function requestAccepted(fromUid, toUid) {
+      let path = /databases/$(database)/documents/friend_requests/$(fromUid + '_' + toUid);
+      return exists(path) && get(path).data.status == 'accepted';
+    }
+
+    function friendshipAccepted(a, b) {
+      return requestAccepted(a, b) || requestAccepted(b, a);
     }
 
     /* ---------------------------------------------------------------- *
@@ -150,14 +170,16 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isSignedIn();
       allow create: if isOwnerOf(userId) && isValidUserProfile(incoming())
-        && (isPrivileged() || isValidNewProfileStats(incoming()));
+        && (isPrivileged() || (isGoogleAccount() && isValidNewProfileStats(incoming())));
       allow update: if isOwnerOf(userId) && isValidUserProfile(incoming())
         && (isPrivileged() || (keepsPrivilegedFields() && isValidStatUpdate()));
       allow delete: if false;
 
       match /friends/{friendId} {
         allow read: if isOwnerOf(userId) || isOwnerOf(friendId);
-        allow write: if isOwnerOf(userId) || isOwnerOf(friendId);
+        // Either player writes both sides, but only once a request between them was accepted.
+        allow create, update: if (isOwnerOf(userId) || isOwnerOf(friendId)) && friendshipAccepted(userId, friendId);
+        allow delete: if isOwnerOf(userId) || isOwnerOf(friendId);
       }
 
       match /notifications/{notificationId} {
@@ -173,9 +195,25 @@ service cloud.firestore {
     }
 
     match /friend_requests/{requestId} {
-      allow read: if isSignedIn() && (resource.data.fromUserId == uid() || resource.data.toUserId == uid() || isDeveloper());
-      allow create: if isSignedIn() && incoming().fromUserId == uid();
-      allow update: if isSignedIn() && (existing().toUserId == uid() || existing().fromUserId == uid() || isDeveloper());
+      // Checking whether a request exists is fine (a missing one reveals nothing); reading one
+      // that exists is for the two players only, and lists must be limited to your own.
+      allow get: if isSignedIn() && (resource == null || resource.data.fromUserId == uid() || resource.data.toUserId == uid() || isDeveloper());
+      allow list: if isSignedIn() && (resource.data.fromUserId == uid() || resource.data.toUserId == uid() || isDeveloper());
+      // Only to a real player who has not blocked you, under the id "<from>_<to>".
+      allow create: if isSignedIn()
+        && incoming().fromUserId == uid()
+        && incoming().toUserId is string && incoming().toUserId != uid()
+        && requestId == uid() + '_' + incoming().toUserId
+        && incoming().status == 'pending'
+        && exists(/databases/$(database)/documents/users/$(incoming().toUserId))
+        && !exists(/databases/$(database)/documents/users/$(incoming().toUserId)/blocked/$(uid()));
+      // Only the receiver answers; nobody can change who the request is between.
+      allow update: if isSignedIn()
+        && existing().toUserId == uid()
+        && existing().status == 'pending'
+        && incoming().status in ['accepted', 'declined']
+        && incoming().fromUserId == existing().fromUserId
+        && incoming().toUserId == existing().toUserId;
       allow delete: if isSignedIn() && (existing().toUserId == uid() || existing().fromUserId == uid() || isDeveloper());
     }
 
@@ -238,26 +276,36 @@ service cloud.firestore {
       allow delete: if isDeveloper() || isOwnerOf(resource.data.creatorId);
     }
 
+    /* Private chat between two friends. The chat id is the two uids, sorted, joined by "_". */
     match /direct_messages/{chatId} {
-      function inChat(data) {
-        return isSignedIn() && (
-          data.fromUserId == uid() || 
-          data.toUserId == uid() || 
-          isDeveloper()
-        );
+      function members() {
+        return chatId.split('_');
       }
-      allow read: if inChat(resource.data);
-      allow create: if inChat(incoming());
-      allow update: if inChat(existing()) || isDeveloper();
+      function isMember() {
+        return isSignedIn() && members().size() == 2 && uid() in members();
+      }
+      function otherMember() {
+        return members()[0] == uid() ? members()[1] : members()[0];
+      }
+      function areFriends() {
+        return exists(/databases/$(database)/documents/users/$(uid())/friends/$(otherMember()))
+          && exists(/databases/$(database)/documents/users/$(otherMember())/friends/$(uid()));
+      }
+
+      allow read: if isMember() || isDeveloper();
+      allow create, update: if isMember() && areFriends();
       allow delete: if isDeveloper();
 
       match /messages/{messageId} {
-        allow read: if isSignedIn() && (
-          get(/databases/$(database)/documents/direct_messages/$(chatId)).data.fromUserId == uid() ||
-          get(/databases/$(database)/documents/direct_messages/$(chatId)).data.toUserId == uid() ||
-          isDeveloper()
-        );
-        allow create: if isSignedIn() && isOwnerOf(incoming().senderId) && isValidDirectMessage(incoming());
+        allow read: if isMember() || isDeveloper();
+        allow create: if isMember() && areFriends() && incoming().senderId == uid() && isValidDirectMessage(incoming());
+        // Answering a game challenge only changes its status.
+        allow update: if isMember() && incoming().diff(existing()).affectedKeys().hasOnly(['challengeData']);
+      }
+
+      match /typing/{typerId} {
+        allow read: if isMember();
+        allow write: if isMember() && typerId == uid();
       }
     }
 
