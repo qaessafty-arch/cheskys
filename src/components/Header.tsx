@@ -47,6 +47,8 @@ interface HeaderProps {
   evaluation?: number | null;
   /** Set once the game on the board is decided, e.g. '1-0'. */
   resultLabel?: string | null;
+  /** Forced mate in this many moves (positive: White mates). */
+  mateIn?: number | null;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -56,11 +58,14 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenLogin,
   respectProfile,
   evaluation = null,
-  resultLabel = null
+  resultLabel = null,
+  mateIn = null
 }) => {
   // White's share of the bar: 50% when equal, saturating around ±5 pawns.
   const whiteShare = evaluation === null ? 50 : Math.max(3, Math.min(97, 50 + 50 * Math.tanh(evaluation / 4)));
-  const evalText = resultLabel ?? (evaluation === null ? '' : `${evaluation > 0 ? '+' : ''}${evaluation.toFixed(1)}`);
+  const evalText = resultLabel
+    ?? (mateIn !== null && mateIn !== 0 ? `${mateIn > 0 ? '' : '-'}M${Math.abs(mateIn)}`
+      : evaluation === null ? '' : `${evaluation > 0 ? '+' : ''}${evaluation.toFixed(1)}`);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
 

@@ -409,7 +409,6 @@ export default function App() {
   const executeMove = useCallback(
     (from: Square, to: Square, promotionPiece?: PieceType) => {
       try {
-        const prevEval = evalScore;
         AntiCheatEngine.recordMoveTiming();
         const isWhiteTurn = game.turn() === 'w';
         const newGame = cloneGame(game);
@@ -426,12 +425,14 @@ export default function App() {
         }
         if (!isClockRunning && timeControl.category !== 'unlimited') setIsClockRunning(true);
 
+        // A quick static score until the engine search below replaces it; moves are
+        // labelled only from searched scores, so sacrifices are not called blunders.
         const newScore = evaluateBoard(newGame);
-        const classification = classifyMove(prevEval, newScore, isWhiteTurn, !!moveResult.captured, newGame.isCheckmate());
         const newLog: MoveLog = {
           san: moveResult.san, from: moveResult.from, to: moveResult.to, piece: moveResult.piece as PieceType,
           color: moveResult.color as PieceColor, captured: moveResult.captured as PieceType | undefined,
-          promotion: moveResult.promotion as PieceType | undefined, fen: newGame.fen(), evaluation: newScore, classification
+          promotion: moveResult.promotion as PieceType | undefined, fen: newGame.fen(), evaluation: newScore,
+          classification: newGame.isCheckmate() ? 'brilliant' : undefined
         };
 
         setGame(newGame);
@@ -790,6 +791,55 @@ export default function App() {
     ? { wins: authProfile.wins || 0, losses: authProfile.losses || 0, draws: authProfile.draws || 0 }
     : {};
 
+  // Searched evaluation of each position (White's view, in pawns), cached by FEN.
+  const searchedEvalRef = useRef<Map<string, { pawns: number; mate: number | null }>>(new Map());
+  const [evalMate, setEvalMate] = useState<number | null>(null);
+
+  // After every move, a short engine search gives the real evaluation for the eval bar
+  // and header, and labels the move by how much it lost compared with the best move.
+  useEffect(() => {
+    if (activeMode !== 'ai' && activeMode !== 'pass_and_play') return;
+    let cancelled = false;
+    const evalOf = async (fen: string) => {
+      const cached = searchedEvalRef.current.get(fen);
+      if (cached) return cached;
+      const probe = new Chess(fen);
+      if (probe.isCheckmate()) return { pawns: probe.turn() === 'w' ? -100 : 100, mate: 0 };
+      if (probe.isDraw()) return { pawns: 0, mate: null };
+      const res = await engine.search({ fen }, { timeMs: 350, depth: 14 });
+      const whiteToMove = probe.turn() === 'w';
+      const mate = res.mateIn === null ? null : whiteToMove ? res.mateIn : -res.mateIn;
+      const value = { pawns: mate !== null ? Math.sign(mate) * 50 : res.scoreWhite / 100, mate };
+      searchedEvalRef.current.set(fen, value);
+      return value;
+    };
+    (async () => {
+      try {
+        const n = moveLogs.length;
+        const cur = await evalOf(game.fen());
+        if (cancelled) return;
+        setEvalScore(cur.pawns);
+        setEvalMate(cur.mate);
+        if (n === 0) return;
+        const last = moveLogs[n - 1];
+        const prevFen = n >= 2 ? moveLogs[n - 2].fen : (game.getHeaders().FEN || new Chess().fen());
+        const prev = await evalOf(prevFen);
+        if (cancelled) return;
+        const classification = classifyMove(prev.pawns, cur.pawns, last.color === 'w', {
+          isCapture: !!last.captured,
+          isCheckmate: last.san.endsWith('#')
+        });
+        setMoveLogs(logs => (logs.length === n && logs[n - 1].fen === last.fen
+          ? logs.map((l, i) => (i === n - 1 ? { ...l, evaluation: cur.pawns, classification } : l))
+          : logs));
+      } catch {
+        // Engine unavailable: keep the static score.
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [moveLogs.length, activeMode]);
+
   // PGN for copying, saving and the result screen, with real player names and result.
   const exportPgn = React.useMemo(() => {
     const you = authProfile?.displayName || 'Player';
@@ -903,6 +953,7 @@ export default function App() {
       <AmbientBackground />
       <Header onToggleSidebar={() => setIsSidebarOpen(prev => !prev)} isSidebarOpen={isSidebarOpen} onOpenProfile={() => setActiveMode('profile_page')} onOpenLogin={() => setActiveMode('login')} respectProfile={respectProfile}
         evaluation={activeMode === 'ai' || activeMode === 'pass_and_play' ? evalScore : null}
+        mateIn={activeMode === 'ai' || activeMode === 'pass_and_play' ? evalMate : null}
         resultLabel={(activeMode === 'ai' || activeMode === 'pass_and_play') && gameResult ? (gameResult.winner === 'w' ? '1-0' : gameResult.winner === 'b' ? '0-1' : '½-½') : null} />
 
       <main className="flex-1 flex flex-col justify-start overflow-y-auto w-full z-10 min-h-0">
