@@ -195,6 +195,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [isFlipped] = useState(false);
   const [evalScore, setEvalScore] = useState<number>(0);
+  const [evalMate, setEvalMate] = useState<number | null>(null);
   const [bestMoveSan, setBestMoveSan] = useState<string | null>(null);
   const [searchDepth, setSearchDepth] = useState(0);
   const [fenInput, setFenInput] = useState('');
@@ -371,6 +372,9 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
     const fen = analysisGame.fen();
     if (analysisGame.isGameOver()) {
       setBestMoveSan(null);
+      const mated = analysisGame.isCheckmate();
+      setEvalMate(mated ? 0 : null);
+      setEvalScore(mated ? (analysisGame.turn() === 'w' ? -100 : 100) : 0);
       return;
     }
 
@@ -378,7 +382,10 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
       .search({ fen }, { depth: 16, timeMs: 2000 })
       .then(result => {
         if (cancelled) return;
-        setEvalScore(result.mateIn !== null ? (result.mateIn > 0 ? 1000 : -1000) : result.scoreWhite / 100);
+        // mateIn counts from the side to move; the bar wants White's view.
+        const whiteMate = result.mateIn === null ? null : analysisGame.turn() === 'w' ? result.mateIn : -result.mateIn;
+        setEvalMate(whiteMate);
+        setEvalScore(whiteMate !== null ? Math.sign(whiteMate) * 50 : result.scoreWhite / 100);
         setSearchDepth(result.depth);
         const san = uciToSan(fen, result.bestMove);
         setBestMoveSan(san);
@@ -568,7 +575,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
       <div className="flex items-stretch justify-center gap-2 sm:gap-3 w-full lg:flex-1 lg:max-w-[640px]">
         {settings.showEvalBar && (
           <div className="w-5 sm:w-8 shrink-0 flex glass-premium overflow-hidden !rounded-xl border-white/10">
-            <EvalBar score={evalScore} isFlipped={isFlipped} />
+            <EvalBar score={evalScore} isFlipped={isFlipped} mateIn={evalMate} />
           </div>
         )}
         <ChessBoard

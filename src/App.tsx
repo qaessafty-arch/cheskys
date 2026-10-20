@@ -1065,7 +1065,7 @@ export default function App() {
                   </div>
                   {settings.showEvalBar && (
                     <div className="col-start-1 row-start-2 flex">
-                      <div className="w-5 sm:w-8 h-full glass-premium overflow-hidden !rounded-xl border-white/10"><EvalBar score={evalScore} isFlipped={isBoardFlipped} /></div>
+                      <div className="w-5 sm:w-8 h-full glass-premium overflow-hidden !rounded-xl border-white/10"><EvalBar score={evalScore} isFlipped={isBoardFlipped} mateIn={activeMode === 'ai' || activeMode === 'pass_and_play' ? evalMate : null} /></div>
                     </div>
                   )}
                   <div className="col-start-2 row-start-2 flex justify-center min-w-0">
