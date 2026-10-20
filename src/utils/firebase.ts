@@ -1,8 +1,9 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signOut as firebaseSignOut } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signOut as firebaseSignOut, connectAuthEmulator, signInWithCredential } from 'firebase/auth';
 import { 
   initializeFirestore, 
   getFirestore, 
+  connectFirestoreEmulator,
   doc, 
   getDocFromServer,
   setDoc as fbSetDoc,
@@ -35,6 +36,16 @@ export const db = firebaseConfig.firestoreDatabaseId
   : initializeFirestore(app, { experimentalForceLongPolling: true });
 
 export const googleProvider = new GoogleAuthProvider();
+
+// Local development only (never in a production build): `VITE_USE_FIREBASE_EMULATORS=true npm run dev`
+// talks to the Auth and Firestore emulators, and window.__emulatorGoogleSignIn(uid, name) signs in
+// a fake Google account there, so two browser windows can be two real players.
+if (import.meta.env.DEV && import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true') {
+  connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+  connectFirestoreEmulator(db, '127.0.0.1', 8085);
+  (window as any).__emulatorGoogleSignIn = (uid: string, name: string) =>
+    signInWithCredential(auth, GoogleAuthProvider.credential(JSON.stringify({ sub: uid, email: `${uid}@example.com`, name, email_verified: true })));
+}
 export const storage = getStorage(app);
 
 export default { app, auth, db, storage, googleProvider };

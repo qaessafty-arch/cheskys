@@ -14,6 +14,7 @@ import {
   signInWithPhoneNumber,
   ConfirmationResult,
   signOut as firebaseSignOut,
+  getAdditionalUserInfo,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInAnonymously,
@@ -683,8 +684,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw new Error('Request a code first.');
     }
     try {
-      await phoneConfirmationRef.current.confirm(code.trim());
+      const credential = await phoneConfirmationRef.current.confirm(code.trim());
       phoneConfirmationRef.current = null;
+      // New accounts are created with Google only: an unknown number is not turned into one.
+      if (getAdditionalUserInfo(credential)?.isNewUser) {
+        await credential.user.delete().catch(() => {});
+        await firebaseSignOut(auth).catch(() => {});
+        throw Object.assign(new Error('No account uses this phone number. New players sign up with Google.'), { code: 'auth/new-account-google-only' });
+      }
     } catch (error: any) {
       throw friendlyAuthError(error);
     }
@@ -750,25 +757,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signUpWithEmail = async (email: string, pass: string, displayName?: string) => {
-    try {
-      setIsSkyAccount(false);
-      setIsGuest(false);
-      localStorage.removeItem('chess_active_account');
-      const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), pass);
-      if (displayName && userCredential.user) {
-        await firebaseUpdateProfile(userCredential.user, { displayName });
-      }
-    } catch (error: any) {
-      console.warn('Firebase email signup notice:', error);
-      if (isEmailDeveloper(email)) {
-        if (isSpecialDevSkyPassword(pass)) {
-          activateDevProfile();
-          return;
-        }
-      }
-      throw friendlyAuthError(error);
-    }
+  // New accounts are created with Google only.
+  const signUpWithEmail = async (_email: string, _pass: string, _displayName?: string) => {
+    throw Object.assign(new Error('New accounts are created with Google. Use "Continue with Google".'), { code: 'auth/new-account-google-only' });
   };
 
   const signInAsSky = async (passkey?: string): Promise<boolean> => {

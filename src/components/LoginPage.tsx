@@ -207,52 +207,36 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onCancel, onNav
           {screen === 'landing' ? (
             <motion.div key="landing" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="flex flex-col gap-4">
               <button
-                onClick={handleGuest}
+                onClick={() => handleOAuth('google')}
                 disabled={loading}
-                className="w-full py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white font-bold transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                className="w-full py-3.5 bg-white hover:bg-slate-100 rounded-xl text-slate-900 font-black shadow-lg transition-all flex items-center justify-center gap-3 disabled:opacity-50"
               >
-                <Zap className="w-5 h-5 text-emerald-400" /> Play as Guest
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="" /> Continue with Google
               </button>
+              <p className="text-[11px] text-slate-400 text-center -mt-1">New accounts are created with Google. Your Google account keeps your rating, friends and chats safe.</p>
 
-              <div className="flex items-center gap-4 py-2">
+              <div className="flex items-center gap-4 py-1">
                 <div className="h-px bg-white/10 flex-1" />
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Or</span>
                 <div className="h-px bg-white/10 flex-1" />
               </div>
 
               <button
-                onClick={() => setScreen('auth')}
+                onClick={handleGuest}
                 disabled={loading}
-                className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-sky-600 hover:from-emerald-500 hover:to-sky-500 rounded-xl text-white font-bold shadow-lg transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                className="w-full py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white font-bold transition-all flex items-center justify-center gap-3 disabled:opacity-50"
               >
-                <ShieldCheck className="w-5 h-5" /> Sign In / Register
+                <Zap className="w-5 h-5 text-emerald-400" /> Play as Guest
               </button>
+              <p className="text-[11px] text-slate-500 text-center -mt-1">Guests can play the bots. Friends, chat and the leaderboard need a Google account.</p>
 
-              <div className="grid grid-cols-3 gap-2 mt-2">
-                <button
-                  onClick={() => { setMethod('phone'); setScreen('auth'); setError(null); }}
-                  disabled={loading}
-                  className="py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-bold text-white transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  <Smartphone className="w-4 h-4 text-sky-400" /> Phone
-                </button>
-                <button
-                  onClick={() => handleOAuth('google')}
-                  disabled={loading}
-                  className="py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-bold text-white transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-4 h-4" alt="Google" /> Google
-                </button>
-                <button
-                  onClick={() => handleOAuth('apple')}
-                  disabled={loading}
-                  className="py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-bold text-white transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                    <path d="M16.37 12.75c-.02-2.3 1.88-3.4 1.96-3.46-1.07-1.56-2.73-1.77-3.32-1.8-1.41-.14-2.76.83-3.48.83-.72 0-1.82-.81-3-.79-1.54.02-2.96.9-3.76 2.28-1.6 2.78-.41 6.9 1.15 9.16.76 1.1 1.67 2.34 2.86 2.3 1.15-.05 1.58-.74 2.97-.74 1.38 0 1.77.74 2.98.72 1.23-.02 2.01-1.12 2.77-2.23.87-1.28 1.23-2.52 1.25-2.58-.03-.01-2.4-.92-2.42-3.65zM14.1 6c.63-.77 1.06-1.84.94-2.9-.91.04-2.01.6-2.66 1.37-.58.67-1.09 1.76-.95 2.8 1.01.08 2.04-.51 2.67-1.27z"/>
-                  </svg> Apple
-                </button>
-              </div>
+              <button
+                onClick={() => { setAuthMode('login'); setScreen('auth'); setError(null); }}
+                disabled={loading}
+                className="text-xs font-bold text-slate-400 hover:text-white transition-colors disabled:opacity-50"
+              >
+                Already have an email or phone account? Sign in
+              </button>
             </motion.div>
           ) : (
             <motion.div key="auth" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
@@ -263,10 +247,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onCancel, onNav
                 {method === 'phone' ? (
                   <span className="flex-1 text-sm font-bold text-white">Sign in with phone</span>
                 ) : (
-                <div className="flex flex-1 bg-black/40 rounded-lg p-1">
-                  <button onClick={() => {setAuthMode('login'); setError(null);}} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${authMode === 'login' ? 'bg-slate-700 text-white' : 'text-slate-400'}`}>Log In</button>
-                  <button onClick={() => {setAuthMode('signup'); setError(null);}} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${authMode === 'signup' ? 'bg-slate-700 text-white' : 'text-slate-400'}`}>Sign Up</button>
-                </div>
+                <span className="flex-1 text-sm font-bold text-white">{authMode === 'forgot' ? 'Reset your password' : 'Sign in to your existing account'}</span>
                 )}
               </div>
 
@@ -291,7 +272,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onCancel, onNav
                     <input type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={phoneCode} onChange={e => setPhoneCode(e.target.value.replace(/\D/g, ''))} className="w-full bg-black/40 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white text-sm tracking-[0.4em] font-mono placeholder:tracking-normal placeholder:font-sans placeholder:text-slate-600 focus:outline-none focus:border-emerald-500/50" placeholder="6-digit code" aria-label="Verification code" required />
                   </div>
                 )}
-                <p className="text-[11px] text-slate-500 px-1">Include your country code. A new number creates an account automatically.</p>
+                <p className="text-[11px] text-slate-500 px-1">Include your country code. Only for phone accounts that already exist; new players sign up with Google.</p>
                 <button type="submit" disabled={loading || (codeSent && phoneCode.length < 6)} className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
                   {loading ? 'Processing...' : codeSent ? 'Verify & Sign In' : 'Send Code'}
                   {!loading && <ArrowRight className="w-4 h-4" />}

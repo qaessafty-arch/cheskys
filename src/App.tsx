@@ -46,6 +46,7 @@ import { Watermark } from './components/Watermark';
 import { ViewFallback } from './components/ViewFallback';
 import type { SettingsTab } from './components/SettingsModal';
 import { InGameMessage } from './services/chatService';
+import { usePresence } from './hooks/usePresence';
 import { logCompletedGame } from './services/loggingService';
 import { FriendUser } from './types/chess';
 import { engine } from './engine/client';
@@ -87,7 +88,9 @@ const LoginPage = lazyPreload(() => import('./components/LoginPage').then(m => (
 const UserProfilePage = lazyPreload(() => import('./components/UserProfilePage').then(m => ({ default: m.UserProfilePage })));
 
 export default function App() {
-  const { user, profile: authProfile, updateRespectMetrics } = useAuth();
+  const { user, profile: authProfile, updateRespectMetrics, isGuest: isGuestSession } = useAuth();
+  // Friends see you as online while the app is open (real accounts only).
+  usePresence(authProfile?.uid, !!user && !isGuestSession && !!authProfile);
   const { currentRoom, activeGameId, acceptInvite, declineInvite, joinRoom, joinRoomWithContext } = useRoom();
   const { t, i18n } = useTranslation();
   const { settings, updateSettings } = useSettings();
@@ -278,19 +281,7 @@ export default function App() {
       senderUid, senderName, text, type, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
     setLocalMessages(prev => [...prev, newMessage]);
-    if (isAiMode) {
-      setTimeout(() => {
-        const botReplies = ['Interesting choice. 🤔', 'My turn to punish that. ⚔️', 'Calculating... ⏳', 'Bold. I respect it. 👑'];
-        const botMessage: InGameMessage = {
-          id: `bot_${Date.now()}`, senderUid: 'local_bot', senderName: currentBot.name,
-          text: botReplies[Math.floor(Math.random() * botReplies.length)],
-          type: 'text', timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-        setLocalMessages(prev => [...prev, botMessage]);
-        if (settings.sound) soundManager.playChat();
-      }, 1000 + Math.random() * 1500);
-    }
-  }, [activeMode, game, currentBot.name, settings.sound]);
+  }, [activeMode, game]);
 
   useEffect(() => {
     if (activeTacticalTab === 'chat') setUnreadChatCount(0);
@@ -1057,7 +1048,7 @@ export default function App() {
             </motion.div>
           ) : activeMode === 'leaderboard' ? (
             <motion.div key="leaderboard-view" className="w-full h-full">
-              <WorldwideLeaderboardView />
+              <WorldwideLeaderboardView onOpenChat={friend => setActiveChatFriend(friend)} />
             </motion.div>
           ) : activeMode === 'dev_panel' ? (
             <motion.div key="dev-panel" className="w-full h-full">

@@ -12,6 +12,7 @@
     "lint": "tsc --noEmit",
     "test": "npm run test:engine && npm run test:multiplayer && npm run test:multiplayer-platform && npm run test:phase1 && npm run test:coach && npm run test:rules",
     "test:rules": "tsx src/utils/gameRules.test.ts && tsx src/utils/openings.test.ts && tsx src/utils/lichessPuzzle.test.ts",
+    "test:firestore": "tsx tests/firestore.rules.test.ts",
     "test:coach": "tsx src/services/coachMemory.test.ts && tsx src/data/coachExercises.test.ts && tsx src/data/verifiedPuzzles.test.ts && tsx src/coach/mistakes.test.ts && tsx src/coach/review.test.ts",
     "test:phase1": "tsx src/services/phase1Harden.test.ts",
     "test:engine": "tsx src/engine/perft.test.ts && tsx src/engine/bench.ts 600",
@@ -67,6 +68,7 @@
     "zod": "^4.5.4"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.1",
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
     "@types/react": "^19.2.18",
