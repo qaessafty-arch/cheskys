@@ -1,4 +1,5 @@
 import { Puzzle, DailyPuzzleProgress } from '../types/chess';
+import { puzzleFromLichess } from './lichessPuzzle';
 
 export interface DailyPuzzleData extends Puzzle {
   dateKey: string;
@@ -344,21 +345,23 @@ export const fetchLiveDailyPuzzle = async (dateKey: string = getTodayDateKey()):
       clearTimeout(timeoutId);
 
       if (res.ok) {
-        const data = await res.json();
-        if (data && data.puzzle && data.game) {
-          // Parse Lichess data
-          const fen = data.game.tree?.fen || data.game.fen || fallback.fen;
-          const rating = data.puzzle.rating || fallback.rating;
-          const themes = Array.isArray(data.puzzle.themes) ? data.puzzle.themes.slice(0, 2).join(' & ') : 'Master Tactics';
-          const pgnMoves = data.puzzle.solution || [];
-
+        const live = puzzleFromLichess(await res.json());
+        if (live) {
           return {
             ...fallback,
+            id: `lichess-${live.id}`,
             source: 'lichess',
-            rating,
-            theme: themes || fallback.theme,
-            sourceUrl: `https://lichess.org/training/${data.puzzle.id}`,
-            description: `Live Grandmaster puzzle from world arena (${rating} Elo). Find the most accurate move.`
+            fen: live.fen,
+            playerColor: live.playerColor,
+            solutionMoves: live.solutionMoves,
+            rating: live.rating,
+            theme: live.themes.slice(0, 2).join(' & ') || 'Lichess puzzle',
+            title: 'Lichess Puzzle of the Day',
+            sourceUrl: live.url,
+            description: `Today's puzzle from Lichess (rated ${live.rating}). Find the best move.`,
+            loreContext: 'Lichess builds its puzzles from real games between its players.',
+            tacticalTidbit: 'Look at every check and capture first.',
+            solutionExplanation: `Solution: ${live.solutionMoves.join(' ')}.`
           };
         }
       }
