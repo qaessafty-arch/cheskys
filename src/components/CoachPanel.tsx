@@ -35,7 +35,6 @@ import {
   Zap,
   Award,
   Flame,
-  BrainCircuit,
   ClipboardPaste,
   Eye,
   RotateCcw,
@@ -44,12 +43,29 @@ import {
 import { AppSettings, PieceColor, PieceType } from '../types/chess';
 import { PromotionModal } from './PromotionModal';
 import { TRAINING_EXERCISES, TrainingExercise } from '../data/coachExercises';
+import { CoachId, getCoach, loadCoachId, saveCoachId } from '../coach/characters';
+import { reviewGame, ReviewedMistake } from '../coach/review';
+import { LoggedMistake, loadMistakes, practiceFor, recordMistakes, similarMistakes, mistakeCounts } from '../coach/mistakeLog';
+import { winningChance } from '../utils/chessEngine';
+import { CoachStage } from './coach/CoachStage';
+import { ReviewPanel, ReviewView, RetryTask } from './coach/ReviewPanel';
 
 interface CoachPanelProps {
   settings: AppSettings;
   onUpdateSettings: (newSettings: Partial<AppSettings>) => void;
   initialFen?: string;
   initialPgn?: string;
+  /** A finished game the coach can review; reviewed straight away when `autoReview` is set. */
+  reviewGame?: CoachReviewRequest | null;
+  autoReview?: boolean;
+}
+
+export interface CoachReviewRequest {
+  id: string;
+  startFen: string;
+  moves: string[];
+  playerColor: 'w' | 'b';
+  opponent: string;
 }
 
 interface CoachAdvice {
@@ -84,56 +100,6 @@ interface CoachMessage {
   relatedMove?: string;
   priority: 'high' | 'medium' | 'low';
 }
-
-const COACH_PERSONAS = {
-  beginner: {
-    name: 'Coach Alex',
-    style: 'encouraging',
-    focus: ['basics', 'tactics', 'piece safety'],
-    catchphrases: [
-      "Every master was once a beginner!",
-      "Great job spotting that!",
-      "Let's keep every piece safe first."
-    ]
-  },
-  intermediate: {
-    name: 'Coach Maya',
-    style: 'analytical',
-    focus: ['planning', 'calculation', 'structure'],
-    catchphrases: [
-      "Good calculation!",
-      "What's your plan here?",
-      "Let's look at the pawn structure."
-    ]
-  },
-  advanced: {
-    name: 'Coach Viktor',
-    style: 'deep',
-    focus: ['prophylaxis', 'transitions', 'endgames'],
-    catchphrases: [
-      "Interesting choice. What's your plan?",
-      "Have you considered the prophylactic move?",
-      "The endgame starts now."
-    ]
-  },
-  master: {
-    name: 'Grandmaster Aria',
-    style: 'masterful',
-    focus: ['deep strategy', 'psychology', 'endgame mastery'],
-    catchphrases: [
-      "Beautiful! You're thinking like a GM.",
-      "The position whispers its secrets to those who listen.",
-      "Excellence is in the details."
-    ]
-  }
-};
-
-const getCoachPersona = (rating: number) => {
-  if (rating < 1200) return COACH_PERSONAS.beginner;
-  if (rating < 1800) return COACH_PERSONAS.intermediate;
-  if (rating < 2200) return COACH_PERSONAS.advanced;
-  return COACH_PERSONAS.master;
-};
 
 const pick = <T,>(list: T[]): T => list[Math.floor(Math.random() * list.length)];
 
@@ -173,7 +139,9 @@ const uciToSan = (fen: string, uci: string | null): string | null => {
 export const CoachPanel: React.FC<CoachPanelProps> = ({
   settings,
   initialFen,
-  initialPgn
+  initialPgn,
+  reviewGame: reviewRequest,
+  autoReview
 }) => {
   const { user, profile } = useAuth();
   const accountId = user?.uid || profile?.uid || 'guest';
@@ -194,7 +162,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
   const [historyFens, setHistoryFens] = useState<string[]>([analysisGame.fen()]);
   const [historySans, setHistorySans] = useState<string[]>([]);
   const [currentStep, setCurrentStep] = useState<number>(0);
-  const [isFlipped] = useState(false);
+  const [isFlipped, setIsFlipped] = useState(false);
   const [evalScore, setEvalScore] = useState<number>(0);
   const [evalMate, setEvalMate] = useState<number | null>(null);
   const [bestMoveSan, setBestMoveSan] = useState<string | null>(null);
@@ -240,7 +208,9 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
     engineMatch: engineMatchRate(memory)
   }), [memory, rating]);
 
-  const persona = getCoachPersona(rating);
+  const [coachId, setCoachId] = useState<CoachId>(loadCoachId);
+  const coach = getCoach(coachId);
+  const persona = coach;
 
   const pushMessages = useCallback((messages: CoachMessage[]) => {
     if (messages.length > 0) setCoachMessages(prev => [...messages, ...prev].slice(0, 20));
@@ -258,11 +228,11 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
     const weak = weaknesses(memory);
     const solved = Object.values(memory.exercises).filter(r => r.solved > 0).length;
     if (solved === 0 && weak.length === 0) {
-      say('advice', `${persona.name}: Welcome! Solve a few exercises and I'll learn where to help you most.`, 'high');
+      say('advice', `${coach.lines.greeting[0]} Solve a few exercises, or review one of your games, and I'll learn where to help you most.`, 'high');
     } else if (weak.length > 0) {
-      say('advice', `${persona.name}: Welcome back. Last time ${themeLabel(weak[0])} gave you trouble, so I'll bring those up first.`, 'high');
+      say('advice', `Welcome back. Last time ${themeLabel(weak[0])} gave you trouble, so I'll bring those up first.`, 'high');
     } else {
-      say('advice', `${persona.name}: Welcome back! ${solved} exercise${solved === 1 ? '' : 's'} solved so far. Let's keep going.`, 'high');
+      say('advice', `Welcome back! ${solved} exercise${solved === 1 ? '' : 's'} solved so far. Let's keep going.`, 'high');
     }
     // Only once per account.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -361,10 +331,11 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
 
     setCoachAdvice(advice);
     if (advice.length > 0 && advice[0].priority !== 'low') {
-      say('advice', `${persona.name}: ${pick(persona.catchphrases)} ${advice[0].description}`, 'high');
+      say('advice', `${pick(persona.catchphrases)} ${advice[0].description}`, 'high');
     }
   }, [memory, persona, say]);
 
+  const reviewActiveRef = useRef(false);
   const generateRef = useRef(generateCoachAdvice);
   generateRef.current = generateCoachAdvice;
 
@@ -390,7 +361,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
         setSearchDepth(result.depth);
         const san = uciToSan(fen, result.bestMove);
         setBestMoveSan(san);
-        if (!currentExercise) generateRef.current(analysisGame, result, san);
+        if (!currentExercise && !reviewActiveRef.current) generateRef.current(analysisGame, result, san);
       })
       .catch(() => {
         if (!cancelled) setBestMoveSan(null);
@@ -433,18 +404,18 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
       const matched = move.san === bestMoveSan;
       setMemory(m => recordAnalysedMove(m, matched));
       if (!matched && !move.san.includes('#')) {
-        say('warning', `${persona.name}: Playable, but the engine preferred ${bestMoveSan}.`, 'low', move.san);
+        say('warning', `Playable, but the engine preferred ${bestMoveSan}.`, 'low', move.san);
       }
     }
 
     pushPosition(next, move.san);
 
     if (move.san.includes('#')) {
-      say('celebration', `${persona.name}: Checkmate! ${persona.catchphrases[0]}`, 'high', move.san);
+      say('celebration', `Checkmate! ${persona.catchphrases[0]}`, 'high', move.san);
     } else if (move.san.includes('+')) {
-      say('praise', `${persona.name}: Good check! Keep the pressure on.`, 'medium', move.san);
+      say('praise', `Good check! Keep the pressure on.`, 'medium', move.san);
     } else if (move.flags.includes('c') && move.san === bestMoveSan) {
-      say('praise', `${persona.name}: Good capture! ${pick(persona.catchphrases)}`, 'medium', move.san);
+      say('praise', `Good capture! ${pick(persona.catchphrases)}`, 'medium', move.san);
     }
   };
 
@@ -477,11 +448,11 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
     setCurrentExercise(null);
     if (solved) {
       const clean = mistakes === 0 ? ' Flawless!' : ` (${mistakes} miss${mistakes === 1 ? '' : 'es'} on the way.)`;
-      say('celebration', `Exercise completed in ${Math.max(1, Math.round(timeMs / 1000))}s.${clean} ${persona.name}: Outstanding work!`, 'high');
+      say('celebration', `Exercise completed in ${Math.max(1, Math.round(timeMs / 1000))}s.${clean} Outstanding work!`, 'high');
     }
     const next = recommendNext(TRAINING_EXERCISES, updated, rating, Date.now(), exercise.id);
-    if (next) say('advice', `${persona.name}: Up next I'd suggest "${next.title}".`, 'medium');
-    if (solved) {
+    if (next) say('advice', `Up next I'd suggest "${next.title}".`, 'medium');
+    if (solved && !reviewActiveRef.current) {
       // Some finished lines are dead positions the board would announce as "Game over: draw";
       // hand back a fresh board for free analysis instead.
       replyTimerRef.current = setTimeout(() => {
@@ -507,7 +478,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
     const correct = move.san === expected || (expected.endsWith('#') && next.isCheckmate());
     if (!correct) {
       exerciseMistakesRef.current += 1;
-      say('warning', `${persona.name}: Not quite — ${move.san} isn't it. ${currentExercise.hint || 'Think about the key tactical idea.'}`, 'medium', move.san);
+      say('warning', `Not quite — ${move.san} isn't it. ${currentExercise.hint || 'Think about the key tactical idea.'}`, 'medium', move.san);
       return; // The board stays on the exercise position so the player can try again.
     }
 
@@ -518,7 +489,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
       return;
     }
 
-    say('praise', `${persona.name}: Excellent! ${pick(persona.catchphrases)}`, 'medium', move.san);
+    say('praise', `Excellent! ${pick(persona.catchphrases)}`, 'medium', move.san);
     // The coach plays the opponent's reply, then it's the player's turn again.
     const reply = currentExercise.solution[step];
     const exercise = currentExercise;
@@ -536,7 +507,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
   const showSolution = () => {
     if (!currentExercise) return;
     const exercise = currentExercise;
-    say('advice', `${persona.name}: The solution is ${exercise.solution.join(', ')}. We'll come back to this one soon.`, 'high');
+    say('advice', `The solution is ${exercise.solution.join(', ')}. We'll come back to this one soon.`, 'high');
     finishExercise(exercise, false);
     loadExercisePosition(exercise);
   };
@@ -567,6 +538,245 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
     }
   };
 
+
+  // ---- Choosing a coach -------------------------------------------------------------
+  const changeCoach = (id: CoachId) => {
+    if (id === coachId) return;
+    setCoachId(id);
+    saveCoachId(id);
+    const next = getCoach(id);
+    say('advice', pick(next.lines.greeting), 'high');
+  };
+  const pokeCoach = () => say('advice', pick(coach.lines.poke), 'medium');
+
+  // ---- Game review: find the mistakes, retry them, then train the same pattern ---------
+  const [review, setReview] = useState<ReviewView | null>(null);
+  const reviewRunRef = useRef(0);
+  const reviewStampRef = useRef(0);
+  const lineTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const evalCacheRef = useRef(new Map<string, number>());
+  const [mistakeLog, setMistakeLog] = useState<LoggedMistake[]>(() => loadMistakes(accountId));
+  useEffect(() => setMistakeLog(loadMistakes(accountId)), [accountId]);
+
+  const reviewSearch = (fen: string) => engine.search({ fen }, { depth: 12, timeMs: 500 });
+  /** Evaluation in pawns for the side to move (mates as +/-50), cached per position. */
+  const evalFor = async (fen: string) => {
+    const cached = evalCacheRef.current.get(fen);
+    if (cached !== undefined) return cached;
+    const res = await reviewSearch(fen);
+    const value = res.mateIn !== null ? Math.sign(res.mateIn || 1) * 50 : res.score / 100;
+    evalCacheRef.current.set(fen, value);
+    return value;
+  };
+
+  const showPosition = (fen: string) => {
+    if (lineTimerRef.current) clearTimeout(lineTimerRef.current);
+    const g = new Chess(fen);
+    setCurrentExercise(null);
+    setAnalysisGame(g);
+    setHistoryFens([fen]);
+    setHistorySans([]);
+    setCurrentStep(0);
+  };
+
+  const taskFromReview = (m: ReviewedMistake): RetryTask => ({
+    key: m.id,
+    fenBefore: m.fenBefore,
+    playedSan: m.playedSan,
+    bestSan: m.bestSan,
+    bestLineSan: m.bestLineSan,
+    explanation: m.explanation,
+    label: m.label,
+    motif: m.motif,
+    severity: m.severity,
+    moveLabel: m.moveLabel,
+    backRank: m.backRank,
+  });
+
+  const taskFromLog = (m: LoggedMistake): RetryTask => ({
+    key: m.id,
+    fenBefore: m.fenBefore,
+    playedSan: m.playedSan,
+    bestSan: m.bestSan,
+    bestLineSan: m.bestSan ? [m.bestSan] : [],
+    explanation: m.explanation,
+    label: m.label,
+    motif: m.motif,
+    severity: m.severity,
+    moveLabel: m.moveLabel,
+    fromEarlierGame: { opponent: m.opponent, date: m.date },
+  });
+
+  const presentTask = (task: RetryTask, tasks: RetryTask[], index: number, earlier: RetryTask | null, log: LoggedMistake[]) => {
+    showPosition(task.fenBefore);
+    setIsFlipped(new Chess(task.fenBefore).turn() === 'b');
+    setReview({
+      phase: 'ready',
+      tasks,
+      index,
+      earlier,
+      step: 'try',
+      similar: earlier ? [] : similarMistakes(log, task.motif, reviewStampRef.current),
+      practice: practiceFor(task.motif, { backRank: task.backRank, max: 3 }),
+    });
+    const intro = earlier ? `This is from your game against ${earlier.fromEarlierGame?.opponent}.` : pick(coach.lines.mistake[task.severity]);
+    say('exercise', `${intro} You played ${task.moveLabel} ${task.playedSan}. ${coach.lines.tryAgain}`, 'high');
+  };
+
+  const startReview = async (request: CoachReviewRequest) => {
+    const run = ++reviewRunRef.current;
+    setCurrentExercise(null);
+    setCoachAdvice([]);
+    setReview({ phase: 'analysing', done: 0, total: 0 });
+    say('advice', coach.lines.reviewStart, 'high');
+    try {
+      const mistakes = await reviewGame(request.startFen, request.moves, request.playerColor, reviewSearch, {
+        onProgress: (done, total) => {
+          if (reviewRunRef.current === run) setReview({ phase: 'analysing', done, total });
+        },
+        isCancelled: () => reviewRunRef.current !== run,
+      });
+      if (reviewRunRef.current !== run) return;
+      reviewStampRef.current = Date.now();
+      const log = recordMistakes(accountId, mistakes, request.opponent, reviewStampRef.current);
+      setMistakeLog(log);
+      const tasks = mistakes.map(taskFromReview);
+      if (tasks.length === 0) {
+        setReview({ phase: 'ready', tasks, index: 0, earlier: null, step: 'try', similar: [], practice: [] });
+        say('celebration', coach.lines.reviewClean, 'high');
+        return;
+      }
+      say('advice', coach.lines.reviewSummary(tasks.length), 'high');
+      // Give the summary a moment before the first position.
+      lineTimerRef.current = setTimeout(() => {
+        if (reviewRunRef.current === run) presentTask(tasks[0], tasks, 0, null, log);
+      }, 1200);
+    } catch {
+      if (reviewRunRef.current === run) {
+        setReview(null);
+        say('warning', 'The engine could not review this game. Please try again.', 'high');
+      }
+    }
+  };
+
+  const closeReview = () => {
+    reviewRunRef.current++;
+    if (lineTimerRef.current) clearTimeout(lineTimerRef.current);
+    setReview(null);
+    setIsFlipped(false);
+  };
+
+  const reviewedRequestRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!reviewRequest || !autoReview || reviewedRequestRef.current === reviewRequest.id) return;
+    reviewedRequestRef.current = reviewRequest.id;
+    startReview(reviewRequest);
+    // Start once per game handed over.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reviewRequest?.id, autoReview]);
+
+  const activeTask = review?.phase === 'ready' ? review.earlier ?? review.tasks[review.index] ?? null : null;
+
+  const finishTask = (step: 'solved' | 'revealed') => {
+    if (!activeTask || review?.phase !== 'ready') return;
+    setReview({ ...review, step });
+    const tip = coach.lines.motifTip[activeTask.motif];
+    if (step === 'solved') say('praise', `${pick(coach.lines.retryRight)} ${activeTask.explanation} ${tip}`, 'high');
+    else say('advice', `${coach.lines.reveal} ${activeTask.bestLineSan.join(' ')}. ${activeTask.explanation} ${tip}`, 'high');
+  };
+
+  const handleReviewMove = async (from: Square, to: Square, promotion?: PieceType) => {
+    if (!activeTask || review?.phase !== 'ready' || review.step !== 'try') return;
+    const applied = applyMove(analysisGame, from, to, promotion);
+    if (!applied) return;
+    const { next, move } = applied;
+    soundManager.playMove();
+    const task = activeTask;
+    const accept = () => {
+      pushPosition(next, move.san);
+      finishTask('solved');
+    };
+    if (move.san === task.bestSan || (task.bestSan?.endsWith('#') && next.isCheckmate())) {
+      accept();
+      return;
+    }
+    if (move.san === task.playedSan) {
+      say('warning', `That is the move from the game. ${coach.lines.retryWrong}`, 'medium', move.san);
+      return;
+    }
+    // Another move can be just as good: compare it with the best move's evaluation.
+    setReview({ ...review, step: 'checking' });
+    try {
+      const [bestEval, replyEval] = await Promise.all([evalFor(task.fenBefore), next.isGameOver() ? Promise.resolve(0) : evalFor(next.fen())]);
+      const attemptEval = next.isCheckmate() ? 50 : -replyEval;
+      const drop = winningChance(bestEval) - winningChance(attemptEval);
+      if (drop < 3) {
+        pushPosition(next, move.san);
+        setReview(r => (r && r.phase === 'ready' ? { ...r, step: 'solved' } : r));
+        say('praise', `${coach.lines.retryAlsoGood} ${task.explanation} ${coach.lines.motifTip[task.motif]}`, 'high', move.san);
+        return;
+      }
+    } catch {
+      // Without the engine only the best move counts.
+    }
+    setReview(r => (r && r.phase === 'ready' ? { ...r, step: 'try' } : r));
+    say('warning', `${move.san} is not better. ${coach.lines.retryWrong}`, 'medium', move.san);
+  };
+
+  const replayBestLine = () => {
+    if (!activeTask) return;
+    if (lineTimerRef.current) clearTimeout(lineTimerRef.current);
+    const start = new Chess(activeTask.fenBefore);
+    const line = activeTask.bestLineSan.length ? activeTask.bestLineSan : activeTask.bestSan ? [activeTask.bestSan] : [];
+    showPosition(start.fen());
+    let fens = [start.fen()];
+    let sans: string[] = [];
+    const g = new Chess(start.fen());
+    line.forEach((san, i) => {
+      lineTimerRef.current = setTimeout(() => {
+        try {
+          const m = g.move(san);
+          soundManager.playMove();
+          fens = [...fens, g.fen()];
+          sans = [...sans, m.san];
+          setHistoryFens(fens);
+          setHistorySans(sans);
+          setCurrentStep(fens.length - 1);
+          setAnalysisGame(new Chess(g.fen()));
+        } catch {
+          // Line ended.
+        }
+      }, 700 * (i + 1));
+    });
+  };
+
+  const revealTask = () => {
+    if (!activeTask) return;
+    finishTask('revealed');
+    replayBestLine();
+  };
+
+  const selectTask = (index: number) => {
+    if (review?.phase !== 'ready' || index < 0 || index >= review.tasks.length) return;
+    presentTask(review.tasks[index], review.tasks, index, null, mistakeLog);
+  };
+
+  const retryEarlier = (m: LoggedMistake) => {
+    if (review?.phase !== 'ready') return;
+    const task = taskFromLog(m);
+    presentTask(task, review.tasks, review.index, task, mistakeLog);
+  };
+
+  const backToGameMistake = () => selectTask(review?.phase === 'ready' ? review.index : 0);
+
+  const practiceFromReview = (ex: TrainingExercise) => {
+    setIsFlipped(new Chess(ex.fen).turn() === 'b');
+    startExercise(ex);
+  };
+
+  reviewActiveRef.current = review !== null;
+  const commonMistakes = mistakeCounts(mistakeLog).slice(0, 3);
+
   const recommended = recommendNext(TRAINING_EXERCISES, memory, rating, Date.now(), currentExercise?.id);
   const visibleExercises = showAllExercises ? TRAINING_EXERCISES : TRAINING_EXERCISES.slice(0, 4);
   const remaining = TRAINING_EXERCISES.filter(e => !((memory.exercises[e.id]?.solved ?? 0) > 0)).length;
@@ -580,7 +790,12 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
       if (analysisGame.moves({ square: from, verbose: true }).some(m => m.to === to)) setPendingPromotion({ from, to });
       return;
     }
-    (currentExercise ? handleExerciseMove : handleAnalysisMove)(from, to);
+    routeMove(from, to);
+  };
+  const routeMove = (from: Square, to: Square, promotion?: PieceType) => {
+    if (currentExercise) handleExerciseMove(from, to, promotion);
+    else if (activeTask && review?.phase === 'ready' && review.step !== 'solved' && review.step !== 'revealed') handleReviewMove(from, to, promotion);
+    else handleAnalysisMove(from, to, promotion);
   };
 
   return (
@@ -608,21 +823,13 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
 
       <div className="w-full lg:w-96 flex flex-col gap-3">
         <div className="glass-card p-4 shadow-xl space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-9 h-9 shrink-0 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white shadow-lg">
-                <BrainCircuit className="w-4 h-4" />
-              </div>
-              <div className="min-w-0">
-                <div className="font-black text-sm text-white font-ui uppercase tracking-wider truncate">
-                  {persona.name}
-                </div>
-                <div className="text-[11px] text-white/60 font-mono truncate">
-                  {persona.style} · {persona.focus.join(', ')}
-                </div>
-              </div>
-            </div>
-            <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+          <CoachStage
+            coach={coach}
+            onChangeCoach={changeCoach}
+            speech={coachMessages[0] ? { id: coachMessages[0].id, type: coachMessages[0].type, text: coachMessages[0].content } : null}
+            onPoke={pokeCoach}
+            badge={
+              <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
               coachProfile.strength === 'master' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/40' :
               coachProfile.strength === 'expert' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/40' :
               coachProfile.strength === 'advanced' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40' :
@@ -631,7 +838,42 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
             }`}>
               {coachProfile.strength}
             </span>
-          </div>
+            }
+          />
+
+          {review ? (
+            <ReviewPanel
+              coach={coach}
+              view={review}
+              onSelect={selectTask}
+              onReveal={revealTask}
+              onRetryEarlier={retryEarlier}
+              onBackToGame={backToGameMistake}
+              onPractice={practiceFromReview}
+              onReplayLine={replayBestLine}
+              onClose={closeReview}
+            />
+          ) : reviewRequest && (
+            <button
+              type="button"
+              onClick={() => startReview(reviewRequest)}
+              className="w-full py-2.5 px-3 rounded-xl text-black font-black text-[11px] uppercase tracking-wider transition-all hover:brightness-110 active:scale-[0.98] shadow-lg"
+              style={{ background: coach.accent }}
+            >
+              Review your last game vs {reviewRequest.opponent}
+            </button>
+          )}
+
+          {commonMistakes.length > 0 && !review && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] text-white/60">Your most common mistakes:</span>
+              {commonMistakes.map(c => (
+                <span key={c.motif} className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-orange-500/15 text-orange-300 border border-orange-500/30">
+                  {c.label} ×{c.count}
+                </span>
+              ))}
+            </div>
+          )}
 
           {currentExercise && (
             <div className="glass-card p-3 border border-blue-500/30 bg-blue-500/5">
@@ -653,9 +895,9 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
             </div>
           )}
 
-          {showCoachChat && coachMessages.length > 0 && (
+          {showCoachChat && coachMessages.length > 1 && (
             <div className="glass-card p-3 max-h-64 overflow-y-auto space-y-2" aria-live="polite">
-              {coachMessages.slice(0, 10).map(msg => (
+              {coachMessages.slice(1, 10).map(msg => (
                 <div
                   key={msg.id}
                   className={`flex gap-2 p-2 rounded-xl transition-all ${
@@ -879,7 +1121,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
           onSelect={piece => {
             const { from, to } = pendingPromotion;
             setPendingPromotion(null);
-            (currentExercise ? handleExerciseMove : handleAnalysisMove)(from, to, piece);
+            routeMove(from, to, piece);
           }}
         />
       )}

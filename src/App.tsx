@@ -67,6 +67,7 @@ const PuzzlePractice = lazyPreload(() => import('./components/PuzzlePractice').t
 const PuzzleMode = lazyPreload(() => import('./components/PuzzleMode').then(m => ({ default: m.PuzzleMode })));
 const DailyPuzzleView = lazyPreload(() => import('./components/DailyPuzzleView').then(m => ({ default: m.DailyPuzzleView })));
 const AnalysisPanel = lazyPreload(() => import('./components/AnalysisPanel').then(m => ({ default: m.AnalysisPanel })));
+import type { CoachReviewRequest } from './components/CoachPanel';
 const CoachPanel = lazyPreload(() => import('./components/CoachPanel').then(m => ({ default: m.CoachPanel })));
 const CheckmateJudgmentModal = lazyPreload(() => import('./components/CheckmateJudgmentModal').then(m => ({ default: m.CheckmateJudgmentModal })));
 const LeaderboardModal = lazyPreload(() => import('./components/LeaderboardModal').then(m => ({ default: m.LeaderboardModal })));
@@ -822,6 +823,8 @@ export default function App() {
   // Searched evaluation of each position (White's view, in pawns), cached by FEN.
   const searchedEvalRef = useRef<Map<string, { pawns: number; mate: number | null }>>(new Map());
   const [evalMate, setEvalMate] = useState<number | null>(null);
+  const [coachReview, setCoachReview] = useState<CoachReviewRequest | null>(null);
+  const [autoCoachReview, setAutoCoachReview] = useState(false);
 
   // After every move, a short engine search gives the real evaluation for the eval bar
   // and header, and labels the move by how much it lost compared with the best move.
@@ -929,6 +932,17 @@ export default function App() {
 
   useEffect(() => {
     if (!gameResult) return;
+    // Keep the finished bot game so the coach can review it.
+    if (activeMode === 'ai' && game.history().length > 0) {
+      setCoachReview({
+        id: `${Date.now()}`,
+        startFen: game.getHeaders().FEN || new Chess().fen(),
+        moves: game.history(),
+        playerColor,
+        opponent: currentBot.name,
+      });
+      setAutoCoachReview(false);
+    }
     try {
       const isWin = gameResult.winner === playerColor;
       const isDraw = gameResult.winner === 'draw';
@@ -1067,7 +1081,7 @@ export default function App() {
             </motion.div>
           ) : activeMode === 'coach' ? (
             <motion.div key="coach-panel" className="w-full h-full">
-              <CoachPanel settings={settings} onUpdateSettings={updates => setSettings(s => ({ ...s, ...updates }))} />
+              <CoachPanel settings={settings} onUpdateSettings={updates => setSettings(s => ({ ...s, ...updates }))} reviewGame={coachReview} autoReview={autoCoachReview} />
             </motion.div>
           ) : (
             <motion.div key="local-game-view" className="w-full max-w-7xl mx-auto p-3 sm:p-6 lg:px-8 lg:py-5 grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-start justify-center relative z-10">
@@ -1190,6 +1204,7 @@ export default function App() {
           onNewGame={() => { setGameResult(null); setIsNewGameModalOpen(true); }}
           onPracticePuzzles={() => { setGameResult(null); setActiveMode("puzzle_practice"); }}
           onAnalyze={() => { setGameResult(null); setActiveMode('analysis'); }}
+          onReviewWithCoach={activeMode === 'ai' ? () => { setGameResult(null); setAutoCoachReview(true); setActiveMode('coach'); } : undefined}
           onClose={() => setGameResult(null)}
         />
       )}

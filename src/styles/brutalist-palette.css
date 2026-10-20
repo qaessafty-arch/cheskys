@@ -741,7 +741,8 @@
   [class~="text-slate-700"],
   [class~="text-slate-950"],
   [class~="text-white"],
-  [class~="text-white/90"]
+  [class~="text-white/90"],
+  [class~="text-white/95"]
 ):not(:where(.board-3d-frame *, [data-nb-keep], [data-nb-keep] *)) {
   color: #0b0b0b;
 }
@@ -754,9 +755,13 @@
   [class~="text-purple-200/60"],
   [class~="text-rose-200/70"],
   [class~="text-sky-100/80"],
+  [class~="text-white/55"],
   [class~="text-white/60"],
+  [class~="text-white/65"],
   [class~="text-white/70"],
-  [class~="text-white/80"]
+  [class~="text-white/75"],
+  [class~="text-white/80"],
+  [class~="text-white/85"]
 ):not(:where(.board-3d-frame *, [data-nb-keep], [data-nb-keep] *)) {
   color: #333333;
 }

@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GameResult } from '../types/chess';
-import { Trophy, RefreshCw, Compass, Award, X } from 'lucide-react';
+import { Trophy, RefreshCw, Compass, Award, X, GraduationCap } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { AiMangaRecap } from './AiMangaRecap';
 
@@ -11,6 +11,7 @@ interface GameOverModalProps {
   onNewGame: () => void;
   onAnalyze: () => void;
   onPracticePuzzles?: () => void;
+  onReviewWithCoach?: () => void;
   onClose: () => void;
   pgn?: string;
   rematchState?: 'none' | 'offered_by_me' | 'offered_by_opponent';
@@ -26,6 +27,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   onNewGame,
   onAnalyze,
   onPracticePuzzles,
+  onReviewWithCoach,
   onClose,
   pgn,
   rematchState = 'none',
@@ -122,6 +124,16 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
             >
               <RefreshCw className="w-4 h-4" />
               <span>Rematch</span>
+            </button>
+          )}
+
+          {onReviewWithCoach && (
+            <button
+              onClick={onReviewWithCoach}
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-emerald-500 text-[#0B0F19] font-black text-[11px] hover:brightness-110 transition-all uppercase tracking-widest active:scale-95 cursor-pointer shadow-lg shadow-emerald-500/20"
+            >
+              <GraduationCap className="w-4 h-4" />
+              <span>Review with Coach</span>
             </button>
           )}
 
