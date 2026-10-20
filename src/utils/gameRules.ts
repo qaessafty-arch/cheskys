@@ -31,3 +31,20 @@ export function canStillMate(game: Chess, color: Color): boolean {
   if (own.length === 1 && (own[0]!.type === 'n' || own[0]!.type === 'b') && theirs.length === 0) return false;
   return true;
 }
+
+/** PGN of the game with proper headers, for copying, saving and sharing. */
+export function pgnWithHeaders(
+  game: Chess,
+  headers: { white: string; black: string; result?: '1-0' | '0-1' | '1/2-1/2' | '*'; event?: string; date?: Date }
+): string {
+  const g = cloneGame(game);
+  const d = headers.date ?? new Date();
+  const date = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+  g.setHeader('Event', headers.event ?? 'Casual game');
+  g.setHeader('Site', 'Chesskys');
+  g.setHeader('Date', date);
+  g.setHeader('White', headers.white);
+  g.setHeader('Black', headers.black);
+  g.setHeader('Result', headers.result ?? '*');
+  return g.pgn();
+}

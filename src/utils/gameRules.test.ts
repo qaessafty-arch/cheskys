@@ -1,5 +1,5 @@
 import { Chess } from 'chess.js';
-import { cloneGame, drawReason, canStillMate } from './gameRules';
+import { cloneGame, drawReason, canStillMate, pgnWithHeaders } from './gameRules';
 
 let passed = 0;
 let failed = 0;
@@ -31,6 +31,16 @@ check('king and knight cannot mate a lone king', !canStillMate(new Chess('7k/8/8
 check('king and rook can mate', canStillMate(new Chess('7k/8/8/8/8/8/8/K5R1 w - - 0 1'), 'w'));
 check('king and knight can still mate when the opponent has pawns', canStillMate(new Chess('7k/6p1/8/8/8/8/8/K5N1 w - - 0 1'), 'w'));
 check('a single pawn can still win', canStillMate(new Chess('7k/8/8/8/8/8/P7/K7 w - - 0 1'), 'w'));
+
+const scholar = new Chess();
+for (const m of ['e4', 'e5', 'Bc4', 'Nc6', 'Qh5', 'Nf6', 'Qxf7#']) scholar.move(m);
+const pgn = pgnWithHeaders(scholar, { white: 'Hana', black: 'Zagros Scout', result: '1-0', date: new Date(2026, 9, 20) });
+check('exported PGN names the players', pgn.includes('[White "Hana"]') && pgn.includes('[Black "Zagros Scout"]'));
+check('exported PGN has the date and result', pgn.includes('[Date "2026.10.20"]') && pgn.includes('[Result "1-0"]'));
+check('exported PGN contains every move and ends with the result', pgn.includes('1. e4 e5 2. Bc4 Nc6 3. Qh5 Nf6 4. Qxf7# 1-0'));
+const reread = new Chess();
+reread.loadPgn(pgn);
+check('exported PGN loads back to the same position', reread.fen() === scholar.fen());
 
 console.log(`\nResults: ${passed} passed, ${failed} failed.`);
 if (failed > 0) process.exit(1);

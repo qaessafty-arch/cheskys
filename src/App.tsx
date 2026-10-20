@@ -49,7 +49,7 @@ import { InGameMessage } from './services/chatService';
 import { logCompletedGame } from './services/loggingService';
 import { FriendUser } from './types/chess';
 import { engine } from './engine/client';
-import { cloneGame, drawReason, canStillMate } from './utils/gameRules';
+import { cloneGame, drawReason, canStillMate, pgnWithHeaders } from './utils/gameRules';
 
 const lazyPreload = <P extends object>(load: () => Promise<{ default: React.ComponentType<P> }>) => {
   const Component = lazy(load) as React.LazyExoticComponent<React.ComponentType<P>> & { preload: () => void };
@@ -242,6 +242,8 @@ export default function App() {
   const [gameResult, setGameResult] = useState<GameResult | null>(null);
   // True once the current game's outcome has been written to the player's stats.
   const resultRecordedRef = useRef(false);
+  // Rating change applied for the current game, so the saved game log shows the real number.
+  const lastEloDeltaRef = useRef(0);
   const [isAiThinking, setIsAiThinking] = useState(false);
   const [whiteTime, setWhiteTime] = useState<number>(timeControl.initialSeconds);
   const [blackTime, setBlackTime] = useState<number>(timeControl.initialSeconds);
@@ -788,6 +790,16 @@ export default function App() {
     ? { wins: authProfile.wins || 0, losses: authProfile.losses || 0, draws: authProfile.draws || 0 }
     : {};
 
+  // PGN for copying, saving and the result screen, with real player names and result.
+  const exportPgn = React.useMemo(() => {
+    const you = authProfile?.displayName || 'Player';
+    const bot = currentBot.name;
+    const white = activeMode === 'ai' ? (playerColor === 'w' ? you : bot) : 'White';
+    const black = activeMode === 'ai' ? (playerColor === 'w' ? bot : you) : 'Black';
+    const result = !gameResult ? '*' : gameResult.winner === 'w' ? '1-0' : gameResult.winner === 'b' ? '0-1' : '1/2-1/2';
+    return pgnWithHeaders(game, { white, black, result, event: activeMode === 'ai' ? `Game against ${bot}` : 'Casual game' });
+  }, [game, gameResult, activeMode, playerColor, currentBot.name, authProfile?.displayName]);
+
   // Records wins, losses and draws against the bot. Checkmates the player delivers are
   // recorded by the Execute judgment instead, which sets resultRecordedRef first.
   useEffect(() => {
@@ -797,9 +809,12 @@ export default function App() {
     }
     if (activeMode !== 'ai' || resultRecordedRef.current || moveLogs.length < 2) return;
     resultRecordedRef.current = true;
-    if (gameResult.winner === playerColor) updateRespectMetrics({ wins: 1, gamesPlayed: 1, elo: botGameEloDelta(1) });
-    else if (gameResult.winner === 'w' || gameResult.winner === 'b') updateRespectMetrics({ losses: 1, gamesPlayed: 1, elo: botGameEloDelta(0) });
-    else updateRespectMetrics({ draws: 1, gamesPlayed: 1, elo: botGameEloDelta(0.5) });
+    const score = gameResult.winner === playerColor ? 1 : gameResult.winner === 'w' || gameResult.winner === 'b' ? 0 : 0.5;
+    const elo = botGameEloDelta(score);
+    lastEloDeltaRef.current = elo;
+    if (score === 1) updateRespectMetrics({ wins: 1, gamesPlayed: 1, elo });
+    else if (score === 0) updateRespectMetrics({ losses: 1, gamesPlayed: 1, elo });
+    else updateRespectMetrics({ draws: 1, gamesPlayed: 1, elo });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameResult]);
 
@@ -809,7 +824,8 @@ export default function App() {
     setRespectProfile(updated);
     // Pass-and-play is two people on one device, so only games against the bot count toward ranked stats.
     resultRecordedRef.current = true;
-    updateRespectMetrics(activeMode === 'ai' ? { executions: 1, wins: 1, gamesPlayed: 1, elo: botGameEloDelta(1) } : { executions: 1 });
+    lastEloDeltaRef.current = activeMode === 'ai' ? botGameEloDelta(1) : 0;
+    updateRespectMetrics(activeMode === 'ai' ? { executions: 1, wins: 1, gamesPlayed: 1, elo: lastEloDeltaRef.current } : { executions: 1 });
     if (pendingCheckmateResult) setGameResult(pendingCheckmateResult);
   };
 
@@ -843,8 +859,8 @@ export default function App() {
         userId: user?.uid, mode: activeMode, opponentName: activeMode === 'ai' ? currentBot.name : 'Opponent Player',
         opponentAvatar: activeMode === 'ai' ? currentBot.avatar : '♚', opponentElo: activeMode === 'ai' ? currentBot.elo : 1200,
         playerColor, result: resultType, reason: gameResult.reason, movesCount: moveLogs.length,
-        timeControlName: timeControl.name, pgn: game.pgn(), finalFen: game.fen(),
-        respectChange: isWin ? 20 : isDraw ? 5 : 0, eloChange: isWin ? 15 : isDraw ? 0 : -10
+        timeControlName: timeControl.name, pgn: exportPgn, finalFen: game.fen(),
+        respectChange: 0, eloChange: activeMode === 'ai' ? lastEloDeltaRef.current : 0
       });
     } catch (e) { console.warn(e); }
   }, [gameResult]);
@@ -1040,7 +1056,7 @@ export default function App() {
                         {activeTacticalTab === 'moves' ? (
                           <motion.div key="tab-moves" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="h-full flex flex-col">
                             <div className="flex-1 min-h-0 flex flex-col p-1">
-                              <MoveHistory moveLogs={moveLogs} currentMoveIndex={viewingMoveIndex >= 0 ? viewingMoveIndex : moveLogs.length - 1} onSelectMoveIndex={idx => { if (idx === moveLogs.length - 1) setViewingMoveIndex(-1); else setViewingMoveIndex(idx); }} openingInfo={openingInfo} pgn={game.pgn()} fen={displayGame.fen()} />
+                              <MoveHistory moveLogs={moveLogs} currentMoveIndex={viewingMoveIndex >= 0 ? viewingMoveIndex : moveLogs.length - 1} onSelectMoveIndex={idx => { if (idx === moveLogs.length - 1) setViewingMoveIndex(-1); else setViewingMoveIndex(idx); }} openingInfo={openingInfo} pgn={exportPgn} fen={displayGame.fen()} />
                             </div>
                           </motion.div>
                         ) : (
@@ -1083,7 +1099,7 @@ export default function App() {
       {gameResult && !isJudgmentModalOpen && (activeMode === 'ai' || activeMode === 'pass_and_play') && (
         <GameOverModal
           result={gameResult}
-          pgn={game.pgn()}
+          pgn={exportPgn}
           onRematch={() => {
             handleStartGame({
               mode: activeMode,
