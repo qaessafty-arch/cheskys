@@ -220,18 +220,29 @@ export function classifyMove(
       ? isCaptureOrContext
       : { isCapture: !!isCaptureOrContext, isCheckmate };
 
-  if (context.isCheckmate) return 'brilliant';
+  // Delivering mate is always the best move, but not automatically a brilliant one.
+  if (context.isCheckmate) return 'best';
   if (context.isBook) return 'book';
 
-  // Loss (in pawns) from the mover's point of view. Positive = the position got worse.
-  const loss = isWhite ? prevEval - newEval : newEval - prevEval;
+  // Judge the move by how much winning chance it gave away, not by raw pawns: dropping
+  // from +8 to +6 changes nothing, while +0.5 to -1.5 can decide the game. Same curve
+  // and thresholds as Lichess (0.1 / 0.2 / 0.3 on its -1..1 scale = 5 / 10 / 15 points here).
+  const before = winningChance(isWhite ? prevEval : -prevEval);
+  const after = winningChance(isWhite ? newEval : -newEval);
+  const drop = before - after;
 
-  if (context.isSacrifice && loss <= 0.3) return 'brilliant';
-  if (loss <= 0.05) return context.wasBestMove ? 'best' : 'good';
-  if (loss <= 0.3) return 'good';
-  if (loss <= 0.9) return 'inaccuracy';
-  if (loss <= 2.0) return 'mistake';
+  if (context.isSacrifice && drop <= 3) return 'brilliant';
+  if (drop <= 1) return context.wasBestMove ? 'best' : 'good';
+  if (drop < 5) return 'good';
+  if (drop < 10) return 'inaccuracy';
+  if (drop < 15) return 'mistake';
   return 'blunder';
+}
+
+/** Winning chance in percent (0-100) for an evaluation in pawns from the mover's view. */
+export function winningChance(pawns: number): number {
+  const cp = Math.max(-1000, Math.min(1000, pawns * 100));
+  return 50 + 50 * (2 / (1 + Math.exp(-0.00368208 * cp)) - 1);
 }
 
 /* ------------------------------------------------------------------ *

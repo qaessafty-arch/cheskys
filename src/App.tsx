@@ -432,7 +432,7 @@ export default function App() {
           san: moveResult.san, from: moveResult.from, to: moveResult.to, piece: moveResult.piece as PieceType,
           color: moveResult.color as PieceColor, captured: moveResult.captured as PieceType | undefined,
           promotion: moveResult.promotion as PieceType | undefined, fen: newGame.fen(), evaluation: newScore,
-          classification: newGame.isCheckmate() ? 'brilliant' : undefined
+          classification: newGame.isCheckmate() ? 'best' : undefined
         };
 
         setGame(newGame);
@@ -798,6 +798,27 @@ export default function App() {
     ? { wins: authProfile.wins || 0, losses: authProfile.losses || 0, draws: authProfile.draws || 0 }
     : {};
 
+  // Each clock belongs to a colour; in a bot game the side that is not the player's is the bot.
+  const renderClock = (color: PieceColor) => {
+    const isWhite = color === 'w';
+    const isBot = activeMode === 'ai' && color !== playerColor;
+    const isPlayer = activeMode === 'ai' && color === playerColor;
+    return (
+      <ChessClock
+        timeSeconds={isWhite ? whiteTime : blackTime}
+        totalTimeSeconds={timeControl.initialSeconds}
+        isActive={isClockRunning && game.turn() === color}
+        isWhite={isWhite}
+        playerName={isBot ? currentBot.name : isPlayer ? 'Player (You)' : isWhite ? 'White Player' : 'Black Player'}
+        playerTitle={isBot ? currentBot.title : undefined}
+        avatar={isBot ? currentBot.avatar : isWhite ? '♔' : '♚'}
+        elo={isBot ? currentBot.elo : playerRating}
+        {...(isPlayer ? playerRecord : {})}
+        isUnlimited={timeControl.category === 'unlimited'}
+      />
+    );
+  };
+
   // Searched evaluation of each position (White's view, in pawns), cached by FEN.
   const searchedEvalRef = useRef<Map<string, { pawns: number; mate: number | null }>>(new Map());
   const [evalMate, setEvalMate] = useState<number | null>(null);
@@ -1054,11 +1075,11 @@ export default function App() {
                 <div className="w-full max-w-[644px] lg:max-w-[min(644px,calc(100svh-300px))] grid grid-cols-[auto_1fr] gap-x-2 sm:gap-x-4 gap-y-3 items-stretch">
                   <div className="col-start-2 flex flex-col gap-3 min-w-0">
                     <GlassCard intensity="low" className="p-3 !rounded-2xl">
-                      <ChessClock timeSeconds={isBoardFlipped ? whiteTime : blackTime} totalTimeSeconds={timeControl.initialSeconds} isActive={isClockRunning && (isBoardFlipped ? game.turn() === 'w' : game.turn() === 'b')} isWhite={isBoardFlipped} playerName={activeMode === 'ai' ? (isBoardFlipped ? 'Player (You)' : `${currentBot.name}`) : (isBoardFlipped ? 'White Player' : 'Black Player')} playerTitle={activeMode === 'ai' && !isBoardFlipped ? currentBot.title : undefined} avatar={activeMode === 'ai' && !isBoardFlipped ? currentBot.avatar : isBoardFlipped ? '♔' : '♚'} elo={activeMode === 'ai' && !isBoardFlipped ? currentBot.elo : playerRating} {...(activeMode === 'ai' && isBoardFlipped ? playerRecord : {})} isUnlimited={timeControl.category === 'unlimited'} />
+                      {renderClock(isBoardFlipped ? 'w' : 'b')}
                     </GlassCard>
                     <div className="px-1 flex items-center justify-between">
                       <CapturedPieces pieces={isBoardFlipped ? capturedMaterial.capturedByBlack : capturedMaterial.capturedByWhite} pieceTheme={settings.pieceTheme} colorOfCapturedPieces={isBoardFlipped ? 'w' : 'b'} materialAdvantage={isBoardFlipped ? (capturedMaterial.materialDifference < 0 ? Math.abs(capturedMaterial.materialDifference) : 0) : (capturedMaterial.materialDifference > 0 ? capturedMaterial.materialDifference : 0)} />
-                      {isAiThinking && !isBoardFlipped && (
+                      {isAiThinking && (isBoardFlipped ? 'w' : 'b') !== playerColor && (
                         <div className="flex items-center gap-2 text-[10px] text-[var(--secondary-accent)] font-black uppercase tracking-widest animate-pulse px-3 py-1 rounded-full bg-[var(--app-bg)] border border-[var(--secondary-accent)]/30 shadow-lg"><span className="w-1.5 h-1.5 rounded-full bg-[var(--secondary-accent)] animate-ping" /><span>Thinking...</span></div>
                       )}
                     </div>
@@ -1078,12 +1099,12 @@ export default function App() {
                   <div className="col-start-2 row-start-3 flex flex-col gap-3 min-w-0">
                     <div className="px-1 flex items-center justify-between">
                       <CapturedPieces pieces={isBoardFlipped ? capturedMaterial.capturedByWhite : capturedMaterial.capturedByBlack} pieceTheme={settings.pieceTheme} colorOfCapturedPieces={isBoardFlipped ? 'b' : 'w'} materialAdvantage={isBoardFlipped ? (capturedMaterial.materialDifference > 0 ? capturedMaterial.materialDifference : 0) : (capturedMaterial.materialDifference < 0 ? Math.abs(capturedMaterial.materialDifference) : 0)} />
-                      {isAiThinking && isBoardFlipped && (
+                      {isAiThinking && (isBoardFlipped ? 'b' : 'w') !== playerColor && (
                         <div className="flex items-center gap-2 text-[10px] text-[#FFD700] font-black uppercase tracking-widest animate-pulse px-3 py-1 rounded-full bg-white/5 border border-[#FFD700]/30 shadow-lg backdrop-blur-md"><span className="w-1.5 h-1.5 rounded-full bg-[#FFD700] animate-ping" /><span>Thinking...</span></div>
                       )}
                     </div>
                     <GlassCard intensity="low" className="p-3 !rounded-2xl border-white/10">
-                      <ChessClock timeSeconds={isBoardFlipped ? blackTime : whiteTime} totalTimeSeconds={timeControl.initialSeconds} isActive={isClockRunning && (isBoardFlipped ? game.turn() === 'b' : game.turn() === 'w')} isWhite={!isBoardFlipped} playerName={activeMode === 'ai' ? (isBoardFlipped ? `${currentBot.name}` : 'Player (You)') : (isBoardFlipped ? 'Black Player' : 'White Player')} playerTitle={activeMode === 'ai' && isBoardFlipped ? currentBot.title : undefined} avatar={activeMode === 'ai' && isBoardFlipped ? currentBot.avatar : isBoardFlipped ? '♔' : '♚'} elo={activeMode === 'ai' && isBoardFlipped ? currentBot.elo : playerRating} {...(activeMode === 'ai' && !isBoardFlipped ? playerRecord : {})} isUnlimited={timeControl.category === 'unlimited'} />
+                      {renderClock(isBoardFlipped ? 'b' : 'w')}
                     </GlassCard>
                   </div>
                 </div>
