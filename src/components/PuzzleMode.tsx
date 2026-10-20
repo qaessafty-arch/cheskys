@@ -3,6 +3,7 @@ import { PanelContainer } from './PanelContainer';
 import { Chess, Square, Move } from 'chess.js';
 import { Puzzle, AppSettings } from '../types/chess';
 import { PUZZLES_COLLECTION } from '../utils/puzzles';
+import { isCorrectPuzzleMove, isPuzzleFinished } from '../utils/puzzleCheck';
 import { 
   getDailyPuzzleForDate, 
   getTodayDateKey, 
@@ -80,6 +81,9 @@ export const PuzzleMode: React.FC<PuzzleModeProps> = ({ settings }) => {
     if (puzzleStatus === 'completed' || puzzleStatus === 'wrong') return;
 
     try {
+      // The opponent's reply is still being played: only the solver's moves count.
+      if (puzzleGame.turn() !== currentPuzzle.playerColor) return;
+
       // Test move legality
       const tempGame = new Chess(puzzleGame.fen());
       const move = tempGame.move({ from, to, promotion: 'q' });
@@ -87,11 +91,7 @@ export const PuzzleMode: React.FC<PuzzleModeProps> = ({ settings }) => {
 
       const expectedMoveSan = currentPuzzle.solutionMoves[moveStep];
 
-      // Normalize check and mate symbols for tolerant matching
-      const cleanSan = move.san.replace('+', '').replace('#', '');
-      const cleanExpected = expectedMoveSan.replace('+', '').replace('#', '');
-
-      if (move.san === expectedMoveSan || cleanSan === cleanExpected) {
+      if (isCorrectPuzzleMove(puzzleGame.fen(), move, expectedMoveSan)) {
         // Correct move!
         const nextGame = new Chess(puzzleGame.fen());
         nextGame.move({ from, to, promotion: 'q' });
@@ -101,7 +101,7 @@ export const PuzzleMode: React.FC<PuzzleModeProps> = ({ settings }) => {
         const nextStep = moveStep + 1;
         setMoveStep(nextStep);
 
-        if (nextStep >= currentPuzzle.solutionMoves.length) {
+        if (isPuzzleFinished(move, nextStep, currentPuzzle.solutionMoves.length)) {
           // Solved entire puzzle!
           setPuzzleStatus('completed');
           soundManager.playVictory();

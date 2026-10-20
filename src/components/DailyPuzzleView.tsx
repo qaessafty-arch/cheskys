@@ -41,6 +41,7 @@ import {
   X
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { isCorrectPuzzleMove, isPuzzleFinished } from '../utils/puzzleCheck';
 
 interface DailyPuzzleViewProps {
   settings: AppSettings;
@@ -200,6 +201,9 @@ export const DailyPuzzleView: React.FC<DailyPuzzleViewProps> = ({
     if (puzzleStatus === 'completed' || puzzleStatus === 'wrong') return;
 
     try {
+      // The opponent's reply is still being played: only the solver's moves count.
+      if (puzzleGame.turn() !== dailyPuzzle.playerColor) return;
+
       // Validate move with chess.js
       const tempGame = new Chess(puzzleGame.fen());
       const move = tempGame.move({ from, to, promotion: 'q' });
@@ -208,11 +212,7 @@ export const DailyPuzzleView: React.FC<DailyPuzzleViewProps> = ({
       const expectedMoveSan = dailyPuzzle.solutionMoves[moveStep];
       if (!expectedMoveSan) return;
 
-      // Clean check and checkmate symbols for tolerant matching
-      const cleanSan = move.san.replace('+', '').replace('#', '');
-      const cleanExpected = expectedMoveSan.replace('+', '').replace('#', '');
-
-      if (move.san === expectedMoveSan || cleanSan === cleanExpected) {
+      if (isCorrectPuzzleMove(puzzleGame.fen(), move, expectedMoveSan)) {
         // Player move is correct!
         const nextGame = new Chess(puzzleGame.fen());
         nextGame.move({ from, to, promotion: 'q' });
@@ -222,7 +222,7 @@ export const DailyPuzzleView: React.FC<DailyPuzzleViewProps> = ({
         const nextStep = moveStep + 1;
         setMoveStep(nextStep);
 
-        if (nextStep >= dailyPuzzle.solutionMoves.length) {
+        if (isPuzzleFinished(move, nextStep, dailyPuzzle.solutionMoves.length)) {
           // Solved entire puzzle correctly!
           setPuzzleStatus('completed');
           setShowCelebrationBanner(true);
