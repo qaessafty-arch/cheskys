@@ -1,0 +1,36 @@
+import { Chess } from 'chess.js';
+import { cloneGame, drawReason, canStillMate } from './gameRules';
+
+let passed = 0;
+let failed = 0;
+function check(name: string, ok: boolean) {
+  if (ok) passed++;
+  else {
+    failed++;
+    console.log(`FAIL: ${name}`);
+  }
+}
+
+const rep = new Chess();
+for (const m of ['Nf3', 'Nf6', 'Ng1', 'Ng8', 'Nf3', 'Nf6', 'Ng1']) rep.move(m);
+const next = cloneGame(rep);
+next.move('Ng8');
+check('a copied game still detects threefold repetition', next.isThreefoldRepetition());
+check('the repetition is named', drawReason(next) === 'Draw by threefold repetition.');
+
+const custom = new Chess('4k3/8/8/8/8/8/4P3/4K3 w - - 0 1');
+custom.move('e4');
+check('a copy keeps a custom starting position', cloneGame(custom).fen() === custom.fen());
+
+check('stalemate is named', drawReason(new Chess('7k/5Q2/6K1/8/8/8/8/8 b - - 0 1')) === 'Draw by stalemate.');
+check('insufficient material is named', drawReason(new Chess('7k/8/8/8/8/8/8/K6B w - - 0 1')) === 'Draw by insufficient material.');
+check('the fifty-move rule is named', drawReason(new Chess('7k/8/8/8/8/8/1R6/K7 w - - 100 80')) === 'Draw by the fifty-move rule.');
+
+check('a lone king cannot mate', !canStillMate(new Chess('7k/8/8/8/8/8/8/K6R w - - 0 1'), 'b'));
+check('king and knight cannot mate a lone king', !canStillMate(new Chess('7k/8/8/8/8/8/8/K5N1 w - - 0 1'), 'w'));
+check('king and rook can mate', canStillMate(new Chess('7k/8/8/8/8/8/8/K5R1 w - - 0 1'), 'w'));
+check('king and knight can still mate when the opponent has pawns', canStillMate(new Chess('7k/6p1/8/8/8/8/8/K5N1 w - - 0 1'), 'w'));
+check('a single pawn can still win', canStillMate(new Chess('7k/8/8/8/8/8/P7/K7 w - - 0 1'), 'w'));
+
+console.log(`\nResults: ${passed} passed, ${failed} failed.`);
+if (failed > 0) process.exit(1);

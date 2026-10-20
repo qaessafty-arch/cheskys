@@ -49,6 +49,7 @@ import { InGameMessage } from './services/chatService';
 import { logCompletedGame } from './services/loggingService';
 import { FriendUser } from './types/chess';
 import { engine } from './engine/client';
+import { cloneGame, drawReason, canStillMate } from './utils/gameRules';
 
 const lazyPreload = <P extends object>(load: () => Promise<{ default: React.ComponentType<P> }>) => {
   const Component = lazy(load) as React.LazyExoticComponent<React.ComponentType<P>> & { preload: () => void };
@@ -362,7 +363,7 @@ export default function App() {
       return { winner, reason: `Checkmate! ${winner === 'w' ? 'White' : 'Black'} wins by checkmate.` };
     }
     if (currentGame.isDraw()) {
-      return { winner: 'draw', reason: 'Game drawn.' };
+      return { winner: 'draw', reason: drawReason(currentGame) };
     }
     return null;
   }, []);
@@ -378,7 +379,9 @@ export default function App() {
         setWhiteTime(prev => {
           if (prev <= 1) {
             clearInterval(timer);
-            setGameResult({ winner: 'b', reason: 'White ran out of time!' });
+            setGameResult(canStillMate(game, 'b')
+              ? { winner: 'b', reason: 'White ran out of time!' }
+              : { winner: 'draw', reason: 'White ran out of time, but Black cannot checkmate: draw.' });
             soundManager.playDefeat();
             return 0;
           }
@@ -388,7 +391,9 @@ export default function App() {
         setBlackTime(prev => {
           if (prev <= 1) {
             clearInterval(timer);
-            setGameResult({ winner: 'w', reason: 'Black ran out of time!' });
+            setGameResult(canStillMate(game, 'w')
+              ? { winner: 'w', reason: 'Black ran out of time!' }
+              : { winner: 'draw', reason: 'Black ran out of time, but White cannot checkmate: draw.' });
             soundManager.playVictory();
             return 0;
           }
@@ -405,7 +410,7 @@ export default function App() {
         const prevEval = evalScore;
         AntiCheatEngine.recordMoveTiming();
         const isWhiteTurn = game.turn() === 'w';
-        const newGame = new Chess(game.fen());
+        const newGame = cloneGame(game);
         const moveResult = newGame.move({ from, to, promotion: promotionPiece || 'q' });
         if (!moveResult) return false;
         soundManager.setLastMoveInfo(moveResult.piece, moveResult.color);
@@ -461,10 +466,12 @@ export default function App() {
     if (!isAiTurn) { setIsAiThinking(false); return; }
     setIsAiThinking(true);
     const delay = Math.min(1500, Math.max(400, 300 + currentBot.depth * 80));
-    const currentFen = game.fen();
+    // The bot gets the whole game, not just the current position, so it can see repetitions.
+    const startFen = game.getHeaders().FEN || new Chess().fen();
+    const playedUci = game.history({ verbose: true }).map(m => m.from + m.to + (m.promotion ?? ''));
     const timeoutId = setTimeout(async () => {
       try {
-        const res = await engine.botMove({ fen: currentFen }, currentBot.id);
+        const res = await engine.botMove({ fen: startFen, moves: playedUci }, currentBot.id);
         if (res.bestMove && res.bestMove.length >= 4) {
           executeMove(res.bestMove.slice(0, 2) as Square, res.bestMove.slice(2, 4) as Square, res.bestMove[4] as PieceType | undefined);
         }
@@ -774,6 +781,13 @@ export default function App() {
     return Math.max(-50, Math.min(50, Math.round(k * (score - expected))));
   };
 
+  // The player's own rating and record for the clock card: the account's when signed in,
+  // otherwise the local profile kept for guests.
+  const playerRating = typeof authProfile?.elo === 'number' ? authProfile.elo : Number(respectProfile.elo) || 1200;
+  const playerRecord = authProfile && !authProfile.isGuest
+    ? { wins: authProfile.wins || 0, losses: authProfile.losses || 0, draws: authProfile.draws || 0 }
+    : {};
+
   // Records wins, losses and draws against the bot. Checkmates the player delivers are
   // recorded by the Execute judgment instead, which sets resultRecordedRef first.
   useEffect(() => {
@@ -871,7 +885,9 @@ export default function App() {
       />
 
       <AmbientBackground />
-      <Header onToggleSidebar={() => setIsSidebarOpen(prev => !prev)} isSidebarOpen={isSidebarOpen} onOpenProfile={() => setActiveMode('profile_page')} onOpenLogin={() => setActiveMode('login')} respectProfile={respectProfile} />
+      <Header onToggleSidebar={() => setIsSidebarOpen(prev => !prev)} isSidebarOpen={isSidebarOpen} onOpenProfile={() => setActiveMode('profile_page')} onOpenLogin={() => setActiveMode('login')} respectProfile={respectProfile}
+        evaluation={activeMode === 'ai' || activeMode === 'pass_and_play' ? evalScore : null}
+        resultLabel={(activeMode === 'ai' || activeMode === 'pass_and_play') && gameResult ? (gameResult.winner === 'w' ? '1-0' : gameResult.winner === 'b' ? '0-1' : '½-½') : null} />
 
       <main className="flex-1 flex flex-col justify-start overflow-y-auto w-full z-10 min-h-0">
         <Suspense fallback={<ViewFallback />}>
@@ -964,7 +980,7 @@ export default function App() {
                 <div className="w-full max-w-[644px] lg:max-w-[min(644px,calc(100svh-300px))] grid grid-cols-[auto_1fr] gap-x-2 sm:gap-x-4 gap-y-3 items-stretch">
                   <div className="col-start-2 flex flex-col gap-3 min-w-0">
                     <GlassCard intensity="low" className="p-3 !rounded-2xl">
-                      <ChessClock timeSeconds={isBoardFlipped ? whiteTime : blackTime} totalTimeSeconds={timeControl.initialSeconds} isActive={isClockRunning && (isBoardFlipped ? game.turn() === 'w' : game.turn() === 'b')} isWhite={isBoardFlipped} playerName={activeMode === 'ai' ? (isBoardFlipped ? 'Player (You)' : `${currentBot.name}`) : (isBoardFlipped ? 'White Player' : 'Black Player')} playerTitle={activeMode === 'ai' && !isBoardFlipped ? currentBot.title : undefined} avatar={activeMode === 'ai' && !isBoardFlipped ? currentBot.avatar : isBoardFlipped ? '♔' : '♚'} elo={activeMode === 'ai' && !isBoardFlipped ? currentBot.elo : Number(respectProfile.elo)} isUnlimited={timeControl.category === 'unlimited'} />
+                      <ChessClock timeSeconds={isBoardFlipped ? whiteTime : blackTime} totalTimeSeconds={timeControl.initialSeconds} isActive={isClockRunning && (isBoardFlipped ? game.turn() === 'w' : game.turn() === 'b')} isWhite={isBoardFlipped} playerName={activeMode === 'ai' ? (isBoardFlipped ? 'Player (You)' : `${currentBot.name}`) : (isBoardFlipped ? 'White Player' : 'Black Player')} playerTitle={activeMode === 'ai' && !isBoardFlipped ? currentBot.title : undefined} avatar={activeMode === 'ai' && !isBoardFlipped ? currentBot.avatar : isBoardFlipped ? '♔' : '♚'} elo={activeMode === 'ai' && !isBoardFlipped ? currentBot.elo : playerRating} {...(activeMode === 'ai' && isBoardFlipped ? playerRecord : {})} isUnlimited={timeControl.category === 'unlimited'} />
                     </GlassCard>
                     <div className="px-1 flex items-center justify-between">
                       <CapturedPieces pieces={isBoardFlipped ? capturedMaterial.capturedByBlack : capturedMaterial.capturedByWhite} pieceTheme={settings.pieceTheme} colorOfCapturedPieces={isBoardFlipped ? 'w' : 'b'} materialAdvantage={isBoardFlipped ? (capturedMaterial.materialDifference < 0 ? Math.abs(capturedMaterial.materialDifference) : 0) : (capturedMaterial.materialDifference > 0 ? capturedMaterial.materialDifference : 0)} />
@@ -993,7 +1009,7 @@ export default function App() {
                       )}
                     </div>
                     <GlassCard intensity="low" className="p-3 !rounded-2xl border-white/10">
-                      <ChessClock timeSeconds={isBoardFlipped ? blackTime : whiteTime} totalTimeSeconds={timeControl.initialSeconds} isActive={isClockRunning && (isBoardFlipped ? game.turn() === 'b' : game.turn() === 'w')} isWhite={!isBoardFlipped} playerName={activeMode === 'ai' ? (isBoardFlipped ? `${currentBot.name}` : 'Player (You)') : (isBoardFlipped ? 'Black Player' : 'White Player')} playerTitle={activeMode === 'ai' && isBoardFlipped ? currentBot.title : undefined} avatar={activeMode === 'ai' && isBoardFlipped ? currentBot.avatar : isBoardFlipped ? '♔' : '♚'} elo={activeMode === 'ai' && isBoardFlipped ? currentBot.elo : Number(respectProfile.elo)} isUnlimited={timeControl.category === 'unlimited'} />
+                      <ChessClock timeSeconds={isBoardFlipped ? blackTime : whiteTime} totalTimeSeconds={timeControl.initialSeconds} isActive={isClockRunning && (isBoardFlipped ? game.turn() === 'b' : game.turn() === 'w')} isWhite={!isBoardFlipped} playerName={activeMode === 'ai' ? (isBoardFlipped ? `${currentBot.name}` : 'Player (You)') : (isBoardFlipped ? 'Black Player' : 'White Player')} playerTitle={activeMode === 'ai' && isBoardFlipped ? currentBot.title : undefined} avatar={activeMode === 'ai' && isBoardFlipped ? currentBot.avatar : isBoardFlipped ? '♔' : '♚'} elo={activeMode === 'ai' && isBoardFlipped ? currentBot.elo : playerRating} {...(activeMode === 'ai' && !isBoardFlipped ? playerRecord : {})} isUnlimited={timeControl.category === 'unlimited'} />
                     </GlassCard>
                   </div>
                 </div>

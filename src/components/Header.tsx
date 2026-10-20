@@ -43,6 +43,10 @@ interface HeaderProps {
   onOpenProfile: () => void;
   onOpenLogin?: () => void;
   respectProfile?: RespectProfile;
+  /** Evaluation of the game on the board in pawns, White's point of view; hidden when null. */
+  evaluation?: number | null;
+  /** Set once the game on the board is decided, e.g. '1-0'. */
+  resultLabel?: string | null;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -50,8 +54,13 @@ export const Header: React.FC<HeaderProps> = ({
   isSidebarOpen = false,
   onOpenProfile,
   onOpenLogin,
-  respectProfile
+  respectProfile,
+  evaluation = null,
+  resultLabel = null
 }) => {
+  // White's share of the bar: 50% when equal, saturating around ±5 pawns.
+  const whiteShare = evaluation === null ? 50 : Math.max(3, Math.min(97, 50 + 50 * Math.tanh(evaluation / 4)));
+  const evalText = resultLabel ?? (evaluation === null ? '' : `${evaluation > 0 ? '+' : ''}${evaluation.toFixed(1)}`);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
 
@@ -122,13 +131,13 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* 2. Center: Live Match Evaluation Bar */}
-      <div className="hidden md:flex flex-col items-center justify-center flex-1 mx-8" dir="ltr">
+      <div className={`hidden md:flex flex-col items-center justify-center flex-1 mx-8 ${evaluation === null && !resultLabel ? 'invisible' : ''}`} dir="ltr">
         <div className="w-full max-w-sm flex items-center justify-between text-[10px] font-mono font-bold uppercase tracking-widest text-[var(--text-muted)] mb-1.5">
-          <span>Engine Analysis</span>
-          <span className="text-[var(--secondary-accent)] font-black">+1.2</span>
+          <span>Evaluation</span>
+          <span className="text-[var(--secondary-accent)] font-black">{evalText}</span>
         </div>
         <div className="w-full max-w-sm h-1.5 bg-[var(--app-bg)] rounded-full border border-[var(--glass-border)] overflow-hidden flex relative shadow-inner">
-          <div className="h-full bg-white w-[55%] transition-all duration-700 ease-out shadow-[0_0_15px_rgba(255,255,255,0.4)] z-10" />
+          <div className="h-full bg-white transition-all duration-700 ease-out shadow-[0_0_15px_rgba(255,255,255,0.4)] z-10" style={{ width: `${whiteShare}%` }} />
           <div className="h-full bg-[#EF4444] flex-1 z-0 opacity-80" />
         </div>
       </div>

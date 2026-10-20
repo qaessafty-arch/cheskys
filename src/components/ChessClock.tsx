@@ -32,9 +32,9 @@ const ChessClockInner = React.memo<ChessClockProps>(({
   elo,
   isUnlimited = false,
   countryCode = 'US',
-  wins = 18,
-  losses = 6,
-  draws = 4,
+  wins,
+  losses,
+  draws,
   isVerified = true
 }) => {
   const renderTitleBadge = (title: string | undefined) => {
@@ -140,16 +140,19 @@ const ChessClockInner = React.memo<ChessClockProps>(({
                 </span>
               </div>
 
-              <div className="w-[1px] h-2.5 bg-white/15" />
-
-              {/* Small win/loss/draw stat counters (hidden on phones to keep the timer visible) */}
-              <div className="hidden sm:flex items-center gap-1.5 text-[10px] font-mono text-white/50">
-                <span className="text-emerald-400 font-bold" title="Wins">W:{wins}</span>
-                <span>•</span>
-                <span className="text-rose-400 font-bold" title="Losses">L:{losses}</span>
-                <span>•</span>
-                <span className="text-white/40" title="Draws">D:{draws}</span>
-              </div>
+              {/* Win/loss/draw record, only when the player has one (hidden on phones to keep the timer visible) */}
+              {wins !== undefined && (
+                <>
+                  <div className="w-[1px] h-2.5 bg-white/15" />
+                  <div className="hidden sm:flex items-center gap-1.5 text-[10px] font-mono text-white/50">
+                    <span className="text-emerald-400 font-bold" title="Wins">W:{wins}</span>
+                    <span>•</span>
+                    <span className="text-rose-400 font-bold" title="Losses">L:{losses ?? 0}</span>
+                    <span>•</span>
+                    <span className="text-white/40" title="Draws">D:{draws ?? 0}</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
