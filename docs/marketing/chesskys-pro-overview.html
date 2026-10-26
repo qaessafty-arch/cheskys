@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chesskys PRO — Architecture & Product Overview</title>
+<style>
+  @page { size: A4; margin: 0; }
+  :root{
+    --ink:#0f172a; --muted:#475569; --line:#e2e8f0; --bg:#ffffff;
+    --navy:#0b1220; --navy2:#111b2e; --gold:#d4a24c; --gold2:#f2c46d; --green:#2f7d4f; --sky:#2563eb; --soft:#f8fafc;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{font-family:"Helvetica Neue",Helvetica,Arial,"Liberation Sans",sans-serif;color:var(--ink);font-size:10.4pt;line-height:1.5;background:#fff}
+  .page{width:210mm;height:297mm;padding:16mm 16mm 14mm;position:relative;overflow:hidden;page-break-after:always;break-after:page;background:#fff}
+  .page:last-child{page-break-after:auto;break-after:auto}
+  h1,h2,h3{font-family:Georgia,"Times New Roman","Liberation Serif",serif;letter-spacing:-.01em}
+  h2{font-size:23pt;line-height:1.15;margin-bottom:3mm}
+  h3{font-size:12.5pt;margin-bottom:1.5mm}
+  .kicker{font-size:8pt;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:2mm}
+  .lead{font-size:11.5pt;color:var(--muted);margin-bottom:6mm;max-width:165mm}
+  .foot{position:absolute;left:16mm;right:16mm;bottom:8mm;display:flex;justify-content:space-between;font-size:7.5pt;color:#94a3b8;border-top:1px solid var(--line);padding-top:2mm}
+  /* cover */
+  .cover{background:radial-gradient(1200px 700px at 85% 5%,#1d2f55 0%,var(--navy) 55%,#070b14 100%);color:#fff;padding:0}
+  .cover .board{position:absolute;right:-30mm;top:28mm;width:150mm;height:150mm;transform:rotate(-8deg);opacity:.9;
+    background:conic-gradient(#e8d5ad 25%,#8a6b3f 0 50%,#e8d5ad 0 75%,#8a6b3f 0) 0 0/37.5mm 37.5mm;border-radius:6mm;
+    box-shadow:0 30mm 60mm rgba(0,0,0,.6);-webkit-mask-image:linear-gradient(135deg,rgba(0,0,0,.9),rgba(0,0,0,.05) 85%);mask-image:linear-gradient(135deg,rgba(0,0,0,.9),rgba(0,0,0,.05) 85%)}
+  .cover .piece{position:absolute;right:30mm;top:40mm;font-size:150pt;color:#fff;text-shadow:0 8mm 20mm rgba(0,0,0,.6);line-height:1}
+  .cover .inner{position:absolute;left:18mm;right:18mm;bottom:22mm}
+  .cover h1{font-size:46pt;line-height:1.02;margin-bottom:5mm}
+  .cover h1 span{color:var(--gold2)}
+  .cover p.sub{font-size:13pt;color:#cbd5e1;max-width:130mm;margin-bottom:9mm}
+  .pills{display:flex;flex-wrap:wrap;gap:2.5mm}
+  .pill{border:1px solid rgba(255,255,255,.25);border-radius:99px;padding:1.2mm 4mm;font-size:8.5pt;color:#e2e8f0;background:rgba(255,255,255,.06)}
+  .cover .top{position:absolute;left:18mm;top:16mm;font-size:9pt;letter-spacing:.25em;text-transform:uppercase;color:var(--gold2);font-weight:700}
+  /* stats */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:3mm;margin:5mm 0}
+  .stat{background:var(--navy);color:#fff;border-radius:3mm;padding:4mm 3.5mm}
+  .stat b{display:block;font-family:Georgia,serif;font-size:19pt;color:var(--gold2);line-height:1.05}
+  .stat span{font-size:8pt;color:#cbd5e1}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:5mm}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm}
+  .card{border:1px solid var(--line);border-radius:3mm;padding:4mm;background:var(--soft)}
+  .card h3{font-size:11pt}
+  .card p,.card li{font-size:9.2pt;color:#334155}
+  ul{padding-left:4.5mm}
+  li{margin:.8mm 0}
+  .tag{display:inline-block;font-size:7pt;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#fff;background:var(--green);border-radius:1.5mm;padding:.4mm 1.8mm;margin-right:1.5mm;vertical-align:1px}
+  .tag.b{background:var(--sky)} .tag.g{background:var(--gold);color:#1a1205}
+  table{width:100%;border-collapse:collapse;font-size:9pt;margin-top:2mm}
+  th,td{text-align:left;padding:2mm 2.5mm;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:var(--navy);color:#fff;font-weight:600;font-size:8.5pt}
+  td.k{font-weight:700;width:36mm}
+  .good{color:var(--green);font-weight:700}
+  .dark{background:var(--navy);color:#fff}
+  .dark .lead{color:#cbd5e1} .dark h2{color:#fff} .dark .foot{border-color:#1e293b;color:#64748b}
+  .callout{border-left:1.2mm solid var(--gold);background:#fffaf0;padding:3.5mm 4mm;border-radius:0 2mm 2mm 0;font-size:9.3pt;color:#3b3220;margin:4mm 0}
+  .mono{font-family:"DejaVu Sans Mono","Liberation Mono",monospace;font-size:8.3pt}
+  .flow{display:flex;align-items:stretch;gap:2mm;margin:3mm 0}
+  .flow div{flex:1;background:var(--soft);border:1px solid var(--line);border-radius:2.5mm;padding:3mm;font-size:8.7pt}
+  .flow div b{display:block;font-size:9.4pt;margin-bottom:1mm}
+  .arrow{flex:0 0 auto!important;background:none!important;border:none!important;padding:0!important;align-self:center;color:var(--gold);font-size:14pt}
+  svg text{font-family:Helvetica,Arial,"Liberation Sans",sans-serif}
+</style>
+</head>
+<body>
+
+<!-- 1 · COVER -->
+<section class="page cover">
+  <div class="board"></div><div class="piece">♞</div>
+  <div class="top">Chesskys PRO · Peshmerga Edition</div>
+  <div class="inner">
+    <h1>A chess platform<br>that <span>thinks</span>, <span>teaches</span><br>and can't be cheated.</h1>
+    <p class="sub">Strong in-browser engine. Server-checked online play. A personal coach that explains <i>why</i> a move was wrong. Built in Kurdistan, in four languages.</p>
+    <div class="pills">
+      <span class="pill">Custom 0x88 engine</span><span class="pill">11 bots · 400–2650</span><span class="pill">3 animated 3D coaches</span>
+      <span class="pill">Live online play</span><span class="pill">EN · کوردی · Kurmancî · العربية</span>
+    </div>
+  </div>
+</section>
+
+<!-- 2 · AT A GLANCE -->
+<section class="page">
+  <div class="kicker">The product in one page</div>
+  <h2>What is Chesskys PRO?</h2>
+  <p class="lead">A full chess platform that runs in the browser: play bots, play real people online, solve puzzles, get every game reviewed by a coach, climb a leaderboard and make friends — all wrapped in Kurdish culture and a theme system that makes it your own.</p>
+
+  <div class="stats">
+    <div class="stat"><b>16.56M</b><span>perft nodes — move generator matches the published counts</span></div>
+    <div class="stat"><b>depth 12</b><span>from the start position in a 3-second search</span></div>
+    <div class="stat"><b>11</b><span>bot personalities, Elo 400 to 2650</span></div>
+    <div class="stat"><b>12</b><span>time controls, 1 min to 45|15 and unlimited</span></div>
+  </div>
+
+  <div class="grid3">
+    <div class="card"><h3>♟ Play</h3><ul>
+      <li>Vs 11 engine bots</li><li>Worldwide humans-only matchmaking</li><li>Private rooms with 6-character codes</li><li>Friend challenges, spectators, rematch</li></ul></div>
+    <div class="card"><h3>🎓 Learn</h3><ul>
+      <li>Post-game review with the coach</li><li>Mistakes named by pattern (fork, hanging piece, missed mate…)</li><li>Training exercises + verified puzzles + daily puzzle</li><li>Hints, analysis mode, live eval bar</li></ul></div>
+    <div class="card"><h3>👥 Belong</h3><ul>
+      <li>Real friendships, friends-only chat</li><li>Quick chat and voice messages</li><li>Leaderboard: global / friends</li><li>Honor ranks from <i>Mountain Recruit</i> to <i>Supreme Peshmerga Grandmaster</i></li></ul></div>
+  </div>
+
+  <h3 style="margin-top:6mm">The stack, in plain words</h3>
+  <table>
+    <tr><td class="k">Front end</td><td>React 19 · TypeScript · Vite 6 · Tailwind CSS 4 · three.js (3D coaches) · i18next (4 languages)</td></tr>
+    <tr><td class="k">Engine</td><td>Hand-written chess engine in a Web Worker (board, search, evaluation, bot personalities); chess.js for SAN/PGN and rules display</td></tr>
+    <tr><td class="k">Server</td><td>Node + Express + Socket.IO (<span class="mono">server.ts</span>, <span class="mono">server/</span>) — REST API, live matchmaking engine, rate limiting, optional Gemini endpoints</td></tr>
+    <tr><td class="k">Data & auth</td><td>Firebase Authentication (Google, guests) + Cloud Firestore with a default-deny rules file</td></tr>
+    <tr><td class="k">Ship</td><td>Docker files, Vercel config, GitHub Pages workflow, Firestore-rules deploy workflow, CI (typecheck + build)</td></tr>
+  </table>
+  <div class="foot"><span>Chesskys PRO — Architecture & Product Overview</span><span>2</span></div>
+</section>
+
+<!-- 3 · ARCHITECTURE -->
+<section class="page">
+  <div class="kicker">How it works</div>
+  <h2>Architecture</h2>
+  <p class="lead">The heavy thinking happens on the player's own device; the shared truth lives on the server and in Firestore, behind rules. That split is why it feels instant <i>and</i> stays fair.</p>
+
+  <svg viewBox="0 0 178 118" width="178mm" style="display:block;margin:0 auto 3mm">
+    <defs><marker id="a" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6z" fill="#d4a24c"/></marker></defs>
+    <rect x="1" y="1" width="176" height="52" rx="3" fill="#f8fafc" stroke="#cbd5e1"/>
+    <text x="5" y="8" font-size="3.4" font-weight="700" fill="#64748b" letter-spacing=".3">PLAYER'S BROWSER</text>
+    <rect x="5" y="12" width="40" height="36" rx="2.5" fill="#0b1220"/>
+    <text x="25" y="20" font-size="3.6" font-weight="700" fill="#f2c46d" text-anchor="middle">React UI</text>
+    <text x="25" y="26" font-size="2.7" fill="#cbd5e1" text-anchor="middle">board · clocks · chat</text>
+    <text x="25" y="31" font-size="2.7" fill="#cbd5e1" text-anchor="middle">friends · puzzles</text>
+    <text x="25" y="36" font-size="2.7" fill="#cbd5e1" text-anchor="middle">3D coaches (three.js)</text>
+    <text x="25" y="41" font-size="2.7" fill="#cbd5e1" text-anchor="middle">EN · CKB · KMR · AR</text>
+    <rect x="52" y="12" width="58" height="36" rx="2.5" fill="#12294d"/>
+    <text x="81" y="20" font-size="3.6" font-weight="700" fill="#f2c46d" text-anchor="middle">Engine Worker</text>
+    <text x="81" y="26" font-size="2.7" fill="#cbd5e1" text-anchor="middle">0x88 board · legal moves · Zobrist</text>
+    <text x="81" y="31" font-size="2.7" fill="#cbd5e1" text-anchor="middle">PVS search · TT · null-move · LMR</text>
+    <text x="81" y="36" font-size="2.7" fill="#cbd5e1" text-anchor="middle">tapered evaluation</text>
+    <text x="81" y="41" font-size="2.7" fill="#cbd5e1" text-anchor="middle">bots · hints · analysis · review</text>
+    <rect x="117" y="12" width="56" height="36" rx="2.5" fill="#173d2c"/>
+    <text x="145" y="20" font-size="3.6" font-weight="700" fill="#f2c46d" text-anchor="middle">Rules &amp; Coach logic</text>
+    <text x="145" y="26" font-size="2.7" fill="#cbd5e1" text-anchor="middle">match rules (pure, tested)</text>
+    <text x="145" y="31" font-size="2.7" fill="#cbd5e1" text-anchor="middle">mistake classifier · review</text>
+    <text x="145" y="36" font-size="2.7" fill="#cbd5e1" text-anchor="middle">coach memory · exercises</text>
+    <text x="145" y="41" font-size="2.7" fill="#cbd5e1" text-anchor="middle">Elo · honor ranks</text>
+    <path d="M45 30 H52" stroke="#d4a24c" stroke-width=".8" marker-end="url(#a)"/>
+    <path d="M110 30 H117" stroke="#d4a24c" stroke-width=".8" marker-end="url(#a)"/>
+
+    <path d="M40 53 V66" stroke="#d4a24c" stroke-width=".8" marker-end="url(#a)"/>
+    <path d="M140 53 V66" stroke="#d4a24c" stroke-width=".8" marker-end="url(#a)"/>
+    <text x="42" y="61" font-size="2.6" fill="#64748b">Socket.IO + REST</text>
+    <text x="142" y="61" font-size="2.6" fill="#64748b">Firebase SDK (live listeners)</text>
+
+    <rect x="1" y="66" width="86" height="50" rx="3" fill="#f8fafc" stroke="#cbd5e1"/>
+    <text x="5" y="73" font-size="3.4" font-weight="700" fill="#64748b" letter-spacing=".3">NODE SERVER</text>
+    <rect x="5" y="76" width="78" height="9" rx="1.8" fill="#0b1220"/><text x="44" y="82" font-size="3" fill="#f2c46d" text-anchor="middle" font-weight="700">Matchmaking engine (Socket.IO)</text>
+    <rect x="5" y="87" width="78" height="9" rx="1.8" fill="#1e293b"/><text x="44" y="93" font-size="2.9" fill="#e2e8f0" text-anchor="middle">Server clock · zod validation · reconnect tickets</text>
+    <rect x="5" y="98" width="78" height="9" rx="1.8" fill="#1e293b"/><text x="44" y="104" font-size="2.9" fill="#e2e8f0" text-anchor="middle">REST API · leaderboard · rate limits · sessions</text>
+    <text x="44" y="113" font-size="2.6" fill="#64748b" text-anchor="middle">optional: Gemini coach + game-recap endpoints · MCP tools</text>
+
+    <rect x="91" y="66" width="86" height="50" rx="3" fill="#f8fafc" stroke="#cbd5e1"/>
+    <text x="95" y="73" font-size="3.4" font-weight="700" fill="#64748b" letter-spacing=".3">FIREBASE</text>
+    <rect x="95" y="76" width="78" height="9" rx="1.8" fill="#0b1220"/><text x="134" y="82" font-size="3" fill="#f2c46d" text-anchor="middle" font-weight="700">Authentication (Google · guest)</text>
+    <rect x="95" y="87" width="78" height="9" rx="1.8" fill="#1e293b"/><text x="134" y="93" font-size="2.9" fill="#e2e8f0" text-anchor="middle">Firestore: matches · users · friends · chat</text>
+    <rect x="95" y="98" width="78" height="9" rx="1.8" fill="#1e293b"/><text x="134" y="104" font-size="2.9" fill="#e2e8f0" text-anchor="middle">Default-deny security rules (append-only moves)</text>
+    <text x="134" y="113" font-size="2.6" fill="#64748b" text-anchor="middle">tournaments · matchmaking queue · rooms · invites</text>
+    <path d="M87 91 H91" stroke="#d4a24c" stroke-width=".8" marker-end="url(#a)"/>
+  </svg>
+
+  <div class="grid2">
+    <div class="card"><h3>Three design decisions</h3><ul>
+      <li><b>Think locally.</b> The search runs in a Web Worker, so a 2650-rated bot never freezes the board, menus or clocks.</li>
+      <li><b>Keep rules pure.</b> Everything that decides "is this move legal / whose clock runs / is it over" is plain functions with unit tests — no UI, no database.</li>
+      <li><b>Never trust a peer.</b> Moves are checked by the server or re-derived from the move list by the other player's client.</li></ul></div>
+    <div class="card"><h3>Two live-play paths</h3><ul>
+      <li><b>Socket.IO engine</b> — server-owned game state, 6-character room codes, rated queue, precise clocks, reconnect tickets.</li>
+      <li><b>Firestore match sessions</b> — worldwide matching, friend challenges and spectating through live listeners, guarded by security rules.</li>
+      <li>Both end in the same result flow: game-over screen, Elo change, review with the coach.</li></ul></div>
+  </div>
+  <div class="foot"><span>Chesskys PRO — Architecture & Product Overview</span><span>3</span></div>
+</section>
+
+<!-- 4 · ENGINE -->
+<section class="page dark">
+  <div class="kicker">The brain</div>
+  <h2>A real engine, not a toy</h2>
+  <p class="lead">chess.js is excellent for rules and notation, but it manages only a few thousand positions a second — enough for a shallow search. Chesskys PRO ships its own allocation-free engine core for strength.</p>
+
+  <div class="grid2" style="gap:5mm">
+    <div style="background:#111b2e;border-radius:3mm;padding:4.5mm">
+      <h3 style="color:#f2c46d">What's inside</h3>
+      <ul style="color:#e2e8f0;font-size:9.3pt">
+        <li><b>0x88 board</b> with legal move generation and Zobrist hashing</li>
+        <li><b>Iterative-deepening PVS</b> with aspiration windows</li>
+        <li><b>Transposition table</b> — 1M entries (~16 MB)</li>
+        <li><b>Pruning &amp; ordering:</b> null-move, late-move reductions, futility, killer + history moves, MVV-LVA, TT move first</li>
+        <li><b>Quiescence search</b> with delta pruning</li>
+        <li><b>Tapered evaluation:</b> material, piece-square tables, mobility, king safety, pawn structure, blended by game phase</li>
+        <li><b>Mate-aware</b> scores (shows <span class="mono">#3</span>, not just a number)</li>
+      </ul>
+    </div>
+    <div style="background:#111b2e;border-radius:3mm;padding:4.5mm">
+      <h3 style="color:#f2c46d">Proof, measured on this repo</h3>
+      <table style="font-size:8.8pt;color:#e2e8f0">
+        <tr><td style="color:#f2c46d;border-color:#1e293b">Perft</td><td style="border-color:#1e293b">All reference positions match — <b>16,564,718 nodes</b> in 4.1 s (~4.0M nodes/s). Move generation is provably correct on castling, en passant and promotion positions.</td></tr>
+        <tr><td style="color:#f2c46d;border-color:#1e293b">Tactics</td><td style="border-color:#1e293b"><b>11 of 12</b> positions solved at 600 ms each (back-rank mate, Morphy mate in 2, smothered mate, Win-At-Chess set).</td></tr>
+        <tr><td style="color:#f2c46d;border-color:#1e293b">Depth</td><td style="border-color:#1e293b">Start position, 3 s: <b>depth 12</b>, ~678k nodes, best move e2e4.</td></tr>
+        <tr><td style="color:#f2c46d;border-color:#1e293b">Types</td><td style="border-color:#1e293b">Full TypeScript typecheck passes with zero errors.</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <h3 style="color:#f2c46d;margin-top:6mm">Bots with personalities — and human mistakes</h3>
+  <p style="color:#cbd5e1;font-size:9.6pt;margin-bottom:2mm">Early versions searched every strong bot to the same depth, so a "2300" played like a "1400". Now every bot has its own search budget plus an error model: evaluation <i>noise</i> (imprecision), a <i>blunder chance</i> with a capped loss (oversight), opening variety, and contempt (willingness to avoid draws). Weak bots really do hang pieces; strong ones punish them.</p>
+  <table style="color:#e2e8f0;font-size:8.6pt">
+    <tr><th>Elo</th><th>Bot</th><th>Style</th></tr>
+    <tr><td style="border-color:#1e293b">400</td><td style="border-color:#1e293b">🐣 Pawn Cadet</td><td style="border-color:#1e293b">Sees one move ahead, hangs pieces often</td></tr>
+    <tr><td style="border-color:#1e293b">700 · 1050</td><td style="border-color:#1e293b">Zagros Scout · Knight Errant</td><td style="border-color:#1e293b">Learning-curve opponents</td></tr>
+    <tr><td style="border-color:#1e293b">1450 · 1500</td><td style="border-color:#1e293b">Bishop Tactician · 🤡 Joker</td><td style="border-color:#1e293b">Tactical / chaotic sacrifices</td></tr>
+    <tr><td style="border-color:#1e293b">1800 · 1900</td><td style="border-color:#1e293b">🦇 Batman · Rook Mastermind</td><td style="border-color:#1e293b">Fortress defence / solid mastery</td></tr>
+    <tr><td style="border-color:#1e293b">2000 · 2200</td><td style="border-color:#1e293b">🍖 Luffy · ⚔️ Levi</td><td style="border-color:#1e293b">Berserker attacker / surgical precision</td></tr>
+    <tr><td style="border-color:#1e293b">2350 · 2650</td><td style="border-color:#1e293b">Grandmaster DeepAI · Peshmerga Titan</td><td style="border-color:#1e293b">Top of the ladder</td></tr>
+  </table>
+  <div class="foot"><span>Chesskys PRO — Architecture & Product Overview</span><span>4</span></div>
+</section>
+
+<!-- 5 · ONLINE -->
+<section class="page">
+  <div class="kicker">Fair play</div>
+  <h2>Online play that holds up under pressure</h2>
+  <p class="lead">The classic failure of home-grown multiplayer is trusting the client. Chesskys PRO treats every move, clock and position as something to verify.</p>
+
+  <div class="flow">
+    <div><b>1 · Find</b>Humans-only worldwide queue, or a private room with a 6-character code.</div><div class="arrow">▶</div>
+    <div><b>2 · Validate</b>Move schema checked, legality checked, turn checked, participants checked.</div><div class="arrow">▶</div>
+    <div><b>3 · Clock</b>Time is computed from timestamps, not trusted from a client.</div><div class="arrow">▶</div>
+    <div><b>4 · Record</b>Game ends, Elo updates, both sides can open the review.</div>
+  </div>
+
+  <div class="grid2">
+    <div class="card"><h3>Socket.IO matchmaking engine</h3><ul>
+      <li>Room codes use a <b>31-character unambiguous alphabet</b> (no 0/O, 1/I/L)</li>
+      <li>Queue pairs by rating: search window starts at ±50 and <b>widens by 100 every 5 s up to ±300</b>; ping gap ≤ 150 ms</li>
+      <li><b>High-resolution server clock</b> (<span class="mono">process.hrtime</span>) with flag-fall detection</li>
+      <li>Signed <b>reconnect tickets</b> (HMAC-SHA256, 90 s) restore a game after a dropped connection</li>
+      <li>Moves limited to 5 per second per socket; payloads schema-validated with zod</li>
+      <li>Draw offers, rematch, resign, abort, abandonment handling</li>
+      <li>Elo: K = 40 / 30 / 20 by experience, change capped at ±50, floor 100</li></ul></div>
+    <div class="card"><h3>Firestore match sessions</h3><ul>
+      <li><b>Server-corrected clocks</b> so a wrong system clock can't invent time</li>
+      <li><b>Pure rules module</b> (<span class="mono">matchRules.ts</span>) rejects illegal moves, moves out of turn, spectators moving, forged positions, flag falls</li>
+      <li><b>Anti-tamper:</b> the opponent's client replays the SAN move list and rejects any position that doesn't add up (red "Match state rejected" banner)</li>
+      <li><b>Rules:</b> default-deny; moves are append-only; finished games are locked</li>
+      <li>A reload rebuilds the position, clocks and history from the stored session; draw by threefold repetition can be claimed</li>
+      <li>Spectators by invite link; rematch with colours swapped; underpromotion supported</li></ul></div>
+  </div>
+
+  <h3 style="margin-top:5mm">Fair-play monitoring</h3>
+  <div class="grid2">
+    <div class="card"><p><b>Timing analysis.</b> The anti-cheat module flags move-time patterns no human produces: variance under 50 ms with average under 300 ms across 10+ moves. Five flags trigger a 7-day suspension in the module's logic. The browser also records frequent tab-switching as a soft signal.</p></div>
+    <div class="card"><p><b>Sensible limits at the door.</b> Auth requests 5/min, chat 1/sec, friend requests 10/min, move validation 180/min per IP; chat text is sanitised server-side; sessions use signed, httpOnly cookies.</p></div>
+  </div>
+  <div class="foot"><span>Chesskys PRO — Architecture & Product Overview</span><span>5</span></div>
+</section>
+
+<!-- 6 · COACH -->
+<section class="page">
+  <div class="kicker">The difference-maker</div>
+  <h2>A coach that explains, not just scores</h2>
+  <p class="lead">Most apps tell you a move was "?". Chesskys PRO tells you <i>what kind</i> of mistake it was — using facts on the board, never guesses.</p>
+
+  <div class="grid3">
+    <div class="card" style="border-top:3px solid #d4a24c"><h3>Paul Morphy</h3><p>Attacking, open-game spirit. Historical inspiration; biography uses documented facts only and the lines are written for the app, not quoted.</p></div>
+    <div class="card" style="border-top:3px solid #2563eb"><h3>Capablanca</h3><p>Clean, simple, endgame-minded. Same documented-facts rule.</p></div>
+    <div class="card" style="border-top:3px solid #2f7d4f"><h3>Mamosta Zagros</h3><p>An original Chesskys character — a Kurdish teacher in a headwrap and sash. All three are animated in 3D (three.js).</p></div>
+  </div>
+
+  <h3 style="margin-top:5mm">How a review works</h3>
+  <div class="flow">
+    <div><b>Replay</b>The finished game is replayed move by move.</div><div class="arrow">▶</div>
+    <div><b>Search</b>The engine searches every position where <i>you</i> moved (cached, cancellable, with progress).</div><div class="arrow">▶</div>
+    <div><b>Measure</b>Winning-chance drop: ≥5 inaccuracy, ≥10 mistake, ≥15 blunder.</div><div class="arrow">▶</div>
+    <div><b>Diagnose</b>Pattern named, best line and punishing line shown in SAN.</div>
+  </div>
+
+  <div class="grid2">
+    <div class="card"><h3>Seven mistake patterns recognised</h3>
+      <ul><li>Allowed checkmate · Missed checkmate</li><li>Hanging piece</li><li>Allowed a fork · Missed a fork</li><li>Missed free material</li><li>Better move available (positional fallback)</li></ul>
+      <p style="margin-top:2mm">Every label is decided by board facts — a capture that wins material, one piece attacking two targets, a forced mate — so the coach never names a tactic that isn't there. Back-rank mates are called out specifically.</p></div>
+    <div class="card"><h3>Remembers you</h3>
+      <ul><li>Coach memory records every exercise attempt and analysed move</li><li>Derives your strength tier (beginner → master), weak themes and next lesson</li><li>Tracks accuracy against the engine and improvement over your last 100 attempts</li><li>Retry flow: try again → hint → reveal → similar exercises</li></ul></div>
+  </div>
+
+  <div class="grid2" style="margin-top:4mm">
+    <div class="card"><h3>Practice material</h3><ul>
+      <li><b>8</b> coach training exercises (mates, forks…, each line replay-tested)</li>
+      <li><b>25</b> verified puzzles in 10 categories; positions from real games; validated by script and, per the repo's notes, checked against Stockfish 16</li>
+      <li>Daily puzzle with streak</li></ul></div>
+    <div class="card"><h3>In-game help</h3><ul>
+      <li>Live eval bar (flips with the board, shows mate distance)</li>
+      <li>Hints computed in the engine worker</li>
+      <li>Move labels graded by winning chances: best / good / inaccuracy / mistake / blunder / brilliant</li>
+      <li>Optional Gemini-powered manga-style game recap</li></ul></div>
+  </div>
+  <div class="foot"><span>Chesskys PRO — Architecture & Product Overview</span><span>6</span></div>
+</section>
+
+<!-- 7 · COMMUNITY + IDENTITY -->
+<section class="page">
+  <div class="kicker">Culture &amp; community</div>
+  <h2>Made in Kurdistan. Made for everyone.</h2>
+  <p class="lead">Chesskys PRO celebrates Kurdish culture, the Peshmerga and the Zagros mountains — and still plays like a serious chess app anywhere in the world.</p>
+
+  <div class="grid2">
+    <div class="card"><h3>Four languages, right-to-left included</h3>
+      <p>English · Sorani Kurdish (کوردی) · Kurmanji (Kurmancî) · Arabic (العربية), with dedicated RTL styling and a language selector.</p></div>
+    <div class="card"><h3>Honor ranks reward fair play</h3>
+      <p>Seven ranks driven by respect points: Mountain Recruit → Desert Scout → Zagros Vanguard → Peshmerga Guardian → Eagle of Kurdistan → Lion of Kurdistan → Supreme Peshmerga Grandmaster.</p></div>
+  </div>
+
+  <div class="grid2" style="margin-top:4mm">
+    <div class="card"><h3>Social, with guard-rails</h3><ul>
+      <li>Google sign-in for new accounts; guest mode to try instantly</li>
+      <li>Real friendships (request → accept), friends-only chat</li>
+      <li>Quick-chat phrases, voice clips (about 30 s), match challenges inside the chat</li>
+      <li>Blocking and notifications; presence (online status)</li>
+      <li>Global and friends leaderboards with week/month activity filters — only real, public, rated players are ranked</li></ul></div>
+    <div class="card"><h3>Make it yours</h3><ul>
+      <li>UI theme presets (Brutalist, Bluesky, High-Contrast Dark, One Piece, Attack on Titan, Peshmerga, UKH, Midnight Cyber, Emerald Grandmaster) + custom themes and backgrounds</li>
+      <li>Piece sets: Classic, Neo, Alpha, Vintage wood, Crystal Neon, FIDE 3D, One Piece, Attack on Titan, Batman, Peshmerga, UKH</li>
+      <li>Board colour themes, sounds, legal-move hints, auto-queen, premoves option</li>
+      <li>Voice move dictation (browser speech recognition) and keyboard shortcuts</li></ul></div>
+  </div>
+
+  <div class="grid2" style="margin-top:4mm">
+    <div class="card"><h3>Tournaments</h3><p>Create a tournament with a name, player cap and time control; players register; a bracket view tracks rounds, and pairings spawn real match challenges.</p></div>
+    <div class="card"><h3>Authoring &amp; analysis</h3><p>Players can author puzzles (the FEN and solution are validated before saving), like and solve each other's, and step through any game from the move list.</p></div>
+  </div>
+  <div class="foot"><span>Chesskys PRO — Architecture & Product Overview</span><span>7</span></div>
+</section>
+
+<!-- 8 · WHY BETTER -->
+<section class="page dark">
+  <div class="kicker">The case</div>
+  <h2>Why it's better</h2>
+  <p class="lead">Compared with the usual way chess apps get built, each choice below solves a real, known weakness.</p>
+  <table style="color:#e2e8f0;font-size:9pt">
+    <tr><th style="width:36mm">The usual approach</th><th>Chesskys PRO</th><th style="width:36mm">What you gain</th></tr>
+    <tr><td style="border-color:#1e293b">Rules engine only (a few thousand positions/s)</td><td style="border-color:#1e293b">Dedicated engine, ~290k–4M nodes/s depending on the workload, perft-verified</td><td style="border-color:#1e293b;color:#f2c46d">Real strength, believable bots</td></tr>
+    <tr><td style="border-color:#1e293b">Search on the UI thread</td><td style="border-color:#1e293b">Web Worker search</td><td style="border-color:#1e293b;color:#f2c46d">No freezes while a bot thinks</td></tr>
+    <tr><td style="border-color:#1e293b">All bots equally "perfect" at a depth</td><td style="border-color:#1e293b">Per-bot budget + noise + blunder model</td><td style="border-color:#1e293b;color:#f2c46d">A ladder you can actually climb</td></tr>
+    <tr><td style="border-color:#1e293b">Client sends a position, server trusts it</td><td style="border-color:#1e293b">Server validation, SAN replay, append-only rules</td><td style="border-color:#1e293b;color:#f2c46d">Forged boards are rejected</td></tr>
+    <tr><td style="border-color:#1e293b">Clocks from client timers</td><td style="border-color:#1e293b">Server-corrected / hrtime clocks, increments only to the mover</td><td style="border-color:#1e293b;color:#f2c46d">Agreeing clocks, honest flags</td></tr>
+    <tr><td style="border-color:#1e293b">Dropped connection = lost game</td><td style="border-color:#1e293b">Reconnect tickets, state restore, abandonment handling</td><td style="border-color:#1e293b;color:#f2c46d">Fair handling of bad networks</td></tr>
+    <tr><td style="border-color:#1e293b">Review = engine score "?"</td><td style="border-color:#1e293b">Pattern-named mistakes, best line, coach memory</td><td style="border-color:#1e293b;color:#f2c46d">You learn <i>why</i></td></tr>
+    <tr><td style="border-color:#1e293b">Open chat for anyone</td><td style="border-color:#1e293b">Friends-only chat, sanitised text, voice clips</td><td style="border-color:#1e293b;color:#f2c46d">Safer community</td></tr>
+    <tr><td style="border-color:#1e293b">English-only, left-to-right</td><td style="border-color:#1e293b">4 languages incl. 2 Kurdish dialects, RTL</td><td style="border-color:#1e293b;color:#f2c46d">Underserved players welcome</td></tr>
+  </table>
+
+  <h3 style="color:#f2c46d;margin-top:6mm">Quality gates behind the claims</h3>
+  <div class="grid3">
+    <div style="background:#111b2e;border-radius:3mm;padding:4mm;font-size:9pt"><b style="color:#f2c46d">Test suites, all passing</b><br>Engine (perft + tactics), 50 multiplayer-rule assertions, 30 platform checks, 15 hardening checks, coach &amp; puzzle suites, game-rule and opening suites, plus Firestore-rules tests.</div>
+    <div style="background:#111b2e;border-radius:3mm;padding:4mm;font-size:9pt"><b style="color:#f2c46d">Typecheck &amp; CI</b><br><span class="mono">tsc --noEmit</span> is clean. CI typechecks and builds on every push and pull request.</div>
+    <div style="background:#111b2e;border-radius:3mm;padding:4mm;font-size:9pt"><b style="color:#f2c46d">Deployable several ways</b><br>Node server, Docker files, Vercel, GitHub Pages, and a workflow that publishes Firestore rules.</div>
+  </div>
+  <div class="foot"><span>Chesskys PRO — Architecture & Product Overview</span><span>8</span></div>
+</section>
+
+<!-- 9 · ACCURACY NOTES -->
+<section class="page">
+  <div class="kicker">Straight talk</div>
+  <h2>Accuracy notes</h2>
+  <p class="lead">This overview was written from the repository itself and from test runs on it. Where something isn't what a quick skim of the old README would suggest, it is stated here.</p>
+
+  <table>
+    <tr><th style="width:44mm">Topic</th><th>What's true in the code today</th></tr>
+    <tr><td class="k">Which stack runs?</td><td><span class="mono">npm run dev</span> / <span class="mono">npm start</span> run <span class="mono">server.ts</span> (Express + Socket.IO + Vite) with Firebase Auth/Firestore. The README, <span class="mono">docker-compose.yml</span>, <span class="mono">backend/</span>, <span class="mono">schema.sql</span> and <span class="mono">API.md</span> describe an earlier PostgreSQL + Redis + JWT design; those files remain in the repository but aren't what the current app is wired to.</td></tr>
+    <tr><td class="k">Redis</td><td>The server's leaderboard cache uses <span class="mono">ioredis-mock</span> (in-memory), and the matchmaking state lives in the server process. A multi-instance deployment would need a shared store.</td></tr>
+    <tr><td class="k">Bot Elo values</td><td>These are design targets from each bot's search budget and error model, not ratings measured against rated human pools.</td></tr>
+    <tr><td class="k">Engine speed</td><td>Perft ran at ~4.0M nodes/s on this machine; real searches ran at roughly 150k–480k nodes/s. Results vary by device.</td></tr>
+    <tr><td class="k">Anti-cheat</td><td>Timing/variance flags and the suspension logic are implemented in a shared module; engine-correlation features named in some docs are partly aspirational. Treat it as a first line, not a complete fair-play system.</td></tr>
+    <tr><td class="k">Firestore rules</td><td>The rules file is strict by default but keeps a documented exception so unauthenticated guests can play; they are not live until deployed to the Firebase project.</td></tr>
+    <tr><td class="k">Worldwide opponents</td><td>The Worldwide modal pairs <b>humans only</b>. The code also contains a pool of named "challenger" personas that are engine opponents, used only by the non-strict matchmaking modes.</td></tr>
+    <tr><td class="k">AI features</td><td>Gemini coaching and game recap work only when <span class="mono">GEMINI_API_KEY</span> is configured on the server; the deterministic engine-based coach and review need no key.</td></tr>
+    <tr><td class="k">Demo edition</td><td><span class="mono">DEMO_FEATURES_UI_UX.md</span> defines a browser-only showcase for UKH Induction Day with simulated opponents and mock data; this PDF describes the full platform.</td></tr>
+  </table>
+
+  <div class="callout"><b>How the numbers were obtained.</b> Dependencies were installed with <span class="mono">npm ci</span>, then <span class="mono">npm run lint</span>, <span class="mono">test:engine</span>, <span class="mono">test:multiplayer</span>, <span class="mono">test:multiplayer-platform</span>, <span class="mono">test:phase1</span>, <span class="mono">test:coach</span> and <span class="mono">test:rules</span> were run on the current code. Every one passed; the one tactical miss (WAC.002) is reported above as 11 of 12.</div>
+
+  <div style="text-align:center;margin-top:8mm">
+    <div style="font-family:Georgia,serif;font-size:20pt;color:#0b1220">Chesskys PRO</div>
+    <div style="color:#64748b;font-size:9.5pt">Kurdish chess, online — engine, coach, community.</div>
+  </div>
+  <div class="foot"><span>Chesskys PRO — Architecture & Product Overview</span><span>9</span></div>
+</section>
+
+</body>
+</html>
