@@ -54,7 +54,7 @@ export interface GameAnalysis {
   skipped: { opening: number; forcedOrDecided: number; timedOut: number };
 }
 
-export const EQUIVALENT_CP = 10;
+export const EQUIVALENT_CP = 20;
 const LOSS_CAP_CP = 500;
 const CLAMP_CP = 1000;
 
@@ -148,11 +148,17 @@ export interface Assessment {
   verdict: Verdict;
   /** 0..1, how far the engine signal sits above what the rating predicts. */
   engineScore: number;
+  /** How many standard errors the engine-equivalent rate is above expectation. */
+  z: number;
   reasons: string[];
 }
 
-/** Fewer scored moves than this and a single game proves nothing. */
-export const MIN_ANALYSED_MOVES = 20;
+/**
+ * Fewer scored moves than this proves nothing. It is lower than it might seem
+ * because a cheater who crushes an opponent leaves few undecided positions to
+ * score; the z-score below keeps small samples honest.
+ */
+export const MIN_ANALYSED_MOVES = 8;
 
 /**
  * Engine-equivalent rate an honest player of this rating is expected to reach.
@@ -166,22 +172,25 @@ export function expectedEquivalentRate(rating: number): number {
 export function assessSide(stats: SideStats, rating: number): Assessment {
   const reasons: string[] = [];
   if (stats.analysed < MIN_ANALYSED_MOVES) {
-    return { verdict: 'none', engineScore: 0, reasons: [`only ${stats.analysed} scored moves`] };
+    return { verdict: 'none', engineScore: 0, z: 0, reasons: [`only ${stats.analysed} scored moves`] };
   }
 
   const expected = expectedEquivalentRate(rating);
   const excess = stats.engineEquivalentRate - expected;
+  const standardError = Math.sqrt((expected * (1 - expected)) / stats.analysed);
+  const z = excess / standardError;
   // 0 at "as expected", 1 at "everything matches"
   const engineScore = Math.max(0, Math.min(1, excess / (1 - expected)));
 
   let verdict: Verdict = 'none';
-  if (excess >= 0.2 && stats.acpl <= 25) verdict = 'watch';
-  if (excess >= 0.3 && stats.acpl <= 15) verdict = 'review';
+  if (z >= 3 && excess >= 0.2 && stats.acpl <= 30) verdict = 'watch';
+  if (z >= 4 && excess >= 0.3 && stats.acpl <= 15) verdict = 'review';
 
   if (verdict !== 'none') {
     reasons.push(
       `${Math.round(stats.engineEquivalentRate * 100)}% engine-equivalent moves over ${stats.analysed} scored ` +
-      `(expected about ${Math.round(expected * 100)}% at rating ${Math.round(rating)}), average loss ${stats.acpl.toFixed(1)} cp`
+      `(expected about ${Math.round(expected * 100)}% at rating ${Math.round(rating)}, z=${z.toFixed(1)}), ` +
+      `average loss ${stats.acpl.toFixed(1)} cp`
     );
     // Supporting signal: unusually even move times. Never raises the verdict alone.
     if (stats.timingCv !== null && stats.timingCv < 0.35 && verdict === 'watch') {
@@ -189,21 +198,21 @@ export function assessSide(stats: SideStats, rating: number): Assessment {
       reasons.push(`very even move times (variation ${stats.timingCv.toFixed(2)})`);
     }
   }
-  return { verdict, engineScore, reasons };
+  return { verdict, engineScore, z, reasons };
 }
 
 export interface HistoryEntry { verdict: Verdict; at: number }
 
-/** Repeated 'watch' games escalate: one odd game is luck, a pattern is not. */
+/** A second elevated game in a short window escalates: one odd game is luck, a pattern is not. */
 export function escalateWithHistory(current: Assessment, recent: HistoryEntry[]): Assessment {
   if (current.verdict !== 'watch') return current;
   const lastFive = recent.slice(-5);
   const elevated = lastFive.filter(h => h.verdict !== 'none').length;
-  if (elevated >= 2) {
+  if (elevated >= 1) {
     return {
       ...current,
       verdict: 'review',
-      reasons: [...current.reasons, `${elevated} of the last ${lastFive.length} analysed games were already elevated`]
+      reasons: [...current.reasons, `${elevated} of the player's last ${lastFive.length} analysed games were already elevated`]
     };
   }
   return current;

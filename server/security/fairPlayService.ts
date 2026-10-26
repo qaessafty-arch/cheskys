@@ -20,6 +20,7 @@ export interface FairPlayRecord {
   stats: SideStats;
   verdict: Verdict;
   engineScore: number;
+  z: number;
   reasons: string[];
 }
 
@@ -103,7 +104,7 @@ export class FairPlayService {
       const assessment = this.assess(uid, analysis[color], rating);
       const record: FairPlayRecord = {
         type: 'game', at: Date.now(), matchId, uid, color, rating,
-        stats: analysis[color], verdict: assessment.verdict, engineScore: assessment.engineScore, reasons: assessment.reasons
+        stats: analysis[color], verdict: assessment.verdict, engineScore: assessment.engineScore, z: assessment.z, reasons: assessment.reasons
       };
       this.append(record);
       records.push(record);
@@ -138,7 +139,9 @@ export class FairPlayService {
     const production = process.env.NODE_ENV === 'production';
     const worker = production
       ? new Worker(path.join(process.cwd(), 'dist', 'fairPlayWorker.cjs'))
-      : new Worker(path.join(process.cwd(), 'server', 'security', 'fairPlayWorker.ts'), { execArgv: ['--import', 'tsx'] });
+      // Development: load the TypeScript worker through tsx's CommonJS hook, which
+      // resolves the extensionless imports the rest of the code base uses.
+      : new Worker(`require('tsx/cjs'); require(${JSON.stringify(path.join(process.cwd(), 'server', 'security', 'fairPlayWorker.ts'))});`, { eval: true });
     worker.unref(); // an idle worker must not keep the server process alive
     return worker;
   }

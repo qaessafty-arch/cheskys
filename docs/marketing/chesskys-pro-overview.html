@@ -254,7 +254,7 @@
 
   <h3 style="margin-top:5mm">Fair-play monitoring</h3>
   <div class="grid2">
-    <div class="card"><p><b>Timing analysis.</b> The anti-cheat module flags move-time patterns no human produces: variance under 50 ms with average under 300 ms across 10+ moves. Five flags trigger a 7-day suspension in the module's logic. The browser also records frequent tab-switching as a soft signal.</p></div>
+    <div class="card"><p><b>Engine-based review.</b> After every rated game a worker thread scores each player's moves against the engine (opening, forced and already-decided positions are skipped) and compares the result with what is normal for that rating. Verdicts are <i>none</i>, <i>watch</i> or <i>review</i>; a second elevated game escalates a watch to review. Uneven-looking move times only add weight once the engine signal is already high. Nothing bans anyone: results are logged for a person to check.</p></div>
     <div class="card"><p><b>Sensible limits at the door.</b> Auth requests 5/min, chat 1/sec, friend requests 10/min, move validation 180/min per IP; chat text is sanitised server-side; sessions use signed, httpOnly cookies.</p></div>
   </div>
   <div class="foot"><span>Chesskys PRO — Architecture & Product Overview</span><span>5</span></div>
@@ -408,7 +408,7 @@
     <tr><td class="k">Redis</td><td>The server's leaderboard cache uses <span class="mono">ioredis-mock</span> (in-memory), and the matchmaking state lives in the server process. A multi-instance deployment would need a shared store.</td></tr>
     <tr><td class="k">Bot Elo values</td><td>These are design targets from each bot's search budget and error model, not ratings measured against rated human pools.</td></tr>
     <tr><td class="k">Engine speed</td><td>Perft ran at ~4.0M nodes/s on this machine; real searches ran at roughly 150k–480k nodes/s. Results vary by device.</td></tr>
-    <tr><td class="k">Anti-cheat</td><td>Timing/variance flags and the suspension logic are implemented in a shared module; engine-correlation features named in some docs are partly aspirational. Treat it as a first line, not a complete fair-play system.</td></tr>
+    <tr><td class="k">Anti-cheat</td><td>Engine-based post-game review is new and tested on bot games only. It is calibrated against this repo's own engine at search depth 4, so it catches engine-perfect play far better than play from a much deeper engine, and a cheater who crushes a weak opponent leaves few positions to score. Thresholds have not been tuned on real human games. Use it to queue games for a human reviewer, not to ban automatically.</td></tr>
     <tr><td class="k">Firestore rules</td><td>The rules file is strict by default but keeps a documented exception so unauthenticated guests can play; they are not live until deployed to the Firebase project.</td></tr>
     <tr><td class="k">Worldwide opponents</td><td>The Worldwide modal pairs <b>humans only</b>. The code also contains a pool of named "challenger" personas that are engine opponents, used only by the non-strict matchmaking modes.</td></tr>
     <tr><td class="k">AI features</td><td>Gemini coaching and game recap work only when <span class="mono">GEMINI_API_KEY</span> is configured on the server; the deterministic engine-based coach and review need no key.</td></tr>
