@@ -140,9 +140,10 @@ const rateLimitStores: Record<string, Map<string, RateLimitBucket>> = {
   chat: new Map(),
   friend: new Map(),
   move: new Map(),
+  telemetry: new Map(),
 };
 
-function createRateLimiter(category: 'auth' | 'chat' | 'friend' | 'move', maxRequests: number, windowMs: number) {
+function createRateLimiter(category: 'auth' | 'chat' | 'friend' | 'move' | 'telemetry', maxRequests: number, windowMs: number) {
   return (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const ip = req.headers['x-forwarded-for']?.toString() || req.socket.remoteAddress || '127.0.0.1';
     const store = rateLimitStores[category];
@@ -173,6 +174,7 @@ const authRateLimit = createRateLimiter('auth', 5, 60 * 1000); // 5 auth request
 const chatRateLimit = createRateLimiter('chat', 1, 1000); // 1 req / sec
 const friendRateLimit = createRateLimiter('friend', 10, 60 * 1000); // 10 friend requests / min
 const moveRateLimit = createRateLimiter('move', 180, 60 * 1000); // 180 moves / min
+const telemetryRateLimit = createRateLimiter('telemetry', 20, 60 * 1000); // 20 client signals / min
 
 // Server-side robust string sanitization for XSS prevention
 function sanitizeString(input: string): string {
@@ -356,6 +358,25 @@ app.get('/api/auth/session-verify', (req, res) => {
 });
 
 // ----------------------------------------------------
+// FAIR PLAY: client signals (weak evidence, stored for context only)
+// ----------------------------------------------------
+app.post('/api/security/telemetry-report', telemetryRateLimit, (req, res) => {
+  const reason = typeof req.body?.reason === 'string' ? req.body.reason : '';
+  let uid: string | null = null;
+  try {
+    const cookie = req.signedCookies.chesskys_auth_session;
+    const session = typeof cookie === 'string' ? JSON.parse(cookie) : cookie;
+    if (session?.uid && (!session.expiresAt || Date.now() < session.expiresAt)) uid = String(session.uid);
+  } catch {
+    // anonymous report
+  }
+  if (!fairPlay.recordClientSignal(uid, reason)) {
+    return res.status(400).json({ error: 'Unknown report reason.' });
+  }
+  res.json({ ok: true });
+});
+
+// ----------------------------------------------------
 // 4. SANITIZED CHAT & MESSAGING API
 // ----------------------------------------------------
 app.post('/api/chat/sanitize', chatRateLimit, (req, res) => {
@@ -390,6 +411,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import http from 'http';
 import { MatchmakingEngine } from './server/matchmaking';
 import { mountMcp } from './mcp/chesskys-server';
+import { fairPlay } from './server/security/fairPlayService';
 
 // ----------------------------------------------------
 

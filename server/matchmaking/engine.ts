@@ -25,6 +25,7 @@ import {
 import { moveRateLimiter, chatRateLimiter, actionRateLimiter } from '../security/rateLimiter.js';
 import { generateReconnectTicket, verifyReconnectTicket } from '../security/reconnectToken.js';
 import { MovePayloadSchema } from '../schemas/moveSchema.js';
+import { fairPlay } from '../security/fairPlayService.js';
 
 /** Set of statuses that are still "live" for disconnect / reconnect
  *  handling. */
@@ -1053,6 +1054,9 @@ export class MatchmakingEngine {
 
     this.io.to(match.matchId).emit('gameOver', payload);
     this.io.to(match.matchId).emit('game_over', payload);
+
+    // Score the finished game against the engine, off the main thread.
+    fairPlay.submit(match);
 
     // Defer cleanup so clients have time to review, chat, and rematch
     setTimeout(() => {

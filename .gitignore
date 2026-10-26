@@ -11,3 +11,5 @@ test_*.cjs
 test_*.js
 *.png
 bun.lock
+
+data/
